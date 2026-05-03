@@ -241,7 +241,7 @@ function renderAll() {
       <div class="section-title">Component breakdown — all subreddits</div>
       <div class="card card-pad">
         <div class="card-title">Each axis: User Accounts · Engagement · Temporal · Distribution (all 0–100)</div>
-        <div style="position:relative;height:320px"><canvas id="radarChart"></canvas></div>
+        <div style="position:relative;height:460px"><canvas id="radarChart"></canvas></div>
       </div>
     </div>
 
@@ -319,27 +319,29 @@ function renderAll() {
 // ── risk spectrum ─────────────────────────────────────────────────────────────
 function renderSpectrum(subs) {
   const wrap = document.getElementById('spectrumWrap');
-  // Track sits at y=72 inside a 130px tall container.
-  // Labels alternate: odd → top row (y≈8), even → middle row (y≈30).
-  // Dot sits on the track. Sub name always below track (y≈82, staggered).
-  const TRACK_Y = 68;
+  // 4-row staggered labels above track, 2-row names below.
+  const ROWS   = 4;
+  const ROW_H  = 17;
+  const TRACK_Y = ROWS * ROW_H + 10; // ≈78
   const dots = subs.map(([sub, d], i) => {
-    const pct = d.final_score;
-    const c = COLOR(d.final_score);
-    const labelY  = i % 2 === 0 ?  4 : 26;
-    const nameY   = TRACK_Y + 10 + (i % 2 === 0 ? 0 : 14);
-    const lineH   = TRACK_Y - labelY - 16;
+    const pct   = d.final_score;
+    const c     = COLOR(d.final_score);
+    const row   = i % ROWS;
+    const labelY = row * ROW_H + 4;
+    const lineH  = TRACK_Y - labelY - 14;
+    const nameRow = i % 2;
+    const nameY   = TRACK_Y + 14 + nameRow * 15;
     return `<div style="position:absolute;left:${pct}%;top:0;bottom:0;transform:translateX(-50%)">
-      <div style="position:absolute;top:${labelY}px;left:50%;transform:translateX(-50%);font-size:11px;font-weight:800;color:${c};white-space:nowrap;line-height:1">${d.final_score.toFixed(1)}</div>
-      <div style="position:absolute;top:${labelY+14}px;left:50%;width:1px;height:${lineH}px;background:${c}55"></div>
-      <div style="position:absolute;top:${TRACK_Y-5}px;left:50%;transform:translateX(-50%);width:12px;height:12px;border-radius:50%;background:${c};border:2px solid var(--bg)"></div>
-      <div style="position:absolute;top:${nameY+8}px;left:50%;transform:translateX(-50%);font-size:10px;font-weight:600;color:${c};white-space:nowrap;opacity:0.85">r/${sub}</div>
+      <div style="position:absolute;top:${labelY}px;left:50%;transform:translateX(-50%);font-size:10px;font-weight:700;color:${c};white-space:nowrap;line-height:1">${d.final_score.toFixed(1)}</div>
+      <div style="position:absolute;top:${labelY+13}px;left:50%;width:1px;height:${lineH}px;background:${c}44"></div>
+      <div style="position:absolute;top:${TRACK_Y-4}px;left:50%;transform:translateX(-50%);width:10px;height:10px;border-radius:50%;background:${c};border:2px solid var(--bg)"></div>
+      <div style="position:absolute;top:${nameY}px;left:50%;transform:translateX(-50%);font-size:9px;font-weight:600;color:${c};white-space:nowrap;opacity:0.85">r/${sub}</div>
     </div>`;
   }).join('');
 
   wrap.innerHTML = `
     <div style="font-size:11px;color:var(--muted);margin-bottom:12px">All subreddits on one bot activity scale — higher is worse</div>
-    <div style="position:relative;height:130px;margin:0 8px">
+    <div style="position:relative;height:165px;margin:0 8px">
       ${dots}
       <div style="position:absolute;top:${TRACK_Y}px;left:0;right:0;height:6px;border-radius:3px;background:linear-gradient(to right,#3fb950,#e3b341 32%,#d29922 58%,#f85149)"></div>
       <div style="position:absolute;top:${TRACK_Y+10}px;left:0;right:0;display:flex;justify-content:space-between">
@@ -466,8 +468,8 @@ function renderMultiRadar(subs) {
         return {
           label: 'r/'+sub,
           data: [d.user_score, d.engagement_score, d.temporal_score, d.distribution_score],
-          backgroundColor: c+'22', borderColor: c, borderWidth:2,
-          pointBackgroundColor: c, pointRadius:3,
+          backgroundColor: c+'18', borderColor: c, borderWidth:1,
+          pointBackgroundColor: c, pointRadius:2,
         };
       })
     },
