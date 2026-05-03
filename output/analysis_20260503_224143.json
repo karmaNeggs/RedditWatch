@@ -1,5 +1,5 @@
 {
-  "analysis_date": "2026-05-03T22:42:17.780302",
+  "analysis_date": "2026-05-03T22:41:43.021264",
   "user_analysis": {
     "india": {
       "users_analyzed": 30,
@@ -66,6 +66,17 @@
       "suspicious_accounts_pct": 3.4482758620689653,
       "very_suspicious_count": 0,
       "user_score": 4.137931034482758
+    },
+    "Cricket": {
+      "users_analyzed": 30,
+      "avg_account_age_days": 1161.2037876456172,
+      "avg_total_karma": 928302.3333333334,
+      "avg_karma_per_day": 1892.2771391847202,
+      "median_karma_per_day": 285.9348891391453,
+      "suspicious_accounts_count": 16,
+      "suspicious_accounts_pct": 53.333333333333336,
+      "very_suspicious_count": 14,
+      "user_score": 77.06666666666666
     },
     "IndianFood": {
       "users_analyzed": 30,
@@ -338,6 +349,16 @@
       "ucr": 4.54493545183714,
       "engagement_score": 25.869582367869384
     },
+    "Cricket": {
+      "posts_analyzed": 30,
+      "avg_score": 1768.7333333333333,
+      "median_score": 1481.0,
+      "avg_comments": 118.6,
+      "median_comments": 99.5,
+      "avg_upvote_ratio": 0.9853333333333332,
+      "ucr": 14.913434513771783,
+      "engagement_score": 63.89021922428328
+    },
     "IndianFood": {
       "posts_analyzed": 30,
       "avg_score": 60.166666666666664,
@@ -584,6 +605,15 @@
       "hours_with_posts": 13,
       "temporal_score": 56.99126340736415
     },
+    "Cricket": {
+      "total_posts": 30,
+      "peak_hour_utc": 15,
+      "peak_hour_count": 7,
+      "top_3_hours_concentration": 50.0,
+      "entropy": 3.3478605959607823,
+      "hours_with_posts": 13,
+      "temporal_score": 60.792689402068554
+    },
     "IndianFood": {
       "total_posts": 30,
       "peak_hour_utc": 0,
@@ -799,6 +829,13 @@
       "comments_skew": 0.5567741909572931,
       "distribution_score": 38.093588474219786
     },
+    "Cricket": {
+      "score_cv": 0.44821746779224575,
+      "comments_cv": 0.5652672671274477,
+      "score_skew": 1.8193897828963237,
+      "comments_skew": 1.6969809991670237,
+      "distribution_score": 39.58344905089921
+    },
     "IndianFood": {
       "score_cv": 1.412510305537721,
       "comments_cv": 0.9440532375840403,
@@ -975,6 +1012,13 @@
       "engagement_score": 25.869582367869384,
       "temporal_score": 56.99126340736415,
       "distribution_score": 38.093588474219786
+    },
+    "Cricket": {
+      "final_score": 64.2364543386669,
+      "user_score": 77.06666666666666,
+      "engagement_score": 63.89021922428328,
+      "temporal_score": 60.792689402068554,
+      "distribution_score": 39.58344905089921
     },
     "IndianFood": {
       "final_score": 9.11810179082949,

@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reddit Bot Watch — Monthly Report</title>
+  <style>
+    /* ── Screen styles ── */
+    :root {
+      --ink: #111827;
+      --muted: #6b7280;
+      --border: #e5e7eb;
+      --surface: #f9fafb;
+      --critical: #dc2626;
+      --high: #d97706;
+      --moderate: #ca8a04;
+      --low: #16a34a;
+      --blue: #2563eb;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #f3f4f6;
+      font-family: Georgia, 'Times New Roman', serif;
+      color: var(--ink);
+      font-size: 15px;
+      line-height: 1.7;
+    }
+    a { color: var(--blue); }
+
+    /* Print button bar — hidden in print */
+    .print-bar {
+      background: #1e293b;
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .print-bar span { color: #94a3b8; font-size: 13px; font-family: sans-serif; }
+    .print-btn {
+      background: #3b82f6; color: #fff; border: none; border-radius: 6px;
+      padding: 8px 20px; font-size: 13px; font-family: sans-serif;
+      font-weight: 600; cursor: pointer;
+    }
+    .print-btn:hover { background: #2563eb; }
+    .back-link { color: #94a3b8; font-size: 13px; font-family: sans-serif; text-decoration: none; }
+    .back-link:hover { color: #fff; }
+
+    /* Report card */
+    .report {
+      max-width: 760px;
+      margin: 28px auto;
+      background: #fff;
+      border-radius: 4px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+      overflow: hidden;
+    }
+
+    /* Header band */
+    .rpt-head {
+      background: #0f172a;
+      color: #fff;
+      padding: 36px 48px 28px;
+    }
+    .rpt-label {
+      font-family: -apple-system, sans-serif;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #94a3b8;
+      margin-bottom: 10px;
+    }
+    .rpt-title {
+      font-size: 28px;
+      font-weight: 700;
+      font-family: -apple-system, sans-serif;
+      line-height: 1.2;
+      margin-bottom: 6px;
+    }
+    .rpt-subtitle {
+      font-size: 14px;
+      color: #94a3b8;
+      font-family: -apple-system, sans-serif;
+    }
+    .rpt-meta {
+      margin-top: 18px;
+      display: flex;
+      gap: 24px;
+      font-size: 12px;
+      font-family: -apple-system, sans-serif;
+      color: #64748b;
+    }
+    .rpt-meta strong { color: #cbd5e1; }
+
+    /* Body */
+    .rpt-body { padding: 36px 48px; }
+
+    /* Section headings */
+    .rpt-section { margin-bottom: 32px; }
+    .rpt-section-title {
+      font-family: -apple-system, sans-serif;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 6px;
+      margin-bottom: 14px;
+    }
+
+    /* Summary text */
+    .summary-text {
+      font-size: 15px;
+      line-height: 1.75;
+      color: #374151;
+    }
+    .summary-text strong { color: var(--ink); }
+
+    /* Rankings table */
+    .rank-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .rank-table th {
+      text-align: left;
+      font-family: -apple-system, sans-serif;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--muted);
+      padding: 6px 10px;
+      border-bottom: 2px solid var(--border);
+    }
+    .rank-table td {
+      padding: 9px 10px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+    .rank-table tr:last-child td { border-bottom: none; }
+    .rank-num { color: var(--muted); font-family: -apple-system, sans-serif; font-size: 12px; }
+    .rank-sub { font-family: -apple-system, sans-serif; font-weight: 700; font-size: 13px; }
+    .rank-score { font-family: -apple-system, sans-serif; font-weight: 800; font-size: 14px; }
+
+    /* Score bar */
+    .bar-wrap { width: 120px; height: 5px; background: #e5e7eb; border-radius: 3px; display: inline-block; vertical-align: middle; }
+    .bar-fill  { height: 5px; border-radius: 3px; }
+
+    /* Severity pill */
+    .pill { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 10px; font-family: -apple-system, sans-serif; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+    .pill.critical { background: #fee2e2; color: #dc2626; }
+    .pill.high     { background: #fef3c7; color: #d97706; }
+    .pill.moderate { background: #fefce8; color: #ca8a04; }
+    .pill.low      { background: #dcfce7; color: #16a34a; }
+
+    /* Component mini bars */
+    .comp-row { display: flex; gap: 12px; margin-top: 4px; }
+    .comp-item { flex: 1; }
+    .comp-label { font-size: 9px; font-family: -apple-system, sans-serif; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 3px; }
+    .comp-bar { height: 4px; border-radius: 2px; background: #e5e7eb; }
+    .comp-bar-fill { height: 4px; border-radius: 2px; }
+
+    /* How it works */
+    .meth-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .meth-box { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 14px; }
+    .meth-box h4 { font-family: -apple-system, sans-serif; font-size: 12px; font-weight: 700; margin-bottom: 5px; display: flex; justify-content: space-between; }
+    .meth-wt { color: var(--blue); font-size: 11px; }
+    .meth-box p { font-size: 12px; color: var(--muted); font-family: -apple-system, sans-serif; line-height: 1.55; }
+
+    /* Scale legend */
+    .scale-row { display: flex; gap: 0; border-radius: 4px; overflow: hidden; margin-bottom: 10px; }
+    .scale-seg { flex: 1; padding: 6px 10px; font-family: -apple-system, sans-serif; font-size: 11px; font-weight: 700; }
+    .scale-seg small { display: block; font-weight: 400; font-size: 10px; opacity: 0.8; }
+
+    /* Footer */
+    .rpt-footer {
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      padding: 16px 48px;
+      font-size: 11px;
+      color: var(--muted);
+      font-family: -apple-system, sans-serif;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* ── Print styles ── */
+    @media print {
+      body { background: #fff; }
+      .print-bar { display: none !important; }
+      .report { margin: 0; box-shadow: none; border-radius: 0; max-width: 100%; }
+      .rpt-head { background: #0f172a !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .pill, .scale-seg, .meth-box, .comp-bar, .bar-fill, .comp-bar-fill { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      a { color: inherit; text-decoration: none; }
+      @page { margin: 0.5cm; size: A4; }
+    }
+
+    .loading { text-align: center; padding: 80px; color: var(--muted); font-family: sans-serif; }
+  </style>
+</head>
+<body>
+
+<div class="print-bar">
+  <a class="back-link" href="index.html">← Back to dashboard</a>
+  <span>Save as PDF: click Print → choose "Save as PDF" as destination</span>
+  <button class="print-btn" onclick="window.print()">Print / Save as PDF</button>
+</div>
+
+<div id="root"><div class="loading">Loading report…</div></div>
+
+<script>
+const SEV       = s => s >= 70 ? 'critical' : s >= 50 ? 'high' : s >= 30 ? 'moderate' : 'low';
+const SEV_LABEL = s => s >= 70 ? 'Critical'  : s >= 50 ? 'High'  : s >= 30 ? 'Moderate'  : 'Low';
+const COLOR     = s => s >= 70 ? '#dc2626'   : s >= 50 ? '#d97706' : s >= 30 ? '#ca8a04'  : '#16a34a';
+const BAR_COLOR = s => s >= 70 ? '#fca5a5'   : s >= 50 ? '#fcd34d' : s >= 30 ? '#fef08a'  : '#86efac';
+const COMP_C    = { user:'#3b82f6', engagement:'#ef4444', temporal:'#f59e0b', distribution:'#8b5cf6' };
+
+function fmtMonth(ym) {
+  const [y,m] = ym.split('-');
+  return new Date(+y,+m-1).toLocaleDateString('en-IN',{year:'numeric',month:'long'});
+}
+function fmtDate(iso) {
+  return new Date(iso).toLocaleDateString('en-IN',{year:'numeric',month:'long',day:'numeric'});
+}
+
+function buildSummary(subs) {
+  const total = subs.length;
+  const high  = subs.filter(([,d]) => d.final_score >= 50);
+  const low   = subs.filter(([,d]) => d.final_score < 30);
+  const top   = subs[0];
+  const clean = subs[subs.length - 1];
+  const avg   = (subs.reduce((a,[,d]) => a + d.final_score, 0) / total).toFixed(1);
+  const comps = {user:top[1].user_score, engagement:top[1].engagement_score, temporal:top[1].temporal_score, distribution:top[1].distribution_score};
+  const compNames = {user:'suspicious account growth patterns', engagement:'low comment engagement relative to upvotes', temporal:'concentrated posting windows', distribution:'uniform vote distribution'};
+  const dominant = Object.entries(comps).sort((a,b)=>b[1]-a[1])[0][0];
+
+  let s = `This month's scan covered <strong>${total} Indian subreddits</strong>, with an average bot activity score of <strong>${avg}/100</strong>. `;
+  s += `<strong>${high.length} communities</strong> scored High or above (≥50), indicating significant coordinated activity. `;
+  s += `<strong>r/${top[0]}</strong> ranked highest at <strong>${top[1].final_score.toFixed(1)}</strong>, driven primarily by ${compNames[dominant]}. `;
+  if (high.length >= 3) {
+    s += `Political and entertainment communities — including ${high.slice(0,3).map(([x])=>'r/'+x).join(', ')} — show the strongest signals, consistent with agenda-driven coordination. `;
+  }
+  s += `<strong>r/${clean[0]}</strong> was the cleanest community at <strong>${clean[1].final_score.toFixed(1)}</strong>`;
+  s += low.length > 1 ? `, with ${low.length} subreddits total in the low-risk zone, mostly hobby and niche interest spaces.` : `.`;
+  return s;
+}
+
+function bar(val, color) {
+  return `<div class="bar-wrap"><div class="bar-fill" style="width:${val}%;background:${color}"></div></div>`;
+}
+
+function compBars(d) {
+  return `<div class="comp-row">
+    ${[['user','Users'],['engagement','Engagement'],['temporal','Temporal'],['distribution','Dist.']].map(([k,l]) =>
+      `<div class="comp-item">
+        <div class="comp-label">${l} ${d[k+'_score'].toFixed(0)}</div>
+        <div class="comp-bar"><div class="comp-bar-fill" style="width:${d[k+'_score']}%;background:${COMP_C[k]}"></div></div>
+      </div>`
+    ).join('')}
+  </div>`;
+}
+
+async function render() {
+  const h = await fetch(`data/history.json?v=${Date.now()}`).then(r=>r.json());
+  const latest = h.months[h.months.length - 1];
+  const month  = await fetch(`data/${latest.month}.json?v=${Date.now()}`).then(r=>r.json());
+  const subs   = Object.entries(month.subreddits).sort((a,b)=>b[1].final_score-a[1].final_score);
+
+  const highCount = subs.filter(([,d])=>d.final_score>=50).length;
+
+  document.getElementById('root').innerHTML = `
+  <div class="report">
+    <div class="rpt-head">
+      <div class="rpt-label">Reddit Bot Watch · Indian Subreddits</div>
+      <div class="rpt-title">Monthly Bot Activity Report</div>
+      <div class="rpt-subtitle">${fmtMonth(month.month)}</div>
+      <div class="rpt-meta">
+        <span><strong>Subreddits tracked</strong> ${subs.length}</span>
+        <span><strong>High/Critical</strong> ${highCount}</span>
+        <span><strong>Analysis date</strong> ${fmtDate(month.analysis_date)}</span>
+        <span><strong>Data</strong> Top 30 posts · Last 30 days</span>
+      </div>
+    </div>
+
+    <div class="rpt-body">
+
+      <div class="rpt-section">
+        <div class="rpt-section-title">Summary</div>
+        <p class="summary-text">${buildSummary(subs)}</p>
+      </div>
+
+      <div class="rpt-section">
+        <div class="rpt-section-title">Bot Activity Rankings</div>
+        <div class="scale-row">
+          <div class="scale-seg" style="background:#dcfce7;color:#15803d">0–30<small>Low</small></div>
+          <div class="scale-seg" style="background:#fefce8;color:#854d0e">30–50<small>Moderate</small></div>
+          <div class="scale-seg" style="background:#fef3c7;color:#92400e">50–70<small>High</small></div>
+          <div class="scale-seg" style="background:#fee2e2;color:#991b1b">70–100<small>Critical</small></div>
+        </div>
+        <table class="rank-table">
+          <thead><tr>
+            <th>#</th><th>Subreddit</th><th>Score</th><th style="width:130px">Scale</th>
+            <th>Severity</th><th>Component signals</th>
+          </tr></thead>
+          <tbody>
+            ${subs.map(([sub,d],i) => `<tr>
+              <td class="rank-num">${i+1}</td>
+              <td class="rank-sub">r/${sub}</td>
+              <td class="rank-score" style="color:${COLOR(d.final_score)}">${d.final_score.toFixed(1)}</td>
+              <td>${bar(d.final_score, BAR_COLOR(d.final_score))}</td>
+              <td><span class="pill ${SEV(d.final_score)}">${SEV_LABEL(d.final_score)}</span></td>
+              <td>${compBars(d)}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="rpt-section">
+        <div class="rpt-section-title">How we measure this</div>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:14px;font-family:sans-serif">
+          Each subreddit is scored 0–100 across four signals, then combined into a single bot activity score.
+          A higher score means stronger evidence of coordinated, non-organic activity.
+        </p>
+        <div class="meth-grid">
+          <div class="meth-box">
+            <h4>User Account Patterns <span class="meth-wt">35%</span></h4>
+            <p>Accounts earning &gt;200 karma/day or new accounts (&lt;90 days) with elevated karma are flagged. Bot networks maintain fast-growing accounts to appear legitimate.</p>
+          </div>
+          <div class="meth-box">
+            <h4>Engagement Patterns <span class="meth-wt">30%</span></h4>
+            <p>Bots upvote without commenting. High upvote-to-comment ratios and upvote consensus above 85% across many posts indicates coordinated, passive voting.</p>
+          </div>
+          <div class="meth-box">
+            <h4>Temporal Patterns <span class="meth-wt">20%</span></h4>
+            <p>Automated systems post in tight windows. We measure how concentrated posting is in the top 3 hours vs. spread across the full day (entropy).</p>
+          </div>
+          <div class="meth-box">
+            <h4>Score Distribution <span class="meth-wt">15%</span></h4>
+            <p>Organic communities have high variance — some posts go viral, most don't. Suspiciously uniform vote counts (low coefficient of variation) suggest bot-driven engagement.</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="rpt-footer">
+      <span>Reddit Bot Watch · <a href="https://github.com/karmaNeggs/RedditWatch">github.com/karmaNeggs/RedditWatch</a></span>
+      <span>Data: Reddit public JSON API · Not affiliated with Reddit Inc.</span>
+    </div>
+  </div>`;
+}
+
+render().catch(e => {
+  document.getElementById('root').innerHTML = `<div class="loading">Error: ${e.message}<br><br>Serve with: python3 -m http.server 8080 --directory docs/</div>`;
+});
+</script>
+</body>
+</html>

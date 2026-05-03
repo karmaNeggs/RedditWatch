@@ -21,11 +21,18 @@ OUTPUT_DIR = ROOT / 'output'
 def load_latest_data():
     latest = DATA_DIR / 'reddit_data_latest.csv'
     if latest.exists():
-        return pd.read_csv(latest)
-    files = sorted(glob.glob(str(DATA_DIR / 'reddit_data_*.csv')))
-    if not files:
-        raise FileNotFoundError("No data files found. Run collect_data.py first.")
-    return pd.read_csv(max(files, key=os.path.getctime))
+        df = pd.read_csv(latest)
+    else:
+        files = sorted(glob.glob(str(DATA_DIR / 'reddit_data_*.csv')))
+        if not files:
+            raise FileNotFoundError("No data files found. Run collect_data.py first.")
+        df = pd.read_csv(max(files, key=os.path.getctime))
+
+    subs_file = ROOT / 'subreddits.txt'
+    if subs_file.exists():
+        allowed = {s.strip() for s in subs_file.read_text().splitlines() if s.strip()}
+        df = df[df['subreddit'].isin(allowed)]
+    return df
 
 
 # ── Component 1: User account patterns (35%) ─────────────────────────────────

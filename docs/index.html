@@ -148,6 +148,7 @@
       <div class="hdr-right">
         <span id="dataBadge"></span>
         <span id="lastUpdated"></span>
+        <a href="report.html" target="_blank" style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:4px 12px;font-size:12px;color:var(--text)">↓ Monthly Report</a>
         <a href="https://github.com/karmaNeggs/RedditWatch" target="_blank">GitHub</a>
       </div>
     </div>
@@ -233,6 +234,7 @@ function renderAll() {
     <div class="section">
       <div class="section-title">Scores at a glance</div>
       <div class="summary-row" id="summaryRow"></div>
+      <div class="card card-pad" id="summaryText" style="margin-top:12px;font-size:13px;line-height:1.7;color:var(--muted)"></div>
     </div>
 
     <div class="section">
@@ -307,6 +309,7 @@ function renderAll() {
   renderSpectrum(subs);
   renderZones(subs);
   renderSummaryCards(subs);
+  renderSummary(subs);
   renderMultiRadar(subs);
   renderTrendChart();
   renderDetailCards(subs);
@@ -384,6 +387,39 @@ function renderSummaryCards(subs) {
       <div style="margin-top:10px;height:3px;border-radius:2px;background:${c};width:${d.final_score}%"></div>
     </div>`;
   }).join('');
+}
+
+// ── auto summary ──────────────────────────────────────────────────────────────
+function renderSummary(subs) {
+  const total   = subs.length;
+  const high    = subs.filter(([,d]) => d.final_score >= 50);
+  const low     = subs.filter(([,d]) => d.final_score < 30);
+  const top     = subs[0];
+  const cleanest= subs[subs.length - 1];
+  const avgScore= (subs.reduce((a,[,d])=>a+d.final_score,0)/total).toFixed(1);
+
+  // Top subreddit's dominant component
+  const topD = top[1];
+  const comps = {user:topD.user_score, engagement:topD.engagement_score, temporal:topD.temporal_score, distribution:topD.distribution_score};
+  const compNames = {user:'suspicious account patterns',engagement:'low comment engagement relative to upvotes',temporal:'concentrated posting windows',distribution:'uniform vote distribution'};
+  const dominant = Object.entries(comps).sort((a,b)=>b[1]-a[1])[0][0];
+
+  // Surprise: any sub scoring much higher or lower than expected by size
+  const surprise = subs.find(([s,d]) => ['IndianFood','IndianGaming','ISRO'].includes(s) && d.final_score < 20);
+
+  let text = `Of the ${total} subreddits tracked this month, <strong>${high.length}</strong> score High or above (≥50), with an average bot activity score of <strong>${avgScore}/100</strong> across all communities. `;
+  text += `<strong>r/${top[0]}</strong> leads at <strong>${topD.final_score.toFixed(1)}</strong>, driven primarily by ${compNames[dominant]}. `;
+
+  if (high.length >= 3) {
+    const highNames = high.slice(0,3).map(([s])=>'r/'+s).join(', ');
+    text += `${highNames} all show elevated signals — political, entertainment, and finance communities appear more susceptible to coordinated activity than niche or hobby spaces. `;
+  }
+
+  text += `<strong>r/${cleanest[0]}</strong> is the cleanest community this month at <strong>${cleanest[1].final_score.toFixed(1)}</strong>`;
+  if (low.length > 1) text += `, alongside ${low.length-1} other subreddit${low.length>2?'s':''} in the low-risk zone`;
+  text += `, suggesting organic, interest-driven communities see less coordinated interference.`;
+
+  document.getElementById('summaryText').innerHTML = text;
 }
 
 // ── (removed) grouped component bar chart ────────────────────────────────────
