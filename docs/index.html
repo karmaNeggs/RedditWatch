@@ -201,7 +201,7 @@ function renderTabs(active) {
 async function switchMonth(month) {
   ['barChart','radarChart','trendChart'].forEach(destroyChart);
   renderTabs(month);
-  const r = await fetch(`data/${month}.json`);
+  const r = await fetch(`data/${month}.json?v=${Date.now()}`);
   if (!r.ok) { showError(`Could not load data/${month}.json`); return; }
   current = await r.json();
   renderAll();
@@ -531,7 +531,7 @@ function showError(msg) {
 
 async function init() {
   try {
-    const r = await fetch('data/history.json');
+    const r = await fetch(`data/history.json?v=${Date.now()}`);
     if (!r.ok) throw new Error('data/history.json not found');
     history = await r.json();
     if (!history.months?.length) { showError('No analysis data yet. Run <code>bash run_monthly.sh</code> to generate real data.'); return; }
