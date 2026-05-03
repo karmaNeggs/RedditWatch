@@ -131,37 +131,40 @@ def collect_data():
 @app.route('/api/run-analysis', methods=['POST'])
 @login_required
 def run_analysis():
-    """Trigger analysis"""
+    """Trigger analysis then regenerate site data"""
     try:
         result = subprocess.run(
             ['python3', os.path.join(SCRIPTS_DIR, 'analyze_data.py')],
-            capture_output=True,
-            text=True,
-            timeout=300
+            capture_output=True, text=True, timeout=300
         )
-        
-        if result.returncode == 0:
-            return jsonify({
-                'success': True,
-                'message': 'Analysis completed successfully',
-                'output': result.stdout
-            })
-        else:
+        if result.returncode != 0:
             return jsonify({
                 'success': False,
                 'message': 'Analysis failed',
                 'error': result.stderr
             }), 500
+
+        # Rebuild docs/data/ so the site reflects the new run
+        gen = subprocess.run(
+            ['python3', os.path.join(SCRIPTS_DIR, 'generate_site.py')],
+            capture_output=True, text=True, timeout=60
+        )
+
+        combined_output = result.stdout
+        if gen.returncode == 0:
+            combined_output += '\n' + gen.stdout
+        else:
+            combined_output += '\n[Warning] generate_site.py failed: ' + gen.stderr
+
+        return jsonify({
+            'success': True,
+            'message': 'Analysis complete. Site data updated.',
+            'output': combined_output
+        })
     except subprocess.TimeoutExpired:
-        return jsonify({
-            'success': False,
-            'message': 'Analysis timed out (>5 minutes)'
-        }), 500
+        return jsonify({'success': False, 'message': 'Analysis timed out (>5 minutes)'}), 500
     except Exception as e:
-        return jsonify({
-            'success': False,
-            'message': str(e)
-        }), 500
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 @app.route('/api/latest-analysis', methods=['GET'])
 @login_required

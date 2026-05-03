@@ -1,0 +1,233 @@
+{
+  "analysis_date": "2025-03-01T08:42:17",
+  "user_analysis": {
+    "india": {
+      "users_analyzed": 28,
+      "avg_account_age_days": 843.7,
+      "avg_total_karma": 21340.0,
+      "avg_karma_per_day": 31.2,
+      "median_karma_per_day": 18.4,
+      "suspicious_accounts_count": 4,
+      "suspicious_accounts_pct": 14.3,
+      "very_suspicious_count": 1,
+      "user_score": 17.4
+    },
+    "unitedstatesofindia": {
+      "users_analyzed": 27,
+      "avg_account_age_days": 567.8,
+      "avg_total_karma": 37840.0,
+      "avg_karma_per_day": 81.6,
+      "median_karma_per_day": 55.2,
+      "suspicious_accounts_count": 10,
+      "suspicious_accounts_pct": 37.0,
+      "very_suspicious_count": 2,
+      "user_score": 45.1
+    },
+    "indiaspeaks": {
+      "users_analyzed": 24,
+      "avg_account_age_days": 398.4,
+      "avg_total_karma": 63420.0,
+      "avg_karma_per_day": 184.3,
+      "median_karma_per_day": 151.7,
+      "suspicious_accounts_count": 17,
+      "suspicious_accounts_pct": 70.8,
+      "very_suspicious_count": 5,
+      "user_score": 86.4
+    },
+    "teenindia": {
+      "users_analyzed": 22,
+      "avg_account_age_days": 278.3,
+      "avg_total_karma": 5480.0,
+      "avg_karma_per_day": 21.4,
+      "median_karma_per_day": 14.8,
+      "suspicious_accounts_count": 2,
+      "suspicious_accounts_pct": 9.1,
+      "very_suspicious_count": 0,
+      "user_score": 10.9
+    },
+    "indiasocial": {
+      "users_analyzed": 25,
+      "avg_account_age_days": 487.6,
+      "avg_total_karma": 10280.0,
+      "avg_karma_per_day": 24.7,
+      "median_karma_per_day": 17.3,
+      "suspicious_accounts_count": 3,
+      "suspicious_accounts_pct": 12.0,
+      "very_suspicious_count": 0,
+      "user_score": 14.4
+    }
+  },
+  "post_analysis": {
+    "india": {
+      "posts_analyzed": 30,
+      "avg_score": 2287.0,
+      "median_score": 1478.0,
+      "avg_comments": 218.4,
+      "median_comments": 171.0,
+      "avg_upvote_ratio": 0.881,
+      "ucr": 10.5,
+      "engagement_score": 22.8
+    },
+    "unitedstatesofindia": {
+      "posts_analyzed": 30,
+      "avg_score": 3012.0,
+      "median_score": 2214.0,
+      "avg_comments": 82.1,
+      "median_comments": 61.0,
+      "avg_upvote_ratio": 0.941,
+      "ucr": 36.7,
+      "engagement_score": 83.2
+    },
+    "indiaspeaks": {
+      "posts_analyzed": 30,
+      "avg_score": 1341.0,
+      "median_score": 1274.0,
+      "avg_comments": 35.2,
+      "median_comments": 33.0,
+      "avg_upvote_ratio": 0.978,
+      "ucr": 38.1,
+      "engagement_score": 95.8
+    },
+    "teenindia": {
+      "posts_analyzed": 30,
+      "avg_score": 543.0,
+      "median_score": 351.0,
+      "avg_comments": 74.6,
+      "median_comments": 55.0,
+      "avg_upvote_ratio": 0.874,
+      "ucr": 7.3,
+      "engagement_score": 15.8
+    },
+    "indiasocial": {
+      "posts_analyzed": 30,
+      "avg_score": 841.0,
+      "median_score": 573.0,
+      "avg_comments": 58.9,
+      "median_comments": 42.0,
+      "avg_upvote_ratio": 0.889,
+      "ucr": 14.3,
+      "engagement_score": 31.1
+    }
+  },
+  "temporal_analysis": {
+    "india": {
+      "total_posts": 30,
+      "peak_hour_utc": 14,
+      "peak_hour_count": 6,
+      "top_3_hours_concentration": 40.0,
+      "entropy": 3.76,
+      "hours_with_posts": 16,
+      "temporal_score": 43.1
+    },
+    "unitedstatesofindia": {
+      "total_posts": 30,
+      "peak_hour_utc": 16,
+      "peak_hour_count": 10,
+      "top_3_hours_concentration": 53.3,
+      "entropy": 3.14,
+      "hours_with_posts": 12,
+      "temporal_score": 60.8
+    },
+    "indiaspeaks": {
+      "total_posts": 30,
+      "peak_hour_utc": 11,
+      "peak_hour_count": 14,
+      "top_3_hours_concentration": 73.3,
+      "entropy": 2.31,
+      "hours_with_posts": 7,
+      "temporal_score": 93.3
+    },
+    "teenindia": {
+      "total_posts": 30,
+      "peak_hour_utc": 17,
+      "peak_hour_count": 4,
+      "top_3_hours_concentration": 30.0,
+      "entropy": 4.18,
+      "hours_with_posts": 19,
+      "temporal_score": 30.0
+    },
+    "indiasocial": {
+      "total_posts": 30,
+      "peak_hour_utc": 15,
+      "peak_hour_count": 5,
+      "top_3_hours_concentration": 36.7,
+      "entropy": 3.84,
+      "hours_with_posts": 16,
+      "temporal_score": 38.1
+    }
+  },
+  "distribution_analysis": {
+    "india": {
+      "score_cv": 1.58,
+      "comments_cv": 1.31,
+      "score_skew": 2.04,
+      "comments_skew": 1.62,
+      "distribution_score": 0.0
+    },
+    "unitedstatesofindia": {
+      "score_cv": 0.72,
+      "comments_cv": 0.64,
+      "score_skew": 0.94,
+      "comments_skew": 0.81,
+      "distribution_score": 14.0
+    },
+    "indiaspeaks": {
+      "score_cv": 0.19,
+      "comments_cv": 0.17,
+      "score_skew": 0.24,
+      "comments_skew": 0.21,
+      "distribution_score": 98.3
+    },
+    "teenindia": {
+      "score_cv": 1.81,
+      "comments_cv": 1.48,
+      "score_skew": 2.31,
+      "comments_skew": 1.91,
+      "distribution_score": 0.0
+    },
+    "indiasocial": {
+      "score_cv": 1.38,
+      "comments_cv": 1.21,
+      "score_skew": 1.74,
+      "comments_skew": 1.43,
+      "distribution_score": 0.0
+    }
+  },
+  "unified_scores": {
+    "india": {
+      "final_score": 26.4,
+      "user_score": 17.4,
+      "engagement_score": 22.8,
+      "temporal_score": 43.1,
+      "distribution_score": 0.0
+    },
+    "unitedstatesofindia": {
+      "final_score": 57.8,
+      "user_score": 45.1,
+      "engagement_score": 83.2,
+      "temporal_score": 60.8,
+      "distribution_score": 14.0
+    },
+    "indiaspeaks": {
+      "final_score": 90.2,
+      "user_score": 86.4,
+      "engagement_score": 95.8,
+      "temporal_score": 93.3,
+      "distribution_score": 98.3
+    },
+    "teenindia": {
+      "final_score": 18.1,
+      "user_score": 10.9,
+      "engagement_score": 15.8,
+      "temporal_score": 30.0,
+      "distribution_score": 0.0
+    },
+    "indiasocial": {
+      "final_score": 25.7,
+      "user_score": 14.4,
+      "engagement_score": 31.1,
+      "temporal_score": 38.1,
+      "distribution_score": 0.0
+    }
+  }
+}

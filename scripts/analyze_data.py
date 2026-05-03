@@ -1,268 +1,259 @@
 #!/usr/bin/env python3
 """
-Reddit Bot Analysis - Comprehensive Analysis Script
-Run after data collection to perform multi-faceted bot detection
-Usage: python3 analyze_data.py
+Reddit Bot Analysis - Scoring Engine
+Run after collect_data.py. Writes timestamped JSON to output/.
+Usage: python3 scripts/analyze_data.py
 """
 
 import pandas as pd
 import numpy as np
 import json
-from datetime import datetime
-import glob
 import os
+import glob
+from datetime import datetime
+from pathlib import Path
+
+ROOT = Path(__file__).parent.parent
+DATA_DIR = ROOT / 'data'
+OUTPUT_DIR = ROOT / 'output'
+
 
 def load_latest_data():
-    """Load the latest collected data"""
-    if os.path.exists('data/reddit_data_latest.csv'):
-        return pd.read_csv('data/reddit_data_latest.csv')
-    else:
-        # Find the most recent file
-        files = glob.glob('data/reddit_data_*.csv')
-        if not files:
-            raise FileNotFoundError("No data files found. Run collect_data.py first.")
-        latest_file = max(files, key=os.path.getctime)
-        return pd.read_csv(latest_file)
+    latest = DATA_DIR / 'reddit_data_latest.csv'
+    if latest.exists():
+        return pd.read_csv(latest)
+    files = sorted(glob.glob(str(DATA_DIR / 'reddit_data_*.csv')))
+    if not files:
+        raise FileNotFoundError("No data files found. Run collect_data.py first.")
+    return pd.read_csv(max(files, key=os.path.getctime))
 
-def analyze_user_level(df):
-    """Analyze user-level bot indicators"""
-    user_analysis = {}
-    
+
+# ── Component 1: User account patterns (35%) ─────────────────────────────────
+
+def analyze_users(df):
+    result = {}
     for sub in df['subreddit'].unique():
-        sub_data = df[df['subreddit'] == sub].dropna(subset=['total_karma'])
-        
-        if len(sub_data) == 0:
+        sub_df = df[df['subreddit'] == sub].dropna(subset=['karma_per_day', 'account_age_days'])
+        if sub_df.empty:
             continue
-        
-        suspicious_accounts = len(sub_data[sub_data['karma_per_day'] > 100])
-        very_suspicious = len(sub_data[sub_data['karma_per_day'] > 500])
-        
-        user_analysis[sub] = {
-            'users_analyzed': len(sub_data),
-            'avg_account_age_days': sub_data['account_age_days'].mean(),
-            'avg_total_karma': sub_data['total_karma'].mean(),
-            'avg_karma_per_day': sub_data['karma_per_day'].mean(),
-            'median_karma_per_day': sub_data['karma_per_day'].median(),
-            'suspicious_accounts_count': suspicious_accounts,
-            'suspicious_accounts_pct': (suspicious_accounts / len(sub_data)) * 100,
-            'very_suspicious_count': very_suspicious,
-            'karma_per_day_std': sub_data['karma_per_day'].std(),
+
+        # Suspicious: very high karma/day OR new account with elevated karma
+        suspicious_mask = (sub_df['karma_per_day'] > 200) | (
+            (sub_df['account_age_days'] < 90) & (sub_df['karma_per_day'] > 50)
+        )
+        very_suspicious_mask = sub_df['karma_per_day'] > 1000
+
+        n = len(sub_df)
+        suspicious_pct = (suspicious_mask.sum() / n) * 100
+        very_suspicious_pct = (very_suspicious_mask.sum() / n) * 100
+
+        # Score: scale so 60% suspicious ≈ 72, capped at 100
+        # very_suspicious adds up to 28 bonus points
+        score = min(max(0, suspicious_pct * 1.2 + very_suspicious_pct * 0.28), 100)
+
+        result[sub] = {
+            'users_analyzed': n,
+            'avg_account_age_days': float(sub_df['account_age_days'].mean()),
+            'avg_total_karma': float(sub_df['total_karma'].mean()),
+            'avg_karma_per_day': float(sub_df['karma_per_day'].mean()),
+            'median_karma_per_day': float(sub_df['karma_per_day'].median()),
+            'suspicious_accounts_count': int(suspicious_mask.sum()),
+            'suspicious_accounts_pct': float(suspicious_pct),
+            'very_suspicious_count': int(very_suspicious_mask.sum()),
+            'user_score': float(score),
         }
-    
-    return user_analysis
+    return result
+
+
+# ── Component 2: Engagement patterns (30%) ───────────────────────────────────
 
 def analyze_engagement(df):
-    """Analyze post-level engagement patterns"""
-    post_analysis = {}
-    
+    result = {}
     for sub in df['subreddit'].unique():
-        sub_posts = df[df['subreddit'] == sub]
-        
-        avg_score = sub_posts['score'].mean()
-        avg_comments = sub_posts['num_comments'].mean()
-        avg_upvote_ratio = sub_posts['upvote_ratio'].mean()
-        
+        sub_df = df[df['subreddit'] == sub]
+
+        avg_score = float(sub_df['score'].mean())
+        avg_comments = float(sub_df['num_comments'].mean())
+        avg_upvote_ratio = float(sub_df['upvote_ratio'].mean())
         ucr = avg_score / max(avg_comments, 1)
-        
-        post_analysis[sub] = {
-            'posts_analyzed': len(sub_posts),
+
+        # High UCR = bots upvote without commenting → up to 65 pts
+        # UCR > 30 is very suspicious
+        ucr_component = min((ucr / 30) * 65, 65)
+
+        # High upvote consensus = coordinated voting
+        # Maps 85%–100% ratio → 0–35 pts; never goes negative
+        upvote_component = max(0, min((avg_upvote_ratio - 0.85) / 0.15 * 35, 35))
+
+        engagement_score = min(max(0, ucr_component + upvote_component), 100)
+
+        result[sub] = {
+            'posts_analyzed': len(sub_df),
             'avg_score': avg_score,
-            'median_score': sub_posts['score'].median(),
+            'median_score': float(sub_df['score'].median()),
             'avg_comments': avg_comments,
-            'median_comments': sub_posts['num_comments'].median(),
+            'median_comments': float(sub_df['num_comments'].median()),
             'avg_upvote_ratio': avg_upvote_ratio,
-            'median_upvote_ratio': sub_posts['upvote_ratio'].median(),
-            'ucr': ucr,
-            'score_std': sub_posts['score'].std(),
-            'comments_std': sub_posts['num_comments'].std(),
+            'ucr': float(ucr),
+            'engagement_score': float(engagement_score),
         }
-    
-    return post_analysis
+    return result
+
+
+# ── Component 3: Temporal patterns (20%) ─────────────────────────────────────
 
 def analyze_temporal(df):
-    """Analyze temporal posting patterns"""
-    df['created_datetime'] = pd.to_datetime(df['created_utc'], unit='s')
-    df['hour_of_day'] = df['created_datetime'].dt.hour
-    
-    temporal_analysis = {}
-    
+    df = df.copy()
+    df['hour'] = pd.to_datetime(df['created_utc'], unit='s').dt.hour
+    result = {}
+
     for sub in df['subreddit'].unique():
-        sub_posts = df[df['subreddit'] == sub]
-        
-        hour_dist = sub_posts['hour_of_day'].value_counts().sort_index()
-        
-        peak_hour = hour_dist.idxmax()
-        peak_count = hour_dist.max()
-        
-        top_3_hours = hour_dist.nlargest(3).sum()
-        concentration = (top_3_hours / len(sub_posts)) * 100
-        
-        hour_probs = hour_dist / len(sub_posts)
-        entropy = -np.sum(hour_probs * np.log2(hour_probs + 1e-10))
-        
-        temporal_analysis[sub] = {
-            'total_posts': len(sub_posts),
-            'peak_hour_utc': int(peak_hour),
-            'peak_hour_count': int(peak_count),
+        sub_df = df[df['subreddit'] == sub]
+        hour_counts = sub_df['hour'].value_counts().sort_index()
+
+        peak_hour = int(hour_counts.idxmax())
+        top3 = hour_counts.nlargest(3).sum()
+        concentration = float((top3 / len(sub_df)) * 100)
+
+        probs = hour_counts / len(sub_df)
+        entropy = float(-np.sum(probs * np.log2(probs + 1e-10)))
+        entropy_max = np.log2(24)  # 4.585 — perfectly uniform across 24h
+
+        # High concentration in top 3 hours → up to 60 pts
+        concentration_component = min(concentration * 1.0, 60)
+        # Low entropy = predictable = automated → up to 40 pts
+        entropy_component = max(0, (1.0 - entropy / entropy_max) * 40)
+        temporal_score = min(max(0, concentration_component + entropy_component), 100)
+
+        result[sub] = {
+            'total_posts': len(sub_df),
+            'peak_hour_utc': peak_hour,
+            'peak_hour_count': int(hour_counts.max()),
             'top_3_hours_concentration': concentration,
             'entropy': entropy,
-            'hours_with_posts': len(hour_dist),
+            'hours_with_posts': len(hour_counts),
+            'temporal_score': float(temporal_score),
         }
-    
-    return temporal_analysis
+    return result
+
+
+# ── Component 4: Score distribution anomalies (15%) ──────────────────────────
 
 def analyze_distribution(df):
-    """Analyze statistical distribution patterns"""
-    distribution_analysis = {}
-    
+    result = {}
     for sub in df['subreddit'].unique():
-        sub_posts = df[df['subreddit'] == sub]
-        
-        score_cv = sub_posts['score'].std() / sub_posts['score'].mean()
-        comments_cv = sub_posts['num_comments'].std() / sub_posts['num_comments'].mean()
-        
-        score_skew = sub_posts['score'].skew()
-        comments_skew = sub_posts['num_comments'].skew()
-        
-        q1_score = sub_posts['score'].quantile(0.25)
-        q3_score = sub_posts['score'].quantile(0.75)
-        iqr_score = q3_score - q1_score
-        outliers_score = len(sub_posts[(sub_posts['score'] > q3_score + 1.5*iqr_score)])
-        
-        distribution_analysis[sub] = {
-            'score_cv': score_cv,
-            'comments_cv': comments_cv,
-            'score_skew': score_skew,
-            'comments_skew': comments_skew,
-            'score_outliers': outliers_score,
-            'outlier_pct': (outliers_score / len(sub_posts)) * 100,
-        }
-    
-    return distribution_analysis
+        sub_df = df[df['subreddit'] == sub]
 
-def calculate_unified_scores(user_analysis, post_analysis, temporal_analysis, distribution_analysis):
-    """Calculate unified bot activity scores"""
-    unified_scores = {}
-    
-    for sub in user_analysis.keys():
-        if sub not in post_analysis or sub not in temporal_analysis:
-            continue
-        
-        # Component 1: User-level (35%)
-        user_score = min(
-            (user_analysis[sub]['suspicious_accounts_pct'] * 0.6) +
-            (min(user_analysis[sub]['avg_karma_per_day'] / 10, 100) * 0.4),
-            100
-        )
-        
-        # Component 2: Engagement (30%)
-        ucr = post_analysis[sub]['ucr']
-        upvote_ratio = post_analysis[sub]['avg_upvote_ratio']
-        engagement_score = min(
-            ((ucr / 30) * 50) +
-            ((upvote_ratio - 0.90) * 500 * 0.5),
-            100
-        )
-        
-        # Component 3: Temporal (20%)
-        temporal_score = min(
-            (temporal_analysis[sub]['top_3_hours_concentration'] * 2) +
-            ((3 - temporal_analysis[sub]['entropy']) * 10),
-            100
-        )
-        
-        # Component 4: Distribution (15%)
-        distribution_score = min(
-            (distribution_analysis[sub]['score_cv'] * 20) +
-            (distribution_analysis[sub]['outlier_pct'] * 2),
-            100
-        )
-        
-        # Final score
-        final_score = (
-            (user_score * 0.35) +
-            (engagement_score * 0.30) +
-            (temporal_score * 0.20) +
-            (distribution_score * 0.15)
-        )
-        
-        unified_scores[sub] = {
-            'final_score': final_score,
-            'user_score': user_score,
-            'engagement_score': engagement_score,
-            'temporal_score': temporal_score,
-            'distribution_score': distribution_score,
+        score_mean = sub_df['score'].mean()
+        score_std = sub_df['score'].std()
+        score_cv = score_std / score_mean if score_mean > 0 else 0
+
+        comments_mean = sub_df['num_comments'].mean()
+        comments_cv = sub_df['num_comments'].std() / comments_mean if comments_mean > 0 else 0
+
+        # Low CV = suspiciously uniform votes (bots give similar counts to all posts)
+        # Organic communities: CV typically 1.5–3.0; bots: CV < 0.5–0.8
+        # Threshold 0.8: below it is suspicious, maps linearly to 0–70 pts
+        score_uniformity = max(0, min((0.8 - score_cv) / 0.8 * 70, 70))
+        comment_uniformity = max(0, min((0.8 - comments_cv) / 0.8 * 30, 30))
+        distribution_score = min(max(0, score_uniformity + comment_uniformity), 100)
+
+        result[sub] = {
+            'score_cv': float(score_cv),
+            'comments_cv': float(comments_cv),
+            'score_skew': float(sub_df['score'].skew()),
+            'comments_skew': float(sub_df['num_comments'].skew()),
+            'distribution_score': float(distribution_score),
         }
-    
-    return unified_scores
+    return result
+
+
+# ── Unified scoring ───────────────────────────────────────────────────────────
+
+def calculate_scores(user_a, engagement_a, temporal_a, distribution_a):
+    scores = {}
+    for sub in user_a:
+        if sub not in engagement_a or sub not in temporal_a or sub not in distribution_a:
+            continue
+
+        u = user_a[sub]['user_score']
+        e = engagement_a[sub]['engagement_score']
+        t = temporal_a[sub]['temporal_score']
+        d = distribution_a[sub]['distribution_score']
+
+        final = (u * 0.35) + (e * 0.30) + (t * 0.20) + (d * 0.15)
+        scores[sub] = {
+            'final_score': float(final),
+            'user_score': float(u),
+            'engagement_score': float(e),
+            'temporal_score': float(t),
+            'distribution_score': float(d),
+        }
+    return scores
+
+
+def severity(score):
+    if score >= 70: return 'CRITICAL'
+    if score >= 50: return 'HIGH'
+    if score >= 30: return 'MODERATE'
+    return 'LOW'
+
 
 def main():
-    print("\n" + "="*80)
-    print("REDDIT BOT ANALYSIS - COMPREHENSIVE ANALYSIS")
-    print("Timestamp: " + datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-    print("="*80)
-    
-    # Load data
-    print("\n📂 Loading data...")
+    print("\n" + "=" * 70)
+    print("REDDIT BOT ANALYSIS — SCORING ENGINE")
+    print(f"Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print("=" * 70)
+
+    OUTPUT_DIR.mkdir(exist_ok=True)
+
+    print("\nLoading data...")
     df = load_latest_data()
-    print(f"✓ Loaded {len(df)} posts")
-    
-    # Run analyses
-    print("\n🔍 Running analyses...")
-    user_analysis = analyze_user_level(df)
-    print("  ✓ User-level analysis complete")
-    
-    post_analysis = analyze_engagement(df)
-    print("  ✓ Engagement analysis complete")
-    
-    temporal_analysis = analyze_temporal(df)
-    print("  ✓ Temporal analysis complete")
-    
-    distribution_analysis = analyze_distribution(df)
-    print("  ✓ Distribution analysis complete")
-    
-    # Calculate unified scores
-    print("\n📊 Calculating unified scores...")
-    unified_scores = calculate_unified_scores(
-        user_analysis, post_analysis, temporal_analysis, distribution_analysis
-    )
-    
-    # Sort by final score
-    sorted_scores = sorted(unified_scores.items(), key=lambda x: x[1]['final_score'], reverse=True)
-    
-    print("\n" + "="*80)
-    print("FINAL BOT ACTIVITY RANKINGS")
-    print("="*80)
-    
-    for rank, (sub, scores) in enumerate(sorted_scores, 1):
-        severity = 'CRITICAL' if scores['final_score'] > 70 else 'HIGH' if scores['final_score'] > 55 else 'MODERATE' if scores['final_score'] > 40 else 'LOW'
-        print(f"\n#{rank} {sub:25} | Score: {scores['final_score']:6.1f}/100 | {severity}")
-        print(f"     User: {scores['user_score']:6.1f} | Engagement: {scores['engagement_score']:6.1f} | Temporal: {scores['temporal_score']:6.1f} | Distribution: {scores['distribution_score']:6.1f}")
-    
-    # Save comprehensive results
-    comprehensive_data = {
+    print(f"  {len(df)} posts across {df['subreddit'].nunique()} subreddits")
+
+    print("\nRunning analyses...")
+    user_a = analyze_users(df)
+    print("  User account patterns done")
+    engagement_a = analyze_engagement(df)
+    print("  Engagement patterns done")
+    temporal_a = analyze_temporal(df)
+    print("  Temporal patterns done")
+    distribution_a = analyze_distribution(df)
+    print("  Distribution analysis done")
+
+    scores = calculate_scores(user_a, engagement_a, temporal_a, distribution_a)
+
+    print("\n" + "=" * 70)
+    print("BOT ACTIVITY RANKINGS")
+    print("=" * 70)
+    for rank, (sub, sc) in enumerate(
+        sorted(scores.items(), key=lambda x: x[1]['final_score'], reverse=True), 1
+    ):
+        sev = severity(sc['final_score'])
+        print(f"\n#{rank} r/{sub:<25} Score: {sc['final_score']:5.1f}/100  [{sev}]")
+        print(f"     User:{sc['user_score']:5.1f}  Engagement:{sc['engagement_score']:5.1f}  "
+              f"Temporal:{sc['temporal_score']:5.1f}  Distribution:{sc['distribution_score']:5.1f}")
+
+    output = {
         'analysis_date': datetime.now().isoformat(),
-        'user_analysis': user_analysis,
-        'post_analysis': post_analysis,
-        'temporal_analysis': temporal_analysis,
-        'distribution_analysis': distribution_analysis,
-        'unified_scores': unified_scores,
+        'user_analysis': user_a,
+        'post_analysis': engagement_a,
+        'temporal_analysis': temporal_a,
+        'distribution_analysis': distribution_a,
+        'unified_scores': scores,
     }
-    
+
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    output_file = f'output/analysis_{timestamp}.json'
-    
-    with open(output_file, 'w') as f:
-        json.dump(comprehensive_data, f, indent=2, default=str)
-    
-    # Also save as latest
-    with open('output/analysis_latest.json', 'w') as f:
-        json.dump(comprehensive_data, f, indent=2, default=str)
-    
-    print(f"\n✅ Analysis saved to: {output_file}")
-    print("="*80 + "\n")
-    
-    return output_file
+    out_path = OUTPUT_DIR / f'analysis_{timestamp}.json'
+    with open(out_path, 'w') as f:
+        json.dump(output, f, indent=2, default=str)
+    with open(OUTPUT_DIR / 'analysis_latest.json', 'w') as f:
+        json.dump(output, f, indent=2, default=str)
+
+    print(f"\nSaved: {out_path}")
+    print("=" * 70 + "\n")
+    return str(out_path)
+
 
 if __name__ == '__main__':
     main()

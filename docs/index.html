@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reddit Bot Watch — Indian Subreddits</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --surface2: #21262d;
+      --border: #30363d;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --critical: #f85149;
+      --high: #d29922;
+      --moderate: #e3b341;
+      --low: #3fb950;
+      --blue: #58a6ff;
+      --purple: #bc8cff;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, sans-serif; font-size: 14px; line-height: 1.5; }
+    a { color: var(--blue); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .container { max-width: 1120px; margin: 0 auto; padding: 0 20px; }
+
+    /* ── Header ── */
+    header { border-bottom: 1px solid var(--border); padding: 14px 0; position: sticky; top: 0; background: rgba(13,17,23,0.92); backdrop-filter: blur(8px); z-index: 100; }
+    .hdr { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .logo { font-size: 16px; font-weight: 700; white-space: nowrap; }
+    .logo em { color: var(--muted); font-style: normal; font-weight: 400; font-size: 13px; margin-left: 8px; }
+    .hdr-right { display: flex; align-items: center; gap: 16px; color: var(--muted); font-size: 12px; }
+    .note-badge { background: rgba(227,179,65,0.12); color: var(--moderate); border: 1px solid rgba(227,179,65,0.25); border-radius: 12px; padding: 2px 10px; font-size: 11px; font-weight: 600; }
+
+    /* ── Month bar ── */
+    .month-bar { border-bottom: 1px solid var(--border); padding: 10px 0; background: var(--surface); }
+    .month-tabs { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+    .month-label { font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; margin-right: 4px; }
+    .month-tab { padding: 4px 14px; border-radius: 20px; border: 1px solid var(--border); color: var(--muted); cursor: pointer; font-size: 12px; background: transparent; transition: all 0.15s; }
+    .month-tab:hover { border-color: var(--blue); color: var(--text); }
+    .month-tab.active { background: var(--blue); border-color: var(--blue); color: #fff; font-weight: 600; }
+
+    /* ── Layout ── */
+    main { padding: 24px 0 48px; }
+    .section { margin-bottom: 28px; }
+    .section-title { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; }
+
+    /* ── Summary row ── */
+    .summary-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
+    .summary-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; cursor: pointer; transition: border-color 0.15s; }
+    .summary-card:hover { border-color: var(--blue); }
+    .summary-card.selected { border-color: var(--blue); background: rgba(88,166,255,0.06); }
+    .sc-name { font-size: 12px; font-weight: 700; color: var(--muted); margin-bottom: 6px; }
+    .sc-score { font-size: 28px; font-weight: 800; line-height: 1; }
+    .sc-label { font-size: 11px; margin-top: 4px; font-weight: 600; }
+    .sc-bar { height: 3px; border-radius: 2px; margin-top: 10px; }
+
+    /* ── Charts grid ── */
+    .charts-grid { display: grid; grid-template-columns: 3fr 2fr; gap: 16px; }
+    .card-pad { padding: 20px; }
+    .card-title { font-size: 12px; font-weight: 700; color: var(--muted); margin-bottom: 14px; text-transform: uppercase; letter-spacing: 0.05em; }
+    .chart-wrap { position: relative; }
+
+    /* ── Score table ── */
+    table { width: 100%; border-collapse: collapse; }
+    th { text-align: left; padding: 8px 14px; font-size: 11px; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid var(--border); white-space: nowrap; }
+    td { padding: 11px 14px; border-bottom: 1px solid var(--border); font-size: 13px; vertical-align: middle; }
+    tbody tr:last-child td { border-bottom: none; }
+    tbody tr { cursor: pointer; transition: background 0.1s; }
+    tbody tr:hover td { background: var(--surface2); }
+    tbody tr.selected td { background: rgba(88,166,255,0.06); }
+    .sub-col { font-weight: 700; white-space: nowrap; }
+    .sub-col a { color: var(--text); font-size: 11px; font-weight: 400; margin-left: 6px; }
+
+    /* ── Score bar cell ── */
+    .sc-cell { display: flex; align-items: center; gap: 8px; }
+    .sc-bar-bg { flex: 1; height: 5px; background: var(--surface2); border-radius: 3px; min-width: 60px; }
+    .sc-bar-fill { height: 5px; border-radius: 3px; }
+    .sc-val { min-width: 34px; text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+    /* ── Severity badge ── */
+    .badge { display: inline-block; padding: 2px 9px; border-radius: 10px; font-size: 11px; font-weight: 700; }
+    .badge.critical { background: rgba(248,81,73,0.15); color: var(--critical); }
+    .badge.high     { background: rgba(210,153,34,0.15); color: var(--high); }
+    .badge.moderate { background: rgba(227,179,65,0.12); color: var(--moderate); }
+    .badge.low      { background: rgba(63,185,80,0.12); color: var(--low); }
+
+    /* ── Trend chart ── */
+    .trend-note { font-size: 12px; color: var(--muted); text-align: center; padding: 32px 0; }
+
+    /* ── Detail cards ── */
+    .detail-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+    .det-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+    .det-hdr { padding: 12px 16px; display: flex; align-items: flex-start; justify-content: space-between; border-bottom: 1px solid var(--border); }
+    .det-title { font-weight: 700; font-size: 14px; }
+    .det-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .det-score-big { font-size: 22px; font-weight: 800; line-height: 1; }
+    .det-body { padding: 0; }
+    .mrow { display: flex; justify-content: space-between; align-items: center; padding: 8px 16px; border-bottom: 1px solid var(--border); }
+    .mrow:last-child { border-bottom: none; }
+    .ml { color: var(--muted); font-size: 12px; }
+    .mv { font-size: 12px; font-weight: 600; }
+
+    /* ── Archive ── */
+    .arch-table th, .arch-table td { padding: 9px 14px; }
+    .dl-btn { font-size: 11px; padding: 3px 8px; border: 1px solid var(--border); border-radius: 4px; color: var(--muted); display: inline-block; }
+    .dl-btn:hover { border-color: var(--blue); color: var(--blue); text-decoration: none; }
+
+    /* ── Methodology ── */
+    .meth-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .meth-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+    .meth-card h4 { font-size: 13px; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+    .wt { display: inline-block; padding: 1px 7px; background: rgba(88,166,255,0.12); color: var(--blue); border-radius: 4px; font-size: 11px; font-weight: 700; }
+    .meth-card p { font-size: 12px; color: var(--muted); line-height: 1.65; }
+    .meth-thresholds { margin-top: 10px; display: flex; gap: 6px; flex-wrap: wrap; }
+    .thr { font-size: 11px; padding: 2px 8px; border-radius: 4px; font-weight: 600; }
+
+    /* ── Misc ── */
+    .loading { text-align: center; padding: 80px 0; color: var(--muted); }
+    .error-box { background: rgba(248,81,73,0.08); border: 1px solid rgba(248,81,73,0.25); border-radius: 8px; padding: 16px 20px; color: var(--critical); }
+    footer { border-top: 1px solid var(--border); padding: 20px 0; text-align: center; color: var(--muted); font-size: 12px; }
+
+    /* ── Responsive ── */
+    @media (max-width: 900px) {
+      .charts-grid, .meth-grid { grid-template-columns: 1fr; }
+      .summary-row { grid-template-columns: repeat(3, 1fr); }
+    }
+    @media (max-width: 600px) {
+      .summary-row { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="container">
+    <div class="hdr">
+      <div class="logo">Reddit Bot Watch <em>Indian Subreddits</em></div>
+      <div class="hdr-right">
+        <span class="note-badge" id="dataBadge"></span>
+        <span id="lastUpdated"></span>
+        <a href="https://github.com/anupamvashist/reddit-bot-analysis-repo" target="_blank">GitHub</a>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="month-bar">
+  <div class="container">
+    <div class="month-tabs">
+      <span class="month-label">Report:</span>
+      <div id="monthTabs" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <main id="main">
+    <div class="loading">Loading analysis data…</div>
+  </main>
+</div>
+
+<footer>
+  <div class="container">
+    Data collected via Reddit public JSON API · Scores are 0–100 (higher = more bot activity) ·
+    <a href="https://github.com/anupamvashist/reddit-bot-analysis-repo">View source &amp; methodology</a>
+  </div>
+</footer>
+
+<script>
+// ─── helpers ──────────────────────────────────────────────────────────────────
+let history = null, current = null, charts = {};
+
+const SEV = score => score >= 70 ? 'critical' : score >= 50 ? 'high' : score >= 30 ? 'moderate' : 'low';
+const SEV_LABEL = score => score >= 70 ? 'Critical' : score >= 50 ? 'High' : score >= 30 ? 'Moderate' : 'Low';
+const COLOR = score => score >= 70 ? '#f85149' : score >= 50 ? '#d29922' : score >= 30 ? '#e3b341' : '#3fb950';
+
+function fmtMonth(ym) {
+  const [y, m] = ym.split('-');
+  return new Date(+y, +m - 1).toLocaleDateString('en-IN', { year: 'numeric', month: 'short' });
+}
+function fmtDate(iso) {
+  return new Date(iso).toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' });
+}
+function destroyChart(id) { if (charts[id]) { charts[id].destroy(); delete charts[id]; } }
+
+const PALETTE = ['#58a6ff', '#f85149', '#3fb950', '#d29922', '#bc8cff', '#79c0ff'];
+
+// ─── month tabs ───────────────────────────────────────────────────────────────
+function renderTabs(active) {
+  document.getElementById('monthTabs').innerHTML =
+    history.months.slice().reverse().map(m =>
+      `<button class="month-tab${m.month === active ? ' active' : ''}" onclick="switchMonth('${m.month}')">${fmtMonth(m.month)}</button>`
+    ).join('');
+}
+
+async function switchMonth(month) {
+  ['barChart','radarChart','trendChart'].forEach(destroyChart);
+  renderTabs(month);
+  const r = await fetch(`data/${month}.json`);
+  if (!r.ok) { showError(`Could not load data/${month}.json`); return; }
+  current = await r.json();
+  renderAll();
+}
+
+// ─── main render ─────────────────────────────────────────────────────────────
+function renderAll() {
+  const subs = Object.entries(current.subreddits).sort((a, b) => b[1].final_score - a[1].final_score);
+  const latest = history.months[history.months.length - 1];
+  const isDemo = !latest || latest.month < '2026-01';
+
+  document.getElementById('lastUpdated').textContent = 'Updated ' + fmtDate(current.analysis_date);
+  document.getElementById('dataBadge').textContent = isDemo ? 'Demo data' : 'Live data';
+  document.getElementById('dataBadge').style.display = 'inline-block';
+
+  document.getElementById('main').innerHTML = `
+    <div class="section" style="margin-top:20px">
+      <div class="section-title">Bot Activity Score — ${fmtMonth(current.month)}</div>
+      <div class="summary-row" id="summaryRow"></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Score Breakdown by Component</div>
+      <div class="charts-grid">
+        <div class="card card-pad">
+          <div class="card-title">All subreddits — final score</div>
+          <div class="chart-wrap" style="height:220px"><canvas id="barChart"></canvas></div>
+        </div>
+        <div class="card card-pad">
+          <div class="card-title" id="radarLabel">Component breakdown</div>
+          <div class="chart-wrap" style="height:220px"><canvas id="radarChart"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Detailed Scores</div>
+      <div class="card">
+        <table>
+          <thead><tr>
+            <th>Subreddit</th>
+            <th>User Accounts <span style="font-weight:400;color:var(--muted)">(35%)</span></th>
+            <th>Engagement <span style="font-weight:400;color:var(--muted)">(30%)</span></th>
+            <th>Temporal <span style="font-weight:400;color:var(--muted)">(20%)</span></th>
+            <th>Distribution <span style="font-weight:400;color:var(--muted)">(15%)</span></th>
+            <th>Final</th>
+            <th>Severity</th>
+          </tr></thead>
+          <tbody id="scoreBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Month-to-Month Trend</div>
+      <div class="card card-pad">
+        <div class="chart-wrap" style="height:240px"><canvas id="trendChart"></canvas></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Subreddit Details</div>
+      <div class="detail-grid" id="detailGrid"></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Data Archive</div>
+      <div class="card">
+        <table class="arch-table">
+          <thead><tr><th>Month</th><th>Highest risk</th><th>Score</th><th>Analysis JSON</th></tr></thead>
+          <tbody id="archBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Methodology</div>
+      <div class="meth-grid">
+        <div class="meth-card">
+          <h4>User Account Patterns <span class="wt">35%</span></h4>
+          <p>Flags accounts earning &gt;200 karma/day, or new accounts (&lt;90 days old) with &gt;50 karma/day. Bot networks cycle through accounts that gain karma abnormally fast to appear legitimate.</p>
+          <div class="meth-thresholds">
+            <span class="thr" style="background:rgba(248,81,73,.12);color:#f85149">&gt;1000/day = critical</span>
+            <span class="thr" style="background:rgba(210,153,34,.12);color:#d29922">&gt;200/day = suspicious</span>
+          </div>
+        </div>
+        <div class="meth-card">
+          <h4>Engagement Patterns <span class="wt">30%</span></h4>
+          <p>Measures upvote-to-comment ratio (UCR). Bots upvote without commenting — so bot-heavy subs have high post scores but low discussion. High upvote consensus (&gt;85%) also signals coordinated voting.</p>
+          <div class="meth-thresholds">
+            <span class="thr" style="background:rgba(248,81,73,.12);color:#f85149">UCR &gt; 30 = suspicious</span>
+            <span class="thr" style="background:rgba(210,153,34,.12);color:#d29922">Upvotes &gt;92% = suspicious</span>
+          </div>
+        </div>
+        <div class="meth-card">
+          <h4>Temporal Patterns <span class="wt">20%</span></h4>
+          <p>Automated systems post in tight time windows. Measures concentration in the top 3 busiest hours and entropy of posting distribution — lower entropy means more predictable, scheduled behaviour.</p>
+          <div class="meth-thresholds">
+            <span class="thr" style="background:rgba(248,81,73,.12);color:#f85149">&gt;60% in top-3 hours</span>
+            <span class="thr" style="background:rgba(210,153,34,.12);color:#d29922">Entropy &lt; 3 of 4.58 max</span>
+          </div>
+        </div>
+        <div class="meth-card">
+          <h4>Score Distribution <span class="wt">15%</span></h4>
+          <p>Organic communities have high variance — a few posts go viral, most don't. Coordinated bot activity produces suspiciously <em>uniform</em> vote counts across all posts (low coefficient of variation).</p>
+          <div class="meth-thresholds">
+            <span class="thr" style="background:rgba(248,81,73,.12);color:#f85149">CV &lt; 0.3 = very uniform</span>
+            <span class="thr" style="background:rgba(63,185,80,.12);color:#3fb950">CV &gt; 1.0 = organic</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  renderSummaryCards(subs);
+  renderBarChart(subs);
+  renderRadarChart(subs[0][0], subs[0][1]);
+  renderScoreTable(subs);
+  renderTrendChart();
+  renderDetailCards(subs);
+  renderArchive();
+}
+
+// ─── summary cards ────────────────────────────────────────────────────────────
+function renderSummaryCards(subs) {
+  document.getElementById('summaryRow').innerHTML = subs.map(([sub, d], i) => {
+    const c = COLOR(d.final_score);
+    return `<div class="summary-card${i === 0 ? ' selected' : ''}" onclick="selectSub(this,'${sub}')" id="sc-${sub}">
+      <div class="sc-name">r/${sub}</div>
+      <div class="sc-score" style="color:${c}">${d.final_score.toFixed(1)}</div>
+      <div class="sc-label" style="color:${c}">${SEV_LABEL(d.final_score)}</div>
+      <div class="sc-bar" style="background:${c};width:${d.final_score}%"></div>
+    </div>`;
+  }).join('');
+}
+
+// ─── bar chart ────────────────────────────────────────────────────────────────
+function renderBarChart(subs) {
+  destroyChart('barChart');
+  const ctx = document.getElementById('barChart').getContext('2d');
+  charts.barChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: subs.map(([s]) => 'r/' + s),
+      datasets: [{
+        data: subs.map(([, d]) => d.final_score),
+        backgroundColor: subs.map(([, d]) => COLOR(d.final_score) + 'bb'),
+        borderColor: subs.map(([, d]) => COLOR(d.final_score)),
+        borderWidth: 1, borderRadius: 4,
+      }]
+    },
+    options: {
+      indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: c => ` ${c.parsed.x.toFixed(1)} — ${SEV_LABEL(c.parsed.x)}` } }
+      },
+      scales: {
+        x: { min: 0, max: 100, grid: { color: '#21262d' }, ticks: { color: '#8b949e' }, border: { color: '#30363d' } },
+        y: { grid: { display: false }, ticks: { color: '#e6edf3', font: { size: 13 } }, border: { color: '#30363d' } }
+      }
+    }
+  });
+}
+
+// ─── radar chart ──────────────────────────────────────────────────────────────
+function renderRadarChart(sub, d) {
+  destroyChart('radarChart');
+  document.getElementById('radarLabel').textContent = `r/${sub} — component breakdown`;
+  const ctx = document.getElementById('radarChart').getContext('2d');
+  const c = COLOR(d.final_score);
+  charts.radarChart = new Chart(ctx, {
+    type: 'radar',
+    data: {
+      labels: ['User Accounts', 'Engagement', 'Temporal', 'Distribution'],
+      datasets: [{
+        label: 'r/' + sub,
+        data: [d.user_score, d.engagement_score, d.temporal_score, d.distribution_score],
+        backgroundColor: c + '28', borderColor: c, borderWidth: 2,
+        pointBackgroundColor: c, pointRadius: 4,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { labels: { color: '#8b949e', font: { size: 11 } } } },
+      scales: {
+        r: {
+          min: 0, max: 100,
+          grid: { color: '#30363d' }, angleLines: { color: '#30363d' },
+          ticks: { color: '#8b949e', backdropColor: 'transparent', stepSize: 25, font: { size: 10 } },
+          pointLabels: { color: '#8b949e', font: { size: 11 } }
+        }
+      }
+    }
+  });
+}
+
+// ─── score table ──────────────────────────────────────────────────────────────
+function renderScoreTable(subs) {
+  document.getElementById('scoreBody').innerHTML = subs.map(([sub, d], i) =>
+    `<tr class="${i === 0 ? 'selected' : ''}" onclick="selectSub(null,'${sub}',this)">
+      <td class="sub-col">r/${sub} <a href="https://reddit.com/r/${sub}" target="_blank">↗</a></td>
+      <td>${scorecell(d.user_score)}</td>
+      <td>${scorecell(d.engagement_score)}</td>
+      <td>${scorecell(d.temporal_score)}</td>
+      <td>${scorecell(d.distribution_score)}</td>
+      <td>${scorecell(d.final_score)}</td>
+      <td><span class="badge ${SEV(d.final_score)}">${SEV_LABEL(d.final_score)}</span></td>
+    </tr>`
+  ).join('');
+}
+function scorecell(v) {
+  const c = COLOR(v);
+  return `<div class="sc-cell">
+    <div class="sc-bar-bg"><div class="sc-bar-fill" style="width:${v}%;background:${c}"></div></div>
+    <span class="sc-val" style="color:${c}">${v.toFixed(1)}</span>
+  </div>`;
+}
+
+// ─── select subreddit (updates radar + highlights) ────────────────────────────
+function selectSub(cardEl, sub, rowEl) {
+  // summary cards
+  document.querySelectorAll('.summary-card').forEach(c => c.classList.remove('selected'));
+  const sc = document.getElementById('sc-' + sub);
+  if (sc) sc.classList.add('selected');
+  // table rows
+  document.querySelectorAll('#scoreBody tr').forEach(r => r.classList.remove('selected'));
+  if (rowEl) rowEl.classList.add('selected');
+  else {
+    document.querySelectorAll('#scoreBody tr').forEach(r => {
+      if (r.querySelector('td')?.textContent?.includes('r/' + sub)) r.classList.add('selected');
+    });
+  }
+  renderRadarChart(sub, current.subreddits[sub]);
+}
+
+// ─── trend chart ──────────────────────────────────────────────────────────────
+function renderTrendChart() {
+  destroyChart('trendChart');
+  const ctx = document.getElementById('trendChart').getContext('2d');
+  if (history.months.length < 2) {
+    ctx.canvas.parentElement.innerHTML = '<p class="trend-note">Trend chart available after 2+ months of data. Run the pipeline next month to see trends.</p>';
+    return;
+  }
+  const months = history.months;
+  const allSubs = [...new Set(months.flatMap(m => Object.keys(m.summary)))];
+  charts.trendChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: months.map(m => fmtMonth(m.month)),
+      datasets: allSubs.map((sub, i) => ({
+        label: 'r/' + sub,
+        data: months.map(m => m.summary[sub]?.final_score ?? null),
+        borderColor: PALETTE[i % PALETTE.length],
+        backgroundColor: PALETTE[i % PALETTE.length] + '18',
+        borderWidth: 2, pointRadius: 5, tension: 0.35, spanGaps: true,
+      }))
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { labels: { color: '#8b949e', font: { size: 12 }, padding: 16 } },
+        tooltip: { mode: 'index', intersect: false }
+      },
+      scales: {
+        y: {
+          min: 0, max: 100,
+          grid: { color: '#21262d' }, ticks: { color: '#8b949e' }, border: { color: '#30363d' },
+          title: { display: true, text: 'Bot Activity Score', color: '#8b949e', font: { size: 11 } }
+        },
+        x: { grid: { color: '#21262d' }, ticks: { color: '#8b949e' }, border: { color: '#30363d' } }
+      }
+    }
+  });
+}
+
+// ─── detail cards ─────────────────────────────────────────────────────────────
+function renderDetailCards(subs) {
+  document.getElementById('detailGrid').innerHTML = subs.map(([sub, d]) => {
+    const det = d.details || {};
+    const c = COLOR(d.final_score);
+    const age = det.avg_account_age_days ? Math.round(det.avg_account_age_days) + ' days' : '—';
+    const ageFlag = det.avg_account_age_days && det.avg_account_age_days < 200 ? `color:${COLOR(70)}` : '';
+    return `<div class="det-card">
+      <div class="det-hdr">
+        <div>
+          <div class="det-title">r/${sub}</div>
+          <div class="det-sub"><a href="https://reddit.com/r/${sub}" target="_blank">reddit.com/r/${sub} ↗</a></div>
+        </div>
+        <div>
+          <div class="det-score-big" style="color:${c}">${d.final_score.toFixed(1)}</div>
+          <span class="badge ${SEV(d.final_score)}" style="float:right;margin-top:4px">${SEV_LABEL(d.final_score)}</span>
+        </div>
+      </div>
+      <div class="det-body">
+        <div class="mrow"><span class="ml">Posts analyzed</span><span class="mv">${det.posts_analyzed || '—'}</span></div>
+        <div class="mrow"><span class="ml">Avg account age</span><span class="mv" style="${ageFlag}">${age}</span></div>
+        <div class="mrow"><span class="ml">Avg karma / day</span><span class="mv" style="${det.avg_karma_per_day > 200 ? `color:${COLOR(70)}` : ''}">${det.avg_karma_per_day ?? '—'}</span></div>
+        <div class="mrow"><span class="ml">Suspicious accounts</span><span class="mv" style="${det.suspicious_pct > 20 ? `color:${COLOR(70)}` : ''}">${det.suspicious_pct != null ? det.suspicious_pct + '%' : '—'}</span></div>
+        <div class="mrow"><span class="ml">Avg upvote ratio</span><span class="mv">${det.avg_upvote_ratio ? (det.avg_upvote_ratio * 100).toFixed(1) + '%' : '—'}</span></div>
+        <div class="mrow"><span class="ml">Upvote : Comment ratio</span><span class="mv" style="${det.ucr > 25 ? `color:${COLOR(70)}` : ''}">${det.ucr ?? '—'}</span></div>
+        <div class="mrow"><span class="ml">Peak hour (UTC)</span><span class="mv">${det.peak_hour_utc != null ? det.peak_hour_utc + ':00 UTC' : '—'}</span></div>
+        <div class="mrow"><span class="ml">Top-3 hour concentration</span><span class="mv" style="${det.top_3_concentration > 50 ? `color:${COLOR(70)}` : ''}">${det.top_3_concentration != null ? det.top_3_concentration + '%' : '—'}</span></div>
+        <div class="mrow"><span class="ml">Posting entropy</span><span class="mv">${det.entropy != null ? det.entropy + ' / 4.58' : '—'}</span></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ─── archive ──────────────────────────────────────────────────────────────────
+function renderArchive() {
+  document.getElementById('archBody').innerHTML = history.months.slice().reverse().map(m => {
+    const top = Object.entries(m.summary).sort((a, b) => b[1].final_score - a[1].final_score)[0];
+    return `<tr>
+      <td>${fmtMonth(m.month)}</td>
+      <td>r/${top[0]}</td>
+      <td><span class="badge ${SEV(top[1].final_score)}">${top[1].final_score.toFixed(1)}</span></td>
+      <td><a class="dl-btn" href="data/${m.data_file}" download>Download JSON</a></td>
+    </tr>`;
+  }).join('');
+}
+
+// ─── error / init ─────────────────────────────────────────────────────────────
+function showError(msg) {
+  document.getElementById('main').innerHTML = `<div class="error-box" style="margin-top:24px">${msg}</div>`;
+}
+
+async function init() {
+  try {
+    const r = await fetch('data/history.json');
+    if (!r.ok) throw new Error('data/history.json not found');
+    history = await r.json();
+    if (!history.months?.length) { showError('No analysis data yet. Run <code>bash run_monthly.sh</code> to generate real data.'); return; }
+    const latest = history.months[history.months.length - 1];
+    renderTabs(latest.month);
+    await switchMonth(latest.month);
+  } catch (e) {
+    showError(`Failed to load: ${e.message}.<br><br>
+      <strong>Local testing:</strong> serve with <code>python3 -m http.server 8080</code> from the <code>docs/</code> folder, then open <a href="http://localhost:8080">localhost:8080</a>.<br>
+      Do not open index.html directly as a file:// URL — browsers block fetch() for local files.`);
+  }
+}
+
+init();
+</script>
+</body>
+</html>

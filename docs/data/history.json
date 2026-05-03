@@ -1,0 +1,85 @@
+{
+  "months": [
+    {
+      "month": "2024-09",
+      "analysis_date": "2024-09-20T15:41:05",
+      "data_file": "2024-09.json",
+      "summary": {
+        "india": {
+          "final_score": 21.9,
+          "severity": "low"
+        },
+        "unitedstatesofindia": {
+          "final_score": 43.4,
+          "severity": "moderate"
+        },
+        "indiaspeaks": {
+          "final_score": 75.8,
+          "severity": "critical"
+        },
+        "teenindia": {
+          "final_score": 17.3,
+          "severity": "low"
+        },
+        "indiasocial": {
+          "final_score": 22.6,
+          "severity": "low"
+        }
+      }
+    },
+    {
+      "month": "2024-12",
+      "analysis_date": "2024-12-01T09:03:12",
+      "data_file": "2024-12.json",
+      "summary": {
+        "india": {
+          "final_score": 24.7,
+          "severity": "low"
+        },
+        "unitedstatesofindia": {
+          "final_score": 51.1,
+          "severity": "high"
+        },
+        "indiaspeaks": {
+          "final_score": 83.4,
+          "severity": "critical"
+        },
+        "teenindia": {
+          "final_score": 16.3,
+          "severity": "low"
+        },
+        "indiasocial": {
+          "final_score": 24.8,
+          "severity": "low"
+        }
+      }
+    },
+    {
+      "month": "2025-03",
+      "analysis_date": "2025-03-01T08:42:17",
+      "data_file": "2025-03.json",
+      "summary": {
+        "india": {
+          "final_score": 26.4,
+          "severity": "low"
+        },
+        "unitedstatesofindia": {
+          "final_score": 57.8,
+          "severity": "high"
+        },
+        "indiaspeaks": {
+          "final_score": 90.2,
+          "severity": "critical"
+        },
+        "teenindia": {
+          "final_score": 18.1,
+          "severity": "low"
+        },
+        "indiasocial": {
+          "final_score": 25.7,
+          "severity": "low"
+        }
+      }
+    }
+  ]
+}
