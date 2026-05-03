@@ -1,0 +1,15 @@
+{
+  "timestamp": "2026-05-03T21:20:29.729831",
+  "collection_period": "last_30_days",
+  "posts_per_subreddit": 30,
+  "total_posts": 150,
+  "total_users_fetched": 106,
+  "subreddits": [
+    "india",
+    "unitedstatesofindia",
+    "indiaspeaks",
+    "teenindia",
+    "indiasocial"
+  ],
+  "file": "/Users/anupamvashist/Documents/Project writeups/reddit-bot-analysis-repo/data/reddit_data_20260503_212029.csv"
+}
