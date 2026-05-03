@@ -2,7 +2,7 @@
   "months": [
     {
       "month": "2026-05",
-      "analysis_date": "2026-05-03T21:20:30.231925",
+      "analysis_date": "2026-05-03T21:54:40.646137",
       "data_file": "2026-05.json",
       "summary": {
         "india": {
@@ -24,6 +24,18 @@
         "indiasocial": {
           "final_score": 45.3,
           "severity": "moderate"
+        },
+        "AskIndianWomen": {
+          "final_score": 26.3,
+          "severity": "low"
+        },
+        "Cricket": {
+          "final_score": 64.2,
+          "severity": "high"
+        },
+        "IndianFood": {
+          "final_score": 9.1,
+          "severity": "low"
         }
       }
     }

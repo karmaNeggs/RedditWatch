@@ -7,35 +7,27 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <style>
     :root {
-      --bg: #0d1117;
-      --surface: #161b22;
-      --surface2: #21262d;
-      --border: #30363d;
-      --text: #e6edf3;
-      --muted: #8b949e;
-      --critical: #f85149;
-      --high: #d29922;
-      --moderate: #e3b341;
-      --low: #3fb950;
-      --blue: #58a6ff;
-      --purple: #bc8cff;
+      --bg: #0d1117; --surface: #161b22; --surface2: #21262d; --border: #30363d;
+      --text: #e6edf3; --muted: #8b949e;
+      --critical: #f85149; --high: #d29922; --moderate: #e3b341; --low: #3fb950;
+      --blue: #58a6ff; --purple: #bc8cff;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, sans-serif; font-size: 14px; line-height: 1.5; }
     a { color: var(--blue); text-decoration: none; }
     a:hover { text-decoration: underline; }
-
     .container { max-width: 1120px; margin: 0 auto; padding: 0 20px; }
 
-    /* ── Header ── */
-    header { border-bottom: 1px solid var(--border); padding: 14px 0; position: sticky; top: 0; background: rgba(13,17,23,0.92); backdrop-filter: blur(8px); z-index: 100; }
+    /* Header */
+    header { border-bottom: 1px solid var(--border); padding: 14px 0; position: sticky; top: 0; background: rgba(13,17,23,0.94); backdrop-filter: blur(8px); z-index: 100; }
     .hdr { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-    .logo { font-size: 16px; font-weight: 700; white-space: nowrap; }
+    .logo { font-size: 16px; font-weight: 700; }
     .logo em { color: var(--muted); font-style: normal; font-weight: 400; font-size: 13px; margin-left: 8px; }
     .hdr-right { display: flex; align-items: center; gap: 16px; color: var(--muted); font-size: 12px; }
-    .note-badge { background: rgba(227,179,65,0.12); color: var(--moderate); border: 1px solid rgba(227,179,65,0.25); border-radius: 12px; padding: 2px 10px; font-size: 11px; font-weight: 600; }
+    .live-badge { background: rgba(63,185,80,0.12); color: var(--low); border: 1px solid rgba(63,185,80,0.25); border-radius: 12px; padding: 2px 10px; font-size: 11px; font-weight: 600; }
+    .demo-badge { background: rgba(227,179,65,0.12); color: var(--moderate); border: 1px solid rgba(227,179,65,0.25); border-radius: 12px; padding: 2px 10px; font-size: 11px; font-weight: 600; }
 
-    /* ── Month bar ── */
+    /* Month bar */
     .month-bar { border-bottom: 1px solid var(--border); padding: 10px 0; background: var(--surface); }
     .month-tabs { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
     .month-label { font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; margin-right: 4px; }
@@ -43,94 +35,107 @@
     .month-tab:hover { border-color: var(--blue); color: var(--text); }
     .month-tab.active { background: var(--blue); border-color: var(--blue); color: #fff; font-weight: 600; }
 
-    /* ── Layout ── */
+    /* Layout */
     main { padding: 24px 0 48px; }
-    .section { margin-bottom: 28px; }
-    .section-title { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; }
+    .section { margin-bottom: 32px; }
+    .section-title { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 14px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
     .card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; }
+    .card-pad { padding: 20px; }
+    .card-title { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 14px; }
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
 
-    /* ── Summary row ── */
+    /* Risk spectrum */
+    .spectrum-wrap { padding: 8px 0 16px; }
+    .spectrum-track-wrap { position: relative; height: 40px; margin: 0 8px; }
+    .spectrum-track { height: 8px; border-radius: 4px; background: linear-gradient(to right, #3fb950 0%, #e3b341 30%, #d29922 55%, #f85149 100%); margin-top: 16px; }
+    .spectrum-ticks { display: flex; justify-content: space-between; margin-top: 4px; }
+    .spectrum-tick { font-size: 10px; color: var(--muted); }
+    .sdot { position: absolute; top: 0; transform: translateX(-50%); text-align: center; }
+    .sdot-circle { width: 12px; height: 12px; border-radius: 50%; margin: 0 auto; border: 2px solid var(--bg); }
+    .sdot-line { width: 1px; height: 8px; background: var(--border); margin: 0 auto; }
+    .sdot-name { font-size: 10px; font-weight: 700; white-space: nowrap; margin-top: 2px; }
+    .sdot-score { font-size: 11px; font-weight: 800; }
+
+    /* Zone cards */
+    .zone-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 16px; }
+    .zone-card { padding: 12px 14px; border-radius: 6px; border: 1px solid; }
+    .zone-card.low      { background: rgba(63,185,80,0.07);  border-color: rgba(63,185,80,0.2);  }
+    .zone-card.moderate { background: rgba(227,179,65,0.07); border-color: rgba(227,179,65,0.2); }
+    .zone-card.high     { background: rgba(210,153,34,0.07); border-color: rgba(210,153,34,0.2); }
+    .zone-card.critical { background: rgba(248,81,73,0.07);  border-color: rgba(248,81,73,0.2);  }
+    .zone-range { font-size: 20px; font-weight: 800; line-height: 1; }
+    .zone-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 2px; }
+    .zone-desc  { font-size: 11px; color: var(--muted); margin-top: 6px; line-height: 1.55; }
+    .zone-subs  { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 4px; min-height: 20px; }
+    .zone-sub   { font-size: 10px; font-weight: 700; padding: 1px 7px; border-radius: 10px; }
+
+    /* Summary tiles */
     .summary-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
-    .summary-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; cursor: pointer; transition: border-color 0.15s; }
-    .summary-card:hover { border-color: var(--blue); }
-    .summary-card.selected { border-color: var(--blue); background: rgba(88,166,255,0.06); }
-    .sc-name { font-size: 12px; font-weight: 700; color: var(--muted); margin-bottom: 6px; }
+    .summary-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; }
+    .sc-name  { font-size: 12px; font-weight: 700; color: var(--muted); margin-bottom: 6px; }
     .sc-score { font-size: 28px; font-weight: 800; line-height: 1; }
     .sc-label { font-size: 11px; margin-top: 4px; font-weight: 600; }
-    .sc-bar { height: 3px; border-radius: 2px; margin-top: 10px; }
+    @media (max-width: 900px) { .summary-row { grid-template-columns: repeat(3,1fr); } }
+    @media (max-width: 600px) { .summary-row { grid-template-columns: 1fr 1fr; } }
 
-    /* ── Charts grid ── */
-    .charts-grid { display: grid; grid-template-columns: 3fr 2fr; gap: 16px; }
-    .card-pad { padding: 20px; }
-    .card-title { font-size: 12px; font-weight: 700; color: var(--muted); margin-bottom: 14px; text-transform: uppercase; letter-spacing: 0.05em; }
-    .chart-wrap { position: relative; }
-
-    /* ── Score table ── */
+    /* Score table */
     table { width: 100%; border-collapse: collapse; }
     th { text-align: left; padding: 8px 14px; font-size: 11px; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid var(--border); white-space: nowrap; }
     td { padding: 11px 14px; border-bottom: 1px solid var(--border); font-size: 13px; vertical-align: middle; }
     tbody tr:last-child td { border-bottom: none; }
-    tbody tr { cursor: pointer; transition: background 0.1s; }
     tbody tr:hover td { background: var(--surface2); }
-    tbody tr.selected td { background: rgba(88,166,255,0.06); }
     .sub-col { font-weight: 700; white-space: nowrap; }
-    .sub-col a { color: var(--text); font-size: 11px; font-weight: 400; margin-left: 6px; }
-
-    /* ── Score bar cell ── */
+    .sub-col a { color: var(--muted); font-size: 11px; font-weight: 400; margin-left: 6px; }
     .sc-cell { display: flex; align-items: center; gap: 8px; }
-    .sc-bar-bg { flex: 1; height: 5px; background: var(--surface2); border-radius: 3px; min-width: 60px; }
+    .sc-bar-bg { flex: 1; height: 5px; background: var(--surface2); border-radius: 3px; min-width: 50px; }
     .sc-bar-fill { height: 5px; border-radius: 3px; }
     .sc-val { min-width: 34px; text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
 
-    /* ── Severity badge ── */
+    /* Badge */
     .badge { display: inline-block; padding: 2px 9px; border-radius: 10px; font-size: 11px; font-weight: 700; }
     .badge.critical { background: rgba(248,81,73,0.15); color: var(--critical); }
     .badge.high     { background: rgba(210,153,34,0.15); color: var(--high); }
     .badge.moderate { background: rgba(227,179,65,0.12); color: var(--moderate); }
-    .badge.low      { background: rgba(63,185,80,0.12); color: var(--low); }
+    .badge.low      { background: rgba(63,185,80,0.12);  color: var(--low); }
 
-    /* ── Trend chart ── */
-    .trend-note { font-size: 12px; color: var(--muted); text-align: center; padding: 32px 0; }
-
-    /* ── Detail cards ── */
-    .detail-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+    /* Detail cards */
+    .detail-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 14px; }
     .det-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
     .det-hdr { padding: 12px 16px; display: flex; align-items: flex-start; justify-content: space-between; border-bottom: 1px solid var(--border); }
     .det-title { font-weight: 700; font-size: 14px; }
-    .det-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
-    .det-score-big { font-size: 22px; font-weight: 800; line-height: 1; }
-    .det-body { padding: 0; }
+    .det-sub-link { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .det-score-big { font-size: 24px; font-weight: 800; line-height: 1; text-align: right; }
     .mrow { display: flex; justify-content: space-between; align-items: center; padding: 8px 16px; border-bottom: 1px solid var(--border); }
     .mrow:last-child { border-bottom: none; }
     .ml { color: var(--muted); font-size: 12px; }
     .mv { font-size: 12px; font-weight: 600; }
 
-    /* ── Archive ── */
-    .arch-table th, .arch-table td { padding: 9px 14px; }
+    /* Archive */
     .dl-btn { font-size: 11px; padding: 3px 8px; border: 1px solid var(--border); border-radius: 4px; color: var(--muted); display: inline-block; }
     .dl-btn:hover { border-color: var(--blue); color: var(--blue); text-decoration: none; }
 
-    /* ── Methodology ── */
+    /* Methodology */
     .meth-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
     .meth-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
     .meth-card h4 { font-size: 13px; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
     .wt { display: inline-block; padding: 1px 7px; background: rgba(88,166,255,0.12); color: var(--blue); border-radius: 4px; font-size: 11px; font-weight: 700; }
     .meth-card p { font-size: 12px; color: var(--muted); line-height: 1.65; }
-    .meth-thresholds { margin-top: 10px; display: flex; gap: 6px; flex-wrap: wrap; }
+    .thr-row { margin-top: 10px; display: flex; gap: 6px; flex-wrap: wrap; }
     .thr { font-size: 11px; padding: 2px 8px; border-radius: 4px; font-weight: 600; }
 
-    /* ── Misc ── */
+    /* Misc */
+    .trend-note { font-size: 12px; color: var(--muted); text-align: center; padding: 32px 0; }
     .loading { text-align: center; padding: 80px 0; color: var(--muted); }
-    .error-box { background: rgba(248,81,73,0.08); border: 1px solid rgba(248,81,73,0.25); border-radius: 8px; padding: 16px 20px; color: var(--critical); }
+    .error-box { background: rgba(248,81,73,0.08); border: 1px solid rgba(248,81,73,0.25); border-radius: 8px; padding: 16px 20px; color: var(--critical); margin-top: 24px; }
     footer { border-top: 1px solid var(--border); padding: 20px 0; text-align: center; color: var(--muted); font-size: 12px; }
 
-    /* ── Responsive ── */
     @media (max-width: 900px) {
-      .charts-grid, .meth-grid { grid-template-columns: 1fr; }
-      .summary-row { grid-template-columns: repeat(3, 1fr); }
+      .two-col, .meth-grid { grid-template-columns: 1fr; }
+      .zone-grid { grid-template-columns: 1fr 1fr; }
     }
     @media (max-width: 600px) {
-      .summary-row { grid-template-columns: 1fr 1fr; }
+      .three-col, .zone-grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -141,9 +146,9 @@
     <div class="hdr">
       <div class="logo">Reddit Bot Watch <em>Indian Subreddits</em></div>
       <div class="hdr-right">
-        <span class="note-badge" id="dataBadge"></span>
+        <span id="dataBadge"></span>
         <span id="lastUpdated"></span>
-        <a href="https://github.com/anupamvashist/reddit-bot-analysis-repo" target="_blank">GitHub</a>
+        <a href="https://github.com/karmaNeggs/RedditWatch" target="_blank">GitHub</a>
       </div>
     </div>
   </div>
@@ -159,47 +164,46 @@
 </div>
 
 <div class="container">
-  <main id="main">
-    <div class="loading">Loading analysis data…</div>
-  </main>
+  <main id="main"><div class="loading">Loading…</div></main>
 </div>
 
 <footer>
   <div class="container">
-    Data collected via Reddit public JSON API · Scores are 0–100 (higher = more bot activity) ·
-    <a href="https://github.com/anupamvashist/reddit-bot-analysis-repo">View source &amp; methodology</a>
+    Data collected via Reddit public JSON API · Scores 0–100 (higher = more bot activity) ·
+    <a href="https://github.com/karmaNeggs/RedditWatch">Source &amp; methodology</a>
   </div>
 </footer>
 
 <script>
-// ─── helpers ──────────────────────────────────────────────────────────────────
 let history = null, current = null, charts = {};
 
-const SEV = score => score >= 70 ? 'critical' : score >= 50 ? 'high' : score >= 30 ? 'moderate' : 'low';
-const SEV_LABEL = score => score >= 70 ? 'Critical' : score >= 50 ? 'High' : score >= 30 ? 'Moderate' : 'Low';
-const COLOR = score => score >= 70 ? '#f85149' : score >= 50 ? '#d29922' : score >= 30 ? '#e3b341' : '#3fb950';
+// ── helpers ───────────────────────────────────────────────────────────────────
+const SEV       = s => s >= 70 ? 'critical' : s >= 50 ? 'high' : s >= 30 ? 'moderate' : 'low';
+const SEV_LABEL = s => s >= 70 ? 'Critical' : s >= 50 ? 'High'  : s >= 30 ? 'Moderate' : 'Low';
+const COLOR     = s => s >= 70 ? '#f85149' : s >= 50 ? '#d29922' : s >= 30 ? '#e3b341' : '#3fb950';
+
+const SUB_PALETTE = ['#58a6ff','#f85149','#3fb950','#d29922','#bc8cff'];
+const COMP_COLORS = { user:'#58a6ff', engagement:'#f85149', temporal:'#d29922', distribution:'#bc8cff' };
 
 function fmtMonth(ym) {
-  const [y, m] = ym.split('-');
-  return new Date(+y, +m - 1).toLocaleDateString('en-IN', { year: 'numeric', month: 'short' });
+  const [y,m] = ym.split('-');
+  return new Date(+y,+m-1).toLocaleDateString('en-IN',{year:'numeric',month:'short'});
 }
 function fmtDate(iso) {
-  return new Date(iso).toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' });
+  return new Date(iso).toLocaleDateString('en-IN',{year:'numeric',month:'long',day:'numeric'});
 }
 function destroyChart(id) { if (charts[id]) { charts[id].destroy(); delete charts[id]; } }
 
-const PALETTE = ['#58a6ff', '#f85149', '#3fb950', '#d29922', '#bc8cff', '#79c0ff'];
-
-// ─── month tabs ───────────────────────────────────────────────────────────────
+// ── tabs ──────────────────────────────────────────────────────────────────────
 function renderTabs(active) {
   document.getElementById('monthTabs').innerHTML =
     history.months.slice().reverse().map(m =>
-      `<button class="month-tab${m.month === active ? ' active' : ''}" onclick="switchMonth('${m.month}')">${fmtMonth(m.month)}</button>`
+      `<button class="month-tab${m.month===active?' active':''}" onclick="switchMonth('${m.month}')">${fmtMonth(m.month)}</button>`
     ).join('');
 }
 
 async function switchMonth(month) {
-  ['barChart','radarChart','trendChart'].forEach(destroyChart);
+  ['radarChart','trendChart'].forEach(destroyChart);
   renderTabs(month);
   const r = await fetch(`data/${month}.json?v=${Date.now()}`);
   if (!r.ok) { showError(`Could not load data/${month}.json`); return; }
@@ -207,326 +211,350 @@ async function switchMonth(month) {
   renderAll();
 }
 
-// ─── main render ─────────────────────────────────────────────────────────────
+// ── main render ───────────────────────────────────────────────────────────────
 function renderAll() {
-  const subs = Object.entries(current.subreddits).sort((a, b) => b[1].final_score - a[1].final_score);
-  const latest = history.months[history.months.length - 1];
-  const isDemo = !latest || latest.month < '2026-01';
+  const subs = Object.entries(current.subreddits).sort((a,b) => b[1].final_score - a[1].final_score);
+  const isDemo = current.month < '2026-01';
 
   document.getElementById('lastUpdated').textContent = 'Updated ' + fmtDate(current.analysis_date);
-  document.getElementById('dataBadge').textContent = isDemo ? 'Demo data' : 'Live data';
-  document.getElementById('dataBadge').style.display = 'inline-block';
+  const badge = document.getElementById('dataBadge');
+  badge.className = isDemo ? 'demo-badge' : 'live-badge';
+  badge.textContent = isDemo ? 'Demo data' : 'Live data';
 
   document.getElementById('main').innerHTML = `
     <div class="section" style="margin-top:20px">
-      <div class="section-title">Bot Activity Score — ${fmtMonth(current.month)}</div>
+      <div class="section-title">Where do subreddits fall? — ${fmtMonth(current.month)}</div>
+      <div class="card card-pad">
+        <div id="spectrumWrap"></div>
+        <div class="zone-grid" id="zoneGrid"></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Scores at a glance</div>
       <div class="summary-row" id="summaryRow"></div>
     </div>
 
     <div class="section">
-      <div class="section-title">Score Breakdown by Component</div>
-      <div class="charts-grid">
-        <div class="card card-pad">
-          <div class="card-title">All subreddits — final score</div>
-          <div class="chart-wrap" style="height:220px"><canvas id="barChart"></canvas></div>
-        </div>
-        <div class="card card-pad">
-          <div class="card-title" id="radarLabel">Component breakdown</div>
-          <div class="chart-wrap" style="height:220px"><canvas id="radarChart"></canvas></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="section">
-      <div class="section-title">Detailed Scores</div>
-      <div class="card">
-        <table>
-          <thead><tr>
-            <th>Subreddit</th>
-            <th>User Accounts <span style="font-weight:400;color:var(--muted)">(35%)</span></th>
-            <th>Engagement <span style="font-weight:400;color:var(--muted)">(30%)</span></th>
-            <th>Temporal <span style="font-weight:400;color:var(--muted)">(20%)</span></th>
-            <th>Distribution <span style="font-weight:400;color:var(--muted)">(15%)</span></th>
-            <th>Final</th>
-            <th>Severity</th>
-          </tr></thead>
-          <tbody id="scoreBody"></tbody>
-        </table>
-      </div>
-    </div>
-
-    <div class="section">
-      <div class="section-title">Month-to-Month Trend</div>
+      <div class="section-title">Component breakdown — all subreddits</div>
       <div class="card card-pad">
-        <div class="chart-wrap" style="height:240px"><canvas id="trendChart"></canvas></div>
+        <div class="card-title">Each axis: User Accounts · Engagement · Temporal · Distribution (all 0–100)</div>
+        <div style="position:relative;height:320px"><canvas id="radarChart"></canvas></div>
       </div>
     </div>
 
     <div class="section">
-      <div class="section-title">Subreddit Details</div>
+      <div class="section-title">Month-to-month trend</div>
+      <div class="card card-pad">
+        <div style="position:relative;height:240px"><canvas id="trendChart"></canvas></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Subreddit details</div>
       <div class="detail-grid" id="detailGrid"></div>
     </div>
 
     <div class="section">
-      <div class="section-title">Data Archive</div>
+      <div class="section-title">Data archive</div>
       <div class="card">
-        <table class="arch-table">
-          <thead><tr><th>Month</th><th>Highest risk</th><th>Score</th><th>Analysis JSON</th></tr></thead>
+        <table>
+          <thead><tr><th>Month</th><th>Highest risk</th><th>Score</th><th>Download</th></tr></thead>
           <tbody id="archBody"></tbody>
         </table>
       </div>
     </div>
 
     <div class="section">
-      <div class="section-title">Methodology</div>
+      <div class="section-title">Methodology — how scores are calculated</div>
       <div class="meth-grid">
         <div class="meth-card">
           <h4>User Account Patterns <span class="wt">35%</span></h4>
-          <p>Flags accounts earning &gt;200 karma/day, or new accounts (&lt;90 days old) with &gt;50 karma/day. Bot networks cycle through accounts that gain karma abnormally fast to appear legitimate.</p>
-          <div class="meth-thresholds">
+          <p>Flags accounts earning &gt;200 karma/day or new accounts (&lt;90 days old) posting in top posts. Bot networks use fast-growing accounts to appear legitimate. A subreddit where 50%+ of top posters are suspicious scores near 60 on this component.</p>
+          <div class="thr-row">
             <span class="thr" style="background:rgba(248,81,73,.12);color:#f85149">&gt;1000/day = critical</span>
             <span class="thr" style="background:rgba(210,153,34,.12);color:#d29922">&gt;200/day = suspicious</span>
           </div>
         </div>
         <div class="meth-card">
           <h4>Engagement Patterns <span class="wt">30%</span></h4>
-          <p>Measures upvote-to-comment ratio (UCR). Bots upvote without commenting — so bot-heavy subs have high post scores but low discussion. High upvote consensus (&gt;85%) also signals coordinated voting.</p>
-          <div class="meth-thresholds">
+          <p>Measures upvote-to-comment ratio (UCR). Bots upvote posts without joining discussion — so bot-heavy subs have high-scoring posts with disproportionately low comment counts. High upvote consensus (&gt;85%) also signals coordinated voting.</p>
+          <div class="thr-row">
             <span class="thr" style="background:rgba(248,81,73,.12);color:#f85149">UCR &gt; 30 = suspicious</span>
             <span class="thr" style="background:rgba(210,153,34,.12);color:#d29922">Upvotes &gt;92% = suspicious</span>
           </div>
         </div>
         <div class="meth-card">
           <h4>Temporal Patterns <span class="wt">20%</span></h4>
-          <p>Automated systems post in tight time windows. Measures concentration in the top 3 busiest hours and entropy of posting distribution — lower entropy means more predictable, scheduled behaviour.</p>
-          <div class="meth-thresholds">
-            <span class="thr" style="background:rgba(248,81,73,.12);color:#f85149">&gt;60% in top-3 hours</span>
+          <p>Automated systems post in tight windows. Measures what % of posts fall in the top 3 busiest hours, and how evenly spread posting is (entropy). A perfectly organic community would post at all hours; bots cluster into shifts.</p>
+          <div class="thr-row">
+            <span class="thr" style="background:rgba(248,81,73,.12);color:#f85149">&gt;60% posts in top-3 hours</span>
             <span class="thr" style="background:rgba(210,153,34,.12);color:#d29922">Entropy &lt; 3 of 4.58 max</span>
           </div>
         </div>
         <div class="meth-card">
           <h4>Score Distribution <span class="wt">15%</span></h4>
-          <p>Organic communities have high variance — a few posts go viral, most don't. Coordinated bot activity produces suspiciously <em>uniform</em> vote counts across all posts (low coefficient of variation).</p>
-          <div class="meth-thresholds">
-            <span class="thr" style="background:rgba(248,81,73,.12);color:#f85149">CV &lt; 0.3 = very uniform</span>
-            <span class="thr" style="background:rgba(63,185,80,.12);color:#3fb950">CV &gt; 1.0 = organic</span>
+          <p>Organic communities have high variance — a few posts go viral, most get modest votes. Coordinated bots produce unnaturally uniform vote counts across all posts (low coefficient of variation). Low CV = suspicious uniformity.</p>
+          <div class="thr-row">
+            <span class="thr" style="background:rgba(248,81,73,.12);color:#f85149">CV &lt; 0.3 = suspiciously uniform</span>
+            <span class="thr" style="background:rgba(63,185,80,.12);color:#3fb950">CV &gt; 1.0 = organic variance</span>
           </div>
         </div>
       </div>
     </div>
   `;
 
+  renderSpectrum(subs);
+  renderZones(subs);
   renderSummaryCards(subs);
-  renderBarChart(subs);
-  renderRadarChart(subs[0][0], subs[0][1]);
-  renderScoreTable(subs);
+  renderMultiRadar(subs);
   renderTrendChart();
   renderDetailCards(subs);
   renderArchive();
 }
 
-// ─── summary cards ────────────────────────────────────────────────────────────
-function renderSummaryCards(subs) {
-  document.getElementById('summaryRow').innerHTML = subs.map(([sub, d], i) => {
+// ── risk spectrum ─────────────────────────────────────────────────────────────
+function renderSpectrum(subs) {
+  const wrap = document.getElementById('spectrumWrap');
+  // Track sits at y=72 inside a 130px tall container.
+  // Labels alternate: odd → top row (y≈8), even → middle row (y≈30).
+  // Dot sits on the track. Sub name always below track (y≈82, staggered).
+  const TRACK_Y = 68;
+  const dots = subs.map(([sub, d], i) => {
+    const pct = d.final_score;
     const c = COLOR(d.final_score);
-    return `<div class="summary-card${i === 0 ? ' selected' : ''}" onclick="selectSub(this,'${sub}')" id="sc-${sub}">
+    const labelY  = i % 2 === 0 ?  4 : 26;
+    const nameY   = TRACK_Y + 10 + (i % 2 === 0 ? 0 : 14);
+    const lineH   = TRACK_Y - labelY - 16;
+    return `<div style="position:absolute;left:${pct}%;top:0;bottom:0;transform:translateX(-50%)">
+      <div style="position:absolute;top:${labelY}px;left:50%;transform:translateX(-50%);font-size:11px;font-weight:800;color:${c};white-space:nowrap;line-height:1">${d.final_score.toFixed(1)}</div>
+      <div style="position:absolute;top:${labelY+14}px;left:50%;width:1px;height:${lineH}px;background:${c}55"></div>
+      <div style="position:absolute;top:${TRACK_Y-5}px;left:50%;transform:translateX(-50%);width:12px;height:12px;border-radius:50%;background:${c};border:2px solid var(--bg)"></div>
+      <div style="position:absolute;top:${nameY+8}px;left:50%;transform:translateX(-50%);font-size:10px;font-weight:600;color:${c};white-space:nowrap;opacity:0.85">r/${sub}</div>
+    </div>`;
+  }).join('');
+
+  wrap.innerHTML = `
+    <div style="font-size:11px;color:var(--muted);margin-bottom:12px">All subreddits on one bot activity scale — higher is worse</div>
+    <div style="position:relative;height:130px;margin:0 8px">
+      ${dots}
+      <div style="position:absolute;top:${TRACK_Y}px;left:0;right:0;height:6px;border-radius:3px;background:linear-gradient(to right,#3fb950,#e3b341 32%,#d29922 58%,#f85149)"></div>
+      <div style="position:absolute;top:${TRACK_Y+10}px;left:0;right:0;display:flex;justify-content:space-between">
+        <span style="font-size:9px;color:var(--muted)">0 — Clean</span>
+        <span style="font-size:9px;color:var(--muted)">25</span>
+        <span style="font-size:9px;color:var(--muted)">50</span>
+        <span style="font-size:9px;color:var(--muted)">75</span>
+        <span style="font-size:9px;color:var(--muted)">100 — Critical</span>
+      </div>
+    </div>`;
+}
+
+// ── zone cards ────────────────────────────────────────────────────────────────
+function renderZones(subs) {
+  const zones = {
+    low:      { range:'0–30',  label:'Low',      desc:'Mostly organic. Normal account behaviour, natural posting patterns, healthy engagement variance.', color:'#3fb950', subs:[] },
+    moderate: { range:'30–50', label:'Moderate',  desc:'Notable signals. Some accounts show unusual growth, or posting times are partially concentrated. Worth watching.', color:'#e3b341', subs:[] },
+    high:     { range:'50–70', label:'High',      desc:'Significant coordination likely. Multiple signals firing together — suspicious accounts, low comment engagement, clustered timing.', color:'#d29922', subs:[] },
+    critical: { range:'70–100',label:'Critical',  desc:'Systematic manipulation. Near-uniform voting, bot-like account patterns, and highly concentrated posting windows all present.', color:'#f85149', subs:[] },
+  };
+  subs.forEach(([sub, d]) => zones[SEV(d.final_score)].subs.push({ sub, score: d.final_score }));
+
+  document.getElementById('zoneGrid').innerHTML = Object.entries(zones).map(([key, z]) =>
+    `<div class="zone-card ${key}">
+      <div class="zone-range" style="color:${z.color}">${z.range}</div>
+      <div class="zone-label" style="color:${z.color}">${z.label}</div>
+      <div class="zone-desc">${z.desc}</div>
+      <div class="zone-subs">
+        ${z.subs.length ? z.subs.map(({sub,score}) =>
+          `<span class="zone-sub" style="background:${z.color}22;color:${z.color}">r/${sub} · ${score.toFixed(1)}</span>`
+        ).join('') : `<span style="font-size:11px;color:var(--muted)">None this month</span>`}
+      </div>
+    </div>`
+  ).join('');
+}
+
+// ── summary tiles ─────────────────────────────────────────────────────────────
+function renderSummaryCards(subs) {
+  document.getElementById('summaryRow').innerHTML = subs.map(([sub, d]) => {
+    const c = COLOR(d.final_score);
+    return `<div class="summary-card">
       <div class="sc-name">r/${sub}</div>
       <div class="sc-score" style="color:${c}">${d.final_score.toFixed(1)}</div>
       <div class="sc-label" style="color:${c}">${SEV_LABEL(d.final_score)}</div>
-      <div class="sc-bar" style="background:${c};width:${d.final_score}%"></div>
+      <div style="margin-top:10px;height:3px;border-radius:2px;background:${c};width:${d.final_score}%"></div>
     </div>`;
   }).join('');
 }
 
-// ─── bar chart ────────────────────────────────────────────────────────────────
-function renderBarChart(subs) {
-  destroyChart('barChart');
-  const ctx = document.getElementById('barChart').getContext('2d');
-  charts.barChart = new Chart(ctx, {
+// ── (removed) grouped component bar chart ────────────────────────────────────
+function renderCompChart(subs) {
+  destroyChart('compChart');
+  const ctx = document.getElementById('compChart').getContext('2d');
+  const labels = subs.map(([s]) => 'r/'+s);
+  charts.compChart = new Chart(ctx, {
     type: 'bar',
     data: {
-      labels: subs.map(([s]) => 'r/' + s),
-      datasets: [{
-        data: subs.map(([, d]) => d.final_score),
-        backgroundColor: subs.map(([, d]) => COLOR(d.final_score) + 'bb'),
-        borderColor: subs.map(([, d]) => COLOR(d.final_score)),
-        borderWidth: 1, borderRadius: 4,
-      }]
+      labels,
+      datasets: [
+        { label:'User Accounts', data: subs.map(([,d]) => d.user_score),         backgroundColor: COMP_COLORS.user+'aa',         borderColor: COMP_COLORS.user,         borderWidth:1, borderRadius:3 },
+        { label:'Engagement',    data: subs.map(([,d]) => d.engagement_score),   backgroundColor: COMP_COLORS.engagement+'aa',   borderColor: COMP_COLORS.engagement,   borderWidth:1, borderRadius:3 },
+        { label:'Temporal',      data: subs.map(([,d]) => d.temporal_score),     backgroundColor: COMP_COLORS.temporal+'aa',     borderColor: COMP_COLORS.temporal,     borderWidth:1, borderRadius:3 },
+        { label:'Distribution',  data: subs.map(([,d]) => d.distribution_score), backgroundColor: COMP_COLORS.distribution+'aa', borderColor: COMP_COLORS.distribution, borderWidth:1, borderRadius:3 },
+      ]
     },
     options: {
-      indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+      responsive:true, maintainAspectRatio:false,
       plugins: {
-        legend: { display: false },
-        tooltip: { callbacks: { label: c => ` ${c.parsed.x.toFixed(1)} — ${SEV_LABEL(c.parsed.x)}` } }
+        legend: { display:false },
+        tooltip: { mode:'index', intersect:false }
       },
       scales: {
-        x: { min: 0, max: 100, grid: { color: '#21262d' }, ticks: { color: '#8b949e' }, border: { color: '#30363d' } },
-        y: { grid: { display: false }, ticks: { color: '#e6edf3', font: { size: 13 } }, border: { color: '#30363d' } }
+        x: { grid:{color:'#21262d'}, ticks:{color:'#8b949e',font:{size:11}}, border:{color:'#30363d'} },
+        y: { min:0, max:100, grid:{color:'#21262d'}, ticks:{color:'#8b949e'}, border:{color:'#30363d'},
+             title:{display:true,text:'Score (0–100)',color:'#8b949e',font:{size:10}} }
       }
     }
   });
 }
 
-// ─── radar chart ──────────────────────────────────────────────────────────────
-function renderRadarChart(sub, d) {
+// ── multi-subreddit radar ─────────────────────────────────────────────────────
+function renderMultiRadar(subs) {
   destroyChart('radarChart');
-  document.getElementById('radarLabel').textContent = `r/${sub} — component breakdown`;
   const ctx = document.getElementById('radarChart').getContext('2d');
-  const c = COLOR(d.final_score);
   charts.radarChart = new Chart(ctx, {
     type: 'radar',
     data: {
-      labels: ['User Accounts', 'Engagement', 'Temporal', 'Distribution'],
-      datasets: [{
-        label: 'r/' + sub,
-        data: [d.user_score, d.engagement_score, d.temporal_score, d.distribution_score],
-        backgroundColor: c + '28', borderColor: c, borderWidth: 2,
-        pointBackgroundColor: c, pointRadius: 4,
-      }]
+      labels: ['User\nAccounts','Engagement','Temporal','Distribution'],
+      datasets: subs.map(([sub, d], i) => {
+        const c = SUB_PALETTE[i % SUB_PALETTE.length];
+        return {
+          label: 'r/'+sub,
+          data: [d.user_score, d.engagement_score, d.temporal_score, d.distribution_score],
+          backgroundColor: c+'22', borderColor: c, borderWidth:2,
+          pointBackgroundColor: c, pointRadius:3,
+        };
+      })
     },
     options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { labels: { color: '#8b949e', font: { size: 11 } } } },
+      responsive:true, maintainAspectRatio:false,
+      plugins: { legend:{ labels:{ color:'#8b949e', font:{size:10}, padding:10, boxWidth:10 } } },
       scales: {
         r: {
-          min: 0, max: 100,
-          grid: { color: '#30363d' }, angleLines: { color: '#30363d' },
-          ticks: { color: '#8b949e', backdropColor: 'transparent', stepSize: 25, font: { size: 10 } },
-          pointLabels: { color: '#8b949e', font: { size: 11 } }
+          min:0, max:100,
+          grid:{color:'#30363d'}, angleLines:{color:'#30363d'},
+          ticks:{color:'#8b949e', backdropColor:'transparent', stepSize:25, font:{size:9}},
+          pointLabels:{color:'#8b949e', font:{size:10}}
         }
       }
     }
   });
 }
 
-// ─── score table ──────────────────────────────────────────────────────────────
+// ── score table ───────────────────────────────────────────────────────────────
 function renderScoreTable(subs) {
-  document.getElementById('scoreBody').innerHTML = subs.map(([sub, d], i) =>
-    `<tr class="${i === 0 ? 'selected' : ''}" onclick="selectSub(null,'${sub}',this)">
+  document.getElementById('scoreBody').innerHTML = subs.map(([sub, d]) =>
+    `<tr>
       <td class="sub-col">r/${sub} <a href="https://reddit.com/r/${sub}" target="_blank">↗</a></td>
-      <td>${scorecell(d.user_score)}</td>
-      <td>${scorecell(d.engagement_score)}</td>
-      <td>${scorecell(d.temporal_score)}</td>
-      <td>${scorecell(d.distribution_score)}</td>
-      <td>${scorecell(d.final_score)}</td>
+      <td>${scell(d.user_score, COMP_COLORS.user)}</td>
+      <td>${scell(d.engagement_score, COMP_COLORS.engagement)}</td>
+      <td>${scell(d.temporal_score, COMP_COLORS.temporal)}</td>
+      <td>${scell(d.distribution_score, COMP_COLORS.distribution)}</td>
+      <td>${scell(d.final_score, COLOR(d.final_score))}</td>
       <td><span class="badge ${SEV(d.final_score)}">${SEV_LABEL(d.final_score)}</span></td>
     </tr>`
   ).join('');
 }
-function scorecell(v) {
-  const c = COLOR(v);
+function scell(v, color) {
   return `<div class="sc-cell">
-    <div class="sc-bar-bg"><div class="sc-bar-fill" style="width:${v}%;background:${c}"></div></div>
-    <span class="sc-val" style="color:${c}">${v.toFixed(1)}</span>
+    <div class="sc-bar-bg"><div class="sc-bar-fill" style="width:${v}%;background:${color}"></div></div>
+    <span class="sc-val" style="color:${color}">${v.toFixed(1)}</span>
   </div>`;
 }
 
-// ─── select subreddit (updates radar + highlights) ────────────────────────────
-function selectSub(cardEl, sub, rowEl) {
-  // summary cards
-  document.querySelectorAll('.summary-card').forEach(c => c.classList.remove('selected'));
-  const sc = document.getElementById('sc-' + sub);
-  if (sc) sc.classList.add('selected');
-  // table rows
-  document.querySelectorAll('#scoreBody tr').forEach(r => r.classList.remove('selected'));
-  if (rowEl) rowEl.classList.add('selected');
-  else {
-    document.querySelectorAll('#scoreBody tr').forEach(r => {
-      if (r.querySelector('td')?.textContent?.includes('r/' + sub)) r.classList.add('selected');
-    });
-  }
-  renderRadarChart(sub, current.subreddits[sub]);
-}
-
-// ─── trend chart ──────────────────────────────────────────────────────────────
+// ── trend chart ───────────────────────────────────────────────────────────────
 function renderTrendChart() {
   destroyChart('trendChart');
   const ctx = document.getElementById('trendChart').getContext('2d');
   if (history.months.length < 2) {
-    ctx.canvas.parentElement.innerHTML = '<p class="trend-note">Trend chart available after 2+ months of data. Run the pipeline next month to see trends.</p>';
+    ctx.canvas.parentElement.innerHTML = '<p class="trend-note">Trend chart appears after 2+ months of data. Run the pipeline next month.</p>';
     return;
   }
   const months = history.months;
   const allSubs = [...new Set(months.flatMap(m => Object.keys(m.summary)))];
   charts.trendChart = new Chart(ctx, {
-    type: 'line',
+    type:'line',
     data: {
       labels: months.map(m => fmtMonth(m.month)),
-      datasets: allSubs.map((sub, i) => ({
-        label: 'r/' + sub,
+      datasets: allSubs.map((sub,i) => ({
+        label: 'r/'+sub,
         data: months.map(m => m.summary[sub]?.final_score ?? null),
-        borderColor: PALETTE[i % PALETTE.length],
-        backgroundColor: PALETTE[i % PALETTE.length] + '18',
-        borderWidth: 2, pointRadius: 5, tension: 0.35, spanGaps: true,
+        borderColor: SUB_PALETTE[i%SUB_PALETTE.length],
+        backgroundColor: SUB_PALETTE[i%SUB_PALETTE.length]+'18',
+        borderWidth:2, pointRadius:5, tension:0.35, spanGaps:true,
       }))
     },
     options: {
-      responsive: true, maintainAspectRatio: false,
+      responsive:true, maintainAspectRatio:false,
       plugins: {
-        legend: { labels: { color: '#8b949e', font: { size: 12 }, padding: 16 } },
-        tooltip: { mode: 'index', intersect: false }
+        legend:{ labels:{color:'#8b949e',font:{size:11},padding:14} },
+        tooltip:{ mode:'index', intersect:false }
       },
       scales: {
-        y: {
-          min: 0, max: 100,
-          grid: { color: '#21262d' }, ticks: { color: '#8b949e' }, border: { color: '#30363d' },
-          title: { display: true, text: 'Bot Activity Score', color: '#8b949e', font: { size: 11 } }
-        },
-        x: { grid: { color: '#21262d' }, ticks: { color: '#8b949e' }, border: { color: '#30363d' } }
+        y: { min:0, max:100, grid:{color:'#21262d'}, ticks:{color:'#8b949e'}, border:{color:'#30363d'},
+             title:{display:true,text:'Bot Activity Score',color:'#8b949e',font:{size:10}} },
+        x: { grid:{color:'#21262d'}, ticks:{color:'#8b949e'}, border:{color:'#30363d'} }
       }
     }
   });
 }
 
-// ─── detail cards ─────────────────────────────────────────────────────────────
+// ── detail cards ──────────────────────────────────────────────────────────────
 function renderDetailCards(subs) {
   document.getElementById('detailGrid').innerHTML = subs.map(([sub, d]) => {
-    const det = d.details || {};
-    const c = COLOR(d.final_score);
-    const age = det.avg_account_age_days ? Math.round(det.avg_account_age_days) + ' days' : '—';
-    const ageFlag = det.avg_account_age_days && det.avg_account_age_days < 200 ? `color:${COLOR(70)}` : '';
+    const det = d.details || {}, c = COLOR(d.final_score);
+    const flag = (val, threshold) => val > threshold ? `color:${COLOR(70)}` : '';
     return `<div class="det-card">
       <div class="det-hdr">
         <div>
           <div class="det-title">r/${sub}</div>
-          <div class="det-sub"><a href="https://reddit.com/r/${sub}" target="_blank">reddit.com/r/${sub} ↗</a></div>
+          <div class="det-sub-link"><a href="https://reddit.com/r/${sub}" target="_blank">reddit.com/r/${sub} ↗</a></div>
         </div>
         <div>
           <div class="det-score-big" style="color:${c}">${d.final_score.toFixed(1)}</div>
           <span class="badge ${SEV(d.final_score)}" style="float:right;margin-top:4px">${SEV_LABEL(d.final_score)}</span>
         </div>
       </div>
-      <div class="det-body">
-        <div class="mrow"><span class="ml">Posts analyzed</span><span class="mv">${det.posts_analyzed || '—'}</span></div>
-        <div class="mrow"><span class="ml">Avg account age</span><span class="mv" style="${ageFlag}">${age}</span></div>
-        <div class="mrow"><span class="ml">Avg karma / day</span><span class="mv" style="${det.avg_karma_per_day > 200 ? `color:${COLOR(70)}` : ''}">${det.avg_karma_per_day ?? '—'}</span></div>
-        <div class="mrow"><span class="ml">Suspicious accounts</span><span class="mv" style="${det.suspicious_pct > 20 ? `color:${COLOR(70)}` : ''}">${det.suspicious_pct != null ? det.suspicious_pct + '%' : '—'}</span></div>
-        <div class="mrow"><span class="ml">Avg upvote ratio</span><span class="mv">${det.avg_upvote_ratio ? (det.avg_upvote_ratio * 100).toFixed(1) + '%' : '—'}</span></div>
-        <div class="mrow"><span class="ml">Upvote : Comment ratio</span><span class="mv" style="${det.ucr > 25 ? `color:${COLOR(70)}` : ''}">${det.ucr ?? '—'}</span></div>
-        <div class="mrow"><span class="ml">Peak hour (UTC)</span><span class="mv">${det.peak_hour_utc != null ? det.peak_hour_utc + ':00 UTC' : '—'}</span></div>
-        <div class="mrow"><span class="ml">Top-3 hour concentration</span><span class="mv" style="${det.top_3_concentration > 50 ? `color:${COLOR(70)}` : ''}">${det.top_3_concentration != null ? det.top_3_concentration + '%' : '—'}</span></div>
-        <div class="mrow"><span class="ml">Posting entropy</span><span class="mv">${det.entropy != null ? det.entropy + ' / 4.58' : '—'}</span></div>
+      <div>
+        <div class="mrow"><span class="ml">Posts analyzed</span><span class="mv">${det.posts_analyzed||'—'}</span></div>
+        <div class="mrow"><span class="ml">Users analyzed</span><span class="mv">${det.users_analyzed||'—'}</span></div>
+        <div class="mrow"><span class="ml">Avg account age</span><span class="mv" style="${flag(0,det.avg_account_age_days > 0 && det.avg_account_age_days < 150 ? -1 : 0)}">${det.avg_account_age_days ? Math.round(det.avg_account_age_days)+' days' : '—'}</span></div>
+        <div class="mrow"><span class="ml">Avg karma / day</span><span class="mv" style="${flag(det.avg_karma_per_day,200)}">${det.avg_karma_per_day??'—'}</span></div>
+        <div class="mrow"><span class="ml">Suspicious accounts</span><span class="mv" style="${flag(det.suspicious_pct,20)}">${det.suspicious_pct!=null ? det.suspicious_pct+'%' : '—'}</span></div>
+        <div class="mrow"><span class="ml">Avg upvote ratio</span><span class="mv" style="${flag(det.avg_upvote_ratio,0.92)}">${det.avg_upvote_ratio ? (det.avg_upvote_ratio*100).toFixed(1)+'%' : '—'}</span></div>
+        <div class="mrow"><span class="ml">Upvote:Comment ratio</span><span class="mv" style="${flag(det.ucr,25)}">${det.ucr??'—'}</span></div>
+        <div class="mrow"><span class="ml">Top-3 hour concentration</span><span class="mv" style="${flag(det.top_3_concentration,50)}">${det.top_3_concentration!=null ? det.top_3_concentration+'%' : '—'}</span></div>
+        <div class="mrow"><span class="ml">Posting entropy</span><span class="mv">${det.entropy!=null ? det.entropy+' / 4.58' : '—'}</span></div>
       </div>
     </div>`;
   }).join('');
 }
 
-// ─── archive ──────────────────────────────────────────────────────────────────
+// ── archive ───────────────────────────────────────────────────────────────────
 function renderArchive() {
   document.getElementById('archBody').innerHTML = history.months.slice().reverse().map(m => {
-    const top = Object.entries(m.summary).sort((a, b) => b[1].final_score - a[1].final_score)[0];
+    const top = Object.entries(m.summary).sort((a,b) => b[1].final_score - a[1].final_score)[0];
     return `<tr>
       <td>${fmtMonth(m.month)}</td>
       <td>r/${top[0]}</td>
       <td><span class="badge ${SEV(top[1].final_score)}">${top[1].final_score.toFixed(1)}</span></td>
-      <td><a class="dl-btn" href="data/${m.data_file}" download>Download JSON</a></td>
+      <td><a class="dl-btn" href="data/${m.data_file}" download>JSON</a></td>
     </tr>`;
   }).join('');
 }
 
-// ─── error / init ─────────────────────────────────────────────────────────────
+// ── error / init ──────────────────────────────────────────────────────────────
 function showError(msg) {
-  document.getElementById('main').innerHTML = `<div class="error-box" style="margin-top:24px">${msg}</div>`;
+  document.getElementById('main').innerHTML = `<div class="error-box">${msg}</div>`;
 }
 
 async function init() {
@@ -534,14 +562,14 @@ async function init() {
     const r = await fetch(`data/history.json?v=${Date.now()}`);
     if (!r.ok) throw new Error('data/history.json not found');
     history = await r.json();
-    if (!history.months?.length) { showError('No analysis data yet. Run <code>bash run_monthly.sh</code> to generate real data.'); return; }
+    if (!history.months?.length) { showError('No data yet. Run <code>bash run_monthly.sh</code>.'); return; }
     const latest = history.months[history.months.length - 1];
     renderTabs(latest.month);
     await switchMonth(latest.month);
-  } catch (e) {
-    showError(`Failed to load: ${e.message}.<br><br>
-      <strong>Local testing:</strong> serve with <code>python3 -m http.server 8080</code> from the <code>docs/</code> folder, then open <a href="http://localhost:8080">localhost:8080</a>.<br>
-      Do not open index.html directly as a file:// URL — browsers block fetch() for local files.`);
+  } catch(e) {
+    showError(`Failed to load: ${e.message}<br><br>
+      Serve locally with: <code>python3 -m http.server 8080 --directory docs/</code> then open <a href="http://localhost:8080">localhost:8080</a>.
+      Do not open as a file:// URL.`);
   }
 }
 
