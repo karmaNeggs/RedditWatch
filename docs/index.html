@@ -204,7 +204,7 @@ function renderTabs(active) {
 }
 
 async function switchMonth(month) {
-  ['radarChart','trendChart'].forEach(destroyChart);
+  ['trendChart'].forEach(destroyChart);
   renderTabs(month);
   const r = await fetch(`data/${month}.json?v=${Date.now()}`);
   if (!r.ok) { showError(`Could not load data/${month}.json`); return; }
@@ -240,8 +240,8 @@ function renderAll() {
     <div class="section">
       <div class="section-title">Component breakdown — all subreddits</div>
       <div class="card card-pad">
-        <div class="card-title">Each axis: User Accounts · Engagement · Temporal · Distribution (all 0–100)</div>
-        <div style="position:relative;height:460px"><canvas id="radarChart"></canvas></div>
+        <div class="card-title">Each channel scored 0–100 &nbsp;·&nbsp; <span style="color:#58a6ff">■ User</span> &nbsp;<span style="color:#f85149">■ Engagement</span> &nbsp;<span style="color:#d29922">■ Temporal</span> &nbsp;<span style="color:#bc8cff">■ Distribution</span></div>
+        <div id="compBars"></div>
       </div>
     </div>
 
@@ -455,37 +455,32 @@ function renderCompChart(subs) {
   });
 }
 
-// ── multi-subreddit radar ─────────────────────────────────────────────────────
+// ── component bar grid (replaces radar) ──────────────────────────────────────
 function renderMultiRadar(subs) {
-  destroyChart('radarChart');
-  const ctx = document.getElementById('radarChart').getContext('2d');
-  charts.radarChart = new Chart(ctx, {
-    type: 'radar',
-    data: {
-      labels: ['User\nAccounts','Engagement','Temporal','Distribution'],
-      datasets: subs.map(([sub, d], i) => {
-        const c = SUB_PALETTE[i % SUB_PALETTE.length];
-        return {
-          label: 'r/'+sub,
-          data: [d.user_score, d.engagement_score, d.temporal_score, d.distribution_score],
-          backgroundColor: c+'18', borderColor: c, borderWidth:1,
-          pointBackgroundColor: c, pointRadius:2,
-        };
-      })
-    },
-    options: {
-      responsive:true, maintainAspectRatio:false,
-      plugins: { legend:{ labels:{ color:'#8b949e', font:{size:10}, padding:10, boxWidth:10 } } },
-      scales: {
-        r: {
-          min:0, max:100,
-          grid:{color:'#30363d'}, angleLines:{color:'#30363d'},
-          ticks:{color:'#8b949e', backdropColor:'transparent', stepSize:25, font:{size:9}},
-          pointLabels:{color:'#8b949e', font:{size:10}}
-        }
-      }
-    }
-  });
+  const COMPS = [
+    { key:'user_score',         color:'#58a6ff', label:'User'   },
+    { key:'engagement_score',   color:'#f85149', label:'Eng'    },
+    { key:'temporal_score',     color:'#d29922', label:'Temp'   },
+    { key:'distribution_score', color:'#bc8cff', label:'Dist'   },
+  ];
+  const rows = subs.map(([sub, d]) => {
+    const bars = COMPS.map(c => {
+      const v = d[c.key];
+      return `<div style="display:flex;align-items:center;gap:6px;min-width:0">
+        <div style="width:28px;font-size:9px;color:${c.color};flex-shrink:0;text-align:right">${c.label}</div>
+        <div style="flex:1;height:6px;background:#1e293b;border-radius:3px;overflow:hidden">
+          <div style="width:${v}%;height:100%;background:${c.color};border-radius:3px"></div>
+        </div>
+        <div style="width:24px;font-size:9px;color:#64748b;flex-shrink:0">${v.toFixed(0)}</div>
+      </div>`;
+    }).join('');
+    const fc = COLOR(d.final_score);
+    return `<div style="display:grid;grid-template-columns:130px 1fr;gap:12px;align-items:center;padding:7px 0;border-bottom:1px solid #0f172a">
+      <div style="font-size:11px;font-weight:700;color:${fc};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">r/${sub} <span style="font-size:10px;font-weight:400;color:#475569">${d.final_score.toFixed(1)}</span></div>
+      <div style="display:flex;flex-direction:column;gap:3px">${bars}</div>
+    </div>`;
+  }).join('');
+  document.getElementById('compBars').innerHTML = rows;
 }
 
 // ── score table ───────────────────────────────────────────────────────────────
