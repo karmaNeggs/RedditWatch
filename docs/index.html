@@ -8,18 +8,28 @@
   <style>
     :root {
       --bg: #0d1117; --surface: #161b22; --surface2: #21262d; --border: #30363d;
-      --text: #e6edf3; --muted: #8b949e;
+      --text: #e6edf3; --muted: #8b949e; --hdr-bg: rgba(13,17,23,0.94);
       --critical: #f85149; --high: #d29922; --moderate: #e3b341; --low: #3fb950;
       --blue: #58a6ff; --purple: #bc8cff;
     }
+    [data-theme="light"] {
+      --bg: #ffffff; --surface: #f6f8fa; --surface2: #eaeef2; --border: #d0d7de;
+      --text: #1f2328; --muted: #636c76; --hdr-bg: rgba(255,255,255,0.94);
+      --critical: #cf222e; --high: #7d4e00; --moderate: #9a6700; --low: #1a7f37;
+      --blue: #0969da; --purple: #8250df;
+    }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, sans-serif; font-size: 14px; line-height: 1.5; }
+    body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, sans-serif; font-size: 14px; line-height: 1.5; transition: background 0.2s, color 0.2s; }
     a { color: var(--blue); text-decoration: none; }
     a:hover { text-decoration: underline; }
     .container { max-width: 1120px; margin: 0 auto; padding: 0 20px; }
 
+    /* Theme toggle */
+    .theme-btn { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 4px 10px; cursor: pointer; font-size: 15px; line-height: 1; color: var(--text); transition: border-color 0.15s; }
+    .theme-btn:hover { border-color: var(--blue); }
+
     /* Header */
-    header { border-bottom: 1px solid var(--border); padding: 14px 0; position: sticky; top: 0; background: rgba(13,17,23,0.94); backdrop-filter: blur(8px); z-index: 100; }
+    header { border-bottom: 1px solid var(--border); padding: 14px 0; position: sticky; top: 0; background: var(--hdr-bg); backdrop-filter: blur(8px); z-index: 100; }
     .hdr { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
     .logo { font-size: 16px; font-weight: 700; }
     .logo em { color: var(--muted); font-style: normal; font-weight: 400; font-size: 13px; margin-left: 8px; }
@@ -150,6 +160,7 @@
         <span id="lastUpdated"></span>
         <a href="report.html" target="_blank" style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:4px 12px;font-size:12px;color:var(--text)">↓ Monthly Report</a>
         <a href="https://github.com/karmaNeggs/RedditWatch" target="_blank">GitHub</a>
+        <button class="theme-btn" id="themeToggle" title="Toggle light/dark mode">🌙</button>
       </div>
     </div>
   </div>
@@ -176,6 +187,29 @@
 </footer>
 
 <script>
+// ── theme ─────────────────────────────────────────────────────────────────────
+(function() {
+  const saved = localStorage.getItem('theme') ||
+    (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+  if (saved === 'light') document.documentElement.setAttribute('data-theme', 'light');
+})();
+
+function initThemeToggle() {
+  const btn = document.getElementById('themeToggle');
+  const update = () => {
+    const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+    btn.textContent = isLight ? '🌙' : '☀️';
+  };
+  update();
+  btn.addEventListener('click', () => {
+    const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+    document.documentElement.setAttribute('data-theme', isLight ? 'dark' : 'light');
+    localStorage.setItem('theme', isLight ? 'dark' : 'light');
+    update();
+  });
+}
+document.addEventListener('DOMContentLoaded', initThemeToggle);
+
 let history = null, current = null, charts = {};
 
 // ── helpers ───────────────────────────────────────────────────────────────────
