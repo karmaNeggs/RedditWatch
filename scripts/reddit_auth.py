@@ -96,6 +96,9 @@ def throttle():
 
 # ── single fetch helper used by all scripts ───────────────────────────────────
 def get_json(url, retries=6):
+    # OAuth rate limits only apply on oauth.reddit.com
+    if USING_OAUTH:
+        url = url.replace('https://www.reddit.com/', 'https://oauth.reddit.com/')
     for attempt in range(retries):
         throttle()
         try:
