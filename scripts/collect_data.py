@@ -15,19 +15,14 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from pathlib import Path
 
-WORKERS = 6  # parallel user-lookup threads
-
 ROOT = Path(__file__).parent.parent
 SUBREDDITS_FILE = ROOT / 'subreddits.txt'
 DATA_DIR = ROOT / 'data'
 
-USER_AGENTS = [
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-    'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0',
-    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15',
-]
+import sys; sys.path.insert(0, str(ROOT / 'scripts'))
+from reddit_auth import get_json as _auth_get_json, get_headers, print_auth_status, USING_OAUTH
+
+WORKERS = 8 if USING_OAUTH else 3
 
 
 def load_subreddits():
@@ -39,45 +34,11 @@ def load_subreddits():
     return subs
 
 
-def get_headers():
-    return {'User-Agent': random.choice(USER_AGENTS)}
-
-
-def fetch_with_retry(url, max_retries=12, initial_wait=6):
-    wait_time = initial_wait
-    for attempt in range(max_retries):
-        try:
-            print(f"    Attempt {attempt + 1}/{max_retries}...", end=' ', flush=True)
-            response = requests.get(url, headers=get_headers(), timeout=30)
-
-            if response.status_code == 429:
-                jitter = random.uniform(0.8, 1.5)
-                actual_wait = wait_time * jitter
-                print(f"Rate limited. Waiting {actual_wait:.1f}s...")
-                time.sleep(actual_wait)
-                wait_time = min(wait_time * 2, 120)
-                continue
-
-            response.raise_for_status()
-            print("OK")
-            return response.json()
-
-        except requests.exceptions.RequestException as e:
-            print(f"Error: {e}")
-            if attempt < max_retries - 1:
-                jitter = random.uniform(0.8, 1.5)
-                time.sleep(wait_time * jitter)
-                wait_time = min(wait_time * 2, 120)
-
-    print("Failed after all retries")
-    return None
-
-
 def fetch_posts(subreddit, limit=30):
     """Fetch top posts from last 30 days."""
     print(f"\n  Fetching r/{subreddit}...")
     url = f"https://www.reddit.com/r/{subreddit}/top.json?limit={limit}&t=month"
-    data = fetch_with_retry(url)
+    data = _auth_get_json(url)
 
     if not data or 'data' not in data:
         print(f"    Failed to get posts for r/{subreddit}")
@@ -104,7 +65,7 @@ def fetch_posts(subreddit, limit=30):
 def fetch_top_commenters(subreddit, post_id, limit=5):
     """Return up to `limit` top-commenter usernames for a post."""
     url = f"https://www.reddit.com/r/{subreddit}/comments/{post_id}.json?limit={limit}&sort=top&depth=1"
-    data = fetch_with_retry(url)
+    data = _auth_get_json(url)
     if not data or not isinstance(data, list) or len(data) < 2:
         return []
     commenters = []
@@ -117,43 +78,24 @@ def fetch_top_commenters(subreddit, post_id, limit=5):
     return commenters
 
 
-def fetch_user_data(username, max_retries=8):
+def fetch_user_data(username):
     if not username or username in ('[deleted]', 'AutoModerator'):
         return None
-
-    url = f"https://www.reddit.com/user/{username}/about.json"
-    for attempt in range(max_retries):
-        try:
-            response = requests.get(url, headers=get_headers(), timeout=20)
-
-            if response.status_code == 429:
-                time.sleep(random.uniform(4, 8))
-                continue
-            if response.status_code in (404, 403):
-                return None
-
-            response.raise_for_status()
-            user_data = response.json()
-
-            if 'data' in user_data:
-                d = user_data['data']
-                created_utc = d.get('created_utc')
-                total_karma = d.get('link_karma', 0) + d.get('comment_karma', 0)
-
-                if created_utc:
-                    account_age_days = (datetime.now().timestamp() - created_utc) / 86400
-                    karma_per_day = total_karma / max(account_age_days, 1)
-                    return {
-                        'username': username,
-                        'account_age_days': account_age_days,
-                        'total_karma': total_karma,
-                        'karma_per_day': karma_per_day,
-                    }
-            return None
-
-        except requests.exceptions.RequestException:
-            if attempt < max_retries - 1:
-                time.sleep(random.uniform(2, 5))
+    data = _auth_get_json(f"https://www.reddit.com/user/{username}/about.json")
+    if not data or 'data' not in data:
+        return None
+    d = data['data']
+    created_utc = d.get('created_utc')
+    if not created_utc:
+        return None
+    total_karma = d.get('link_karma', 0) + d.get('comment_karma', 0)
+    account_age_days = (datetime.now().timestamp() - created_utc) / 86400
+    return {
+        'username': username,
+        'account_age_days': account_age_days,
+        'total_karma': total_karma,
+        'karma_per_day': total_karma / max(account_age_days, 1),
+    }
 
     return None
 
@@ -198,7 +140,6 @@ def main():
     total_users = len(all_author_names)
 
     def _lookup(author):
-        time.sleep(random.uniform(0.2, 0.5))
         return author, fetch_user_data(author)
 
     with ThreadPoolExecutor(max_workers=WORKERS) as pool:

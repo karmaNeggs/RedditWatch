@@ -13,7 +13,6 @@ Then re-runs analyze_data.py and generate_site.py automatically.
 Usage: python3 scripts/enrich_commenters.py
 """
 
-import requests
 import pandas as pd
 import time
 import random
@@ -23,38 +22,13 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from pathlib import Path
 
-WORKERS = 6  # parallel user-lookup threads; safe without OAuth
-
 ROOT     = Path(__file__).parent.parent
 DATA_DIR = ROOT / 'data'
 
-USER_AGENTS = [
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36',
-    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36',
-    'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36',
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0',
-]
+import sys; sys.path.insert(0, str(ROOT / 'scripts'))
+from reddit_auth import get_json, print_auth_status, USING_OAUTH
 
-def headers():
-    return {'User-Agent': random.choice(USER_AGENTS)}
-
-def get_json(url, retries=8, wait=4):
-    for attempt in range(retries):
-        try:
-            r = requests.get(url, headers=headers(), timeout=20)
-            if r.status_code == 429:
-                sleep = wait * (1.5 ** attempt) * random.uniform(0.8, 1.2)
-                print(f"    Rate limited, waiting {sleep:.1f}s…")
-                time.sleep(sleep)
-                continue
-            if r.status_code in (404, 403):
-                return None
-            r.raise_for_status()
-            return r.json()
-        except requests.RequestException as e:
-            if attempt < retries - 1:
-                time.sleep(wait * random.uniform(0.8, 1.2))
-    return None
+WORKERS = 8 if USING_OAUTH else 3
 
 def fetch_top_commenters(subreddit, post_id, limit=5):
     url = f"https://www.reddit.com/r/{subreddit}/comments/{post_id}.json?limit={limit}&sort=top&depth=1"
@@ -99,6 +73,8 @@ def main():
             sys.exit(0)
 
     print(f"\nLoaded {len(df)} posts across {df['subreddit'].nunique()} subreddits.")
+    print_auth_status()
+    print(f"Workers: {WORKERS}\n")
     print("Step 1: Fetching top 5 commenters per post…\n")
 
     post_commenters = {}
@@ -120,7 +96,6 @@ def main():
     total_users = len(all_commenters)
 
     def _lookup(name):
-        time.sleep(random.uniform(0.2, 0.5))  # small per-thread jitter
         return name, fetch_user(name)
 
     with ThreadPoolExecutor(max_workers=WORKERS) as pool:
