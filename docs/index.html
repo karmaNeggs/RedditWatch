@@ -319,29 +319,27 @@ function renderAll() {
 // ── risk spectrum ─────────────────────────────────────────────────────────────
 function renderSpectrum(subs) {
   const wrap = document.getElementById('spectrumWrap');
-  // 4-row staggered labels above track, 2-row names below.
-  const ROWS   = 4;
-  const ROW_H  = 17;
-  const TRACK_Y = ROWS * ROW_H + 10; // ≈78
-  const dots = subs.map(([sub, d], i) => {
-    const pct   = d.final_score;
-    const c     = COLOR(d.final_score);
-    const row   = i % ROWS;
-    const labelY = row * ROW_H + 4;
-    const lineH  = TRACK_Y - labelY - 14;
-    const nameRow = i % 2;
-    const nameY   = TRACK_Y + 14 + nameRow * 15;
-    return `<div style="position:absolute;left:${pct}%;top:0;bottom:0;transform:translateX(-50%)">
-      <div style="position:absolute;top:${labelY}px;left:50%;transform:translateX(-50%);font-size:10px;font-weight:700;color:${c};white-space:nowrap;line-height:1">${d.final_score.toFixed(1)}</div>
-      <div style="position:absolute;top:${labelY+13}px;left:50%;width:1px;height:${lineH}px;background:${c}44"></div>
-      <div style="position:absolute;top:${TRACK_Y-4}px;left:50%;transform:translateX(-50%);width:10px;height:10px;border-radius:50%;background:${c};border:2px solid var(--bg)"></div>
-      <div style="position:absolute;top:${nameY}px;left:50%;transform:translateX(-50%);font-size:9px;font-weight:600;color:${c};white-space:nowrap;opacity:0.85">r/${sub}</div>
+  // Dots only on track — no floating text, no overlap.
+  // Ranked legend grid sits below.
+  const TRACK_Y = 20;
+  const dots = subs.map(([sub, d]) => {
+    const c = COLOR(d.final_score);
+    return `<div title="r/${sub} — ${d.final_score.toFixed(1)}" style="position:absolute;left:${d.final_score}%;top:${TRACK_Y-5}px;transform:translateX(-50%);width:11px;height:11px;border-radius:50%;background:${c};border:2px solid #0d1117;cursor:default"></div>`;
+  }).join('');
+
+  const legend = subs.map(([sub, d], i) => {
+    const c = COLOR(d.final_score);
+    return `<div style="display:flex;align-items:center;gap:5px;min-width:0">
+      <span style="font-size:9px;color:#334155;flex-shrink:0;width:14px;text-align:right">${i+1}.</span>
+      <span style="width:8px;height:8px;border-radius:50%;background:${c};flex-shrink:0"></span>
+      <span style="font-size:10px;font-weight:600;color:${c};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">r/${sub}</span>
+      <span style="font-size:9px;color:#475569;flex-shrink:0">${d.final_score.toFixed(1)}</span>
     </div>`;
   }).join('');
 
   wrap.innerHTML = `
-    <div style="font-size:11px;color:var(--muted);margin-bottom:12px">All subreddits on one bot activity scale — higher is worse</div>
-    <div style="position:relative;height:165px;margin:0 8px">
+    <div style="font-size:11px;color:var(--muted);margin-bottom:10px">All subreddits on one bot activity scale — higher is worse</div>
+    <div style="position:relative;height:36px;margin:0 8px">
       ${dots}
       <div style="position:absolute;top:${TRACK_Y}px;left:0;right:0;height:6px;border-radius:3px;background:linear-gradient(to right,#3fb950,#e3b341 32%,#d29922 58%,#f85149)"></div>
       <div style="position:absolute;top:${TRACK_Y+10}px;left:0;right:0;display:flex;justify-content:space-between">
@@ -351,6 +349,9 @@ function renderSpectrum(subs) {
         <span style="font-size:9px;color:var(--muted)">75</span>
         <span style="font-size:9px;color:var(--muted)">100 — Critical</span>
       </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px 12px;margin-top:18px;padding-top:12px;border-top:1px solid #1e293b">
+      ${legend}
     </div>`;
 }
 
