@@ -417,32 +417,49 @@ function renderCompChart(subs) {
   });
 }
 
-// ── component bar grid (replaces radar) ──────────────────────────────────────
+// ── component crosstab ────────────────────────────────────────────────────────
 function renderMultiRadar(subs) {
   const COMPS = [
-    { key:'user_score',         color:'#58a6ff', label:'User'   },
-    { key:'engagement_score',   color:'#f85149', label:'Eng'    },
-    { key:'temporal_score',     color:'#d29922', label:'Temp'   },
-    { key:'distribution_score', color:'#bc8cff', label:'Dist'   },
+    { key:'user_score',         color:'#58a6ff', label:'User',  wt:'35%' },
+    { key:'engagement_score',   color:'#f85149', label:'Eng',   wt:'30%' },
+    { key:'temporal_score',     color:'#d29922', label:'Temp',  wt:'20%' },
+    { key:'distribution_score', color:'#bc8cff', label:'Dist',  wt:'15%' },
   ];
-  const rows = subs.map(([sub, d]) => {
-    const bars = COMPS.map(c => {
-      const v = d[c.key];
-      return `<div style="display:flex;align-items:center;gap:6px;min-width:0">
-        <div style="width:28px;font-size:9px;color:${c.color};flex-shrink:0;text-align:right">${c.label}</div>
-        <div style="flex:1;height:6px;background:#1e293b;border-radius:3px;overflow:hidden">
-          <div style="width:${v}%;height:100%;background:${c.color};border-radius:3px"></div>
+
+  const colStyle = 'flex:1;min-width:0';
+  const cell = (v, color) =>
+    `<div style="${colStyle}">
+      <div style="display:flex;align-items:center;gap:4px">
+        <div style="flex:1;height:7px;background:#1e293b;border-radius:4px;overflow:hidden">
+          <div style="width:${v}%;height:100%;background:${color};border-radius:4px"></div>
         </div>
-        <div style="width:24px;font-size:9px;color:#64748b;flex-shrink:0">${v.toFixed(0)}</div>
-      </div>`;
-    }).join('');
+        <span style="font-size:10px;font-weight:700;color:${color};width:26px;flex-shrink:0;text-align:right">${v.toFixed(0)}</span>
+      </div>
+    </div>`;
+
+  const headerCols = COMPS.map(c =>
+    `<div style="${colStyle};font-size:9px;font-weight:700;color:${c.color};text-transform:uppercase;letter-spacing:.05em">
+       ${c.label} <span style="color:#334155;font-weight:400">${c.wt}</span>
+     </div>`
+  ).join('');
+
+  const header = `<div style="display:flex;gap:10px;align-items:center;padding:6px 0 8px;border-bottom:1px solid #1e293b;margin-bottom:2px">
+    <div style="width:148px;flex-shrink:0"></div>
+    ${headerCols}
+  </div>`;
+
+  const dataRows = subs.map(([sub, d]) => {
     const fc = COLOR(d.final_score);
-    return `<div style="display:grid;grid-template-columns:130px 1fr;gap:12px;align-items:center;padding:7px 0;border-bottom:1px solid #0f172a">
-      <div style="font-size:11px;font-weight:700;color:${fc};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">r/${sub} <span style="font-size:10px;font-weight:400;color:#475569">${d.final_score.toFixed(1)}</span></div>
-      <div style="display:flex;flex-direction:column;gap:3px">${bars}</div>
+    const cells = COMPS.map(c => cell(d[c.key], c.color)).join('');
+    return `<div style="display:flex;gap:10px;align-items:center;padding:5px 0;border-bottom:1px solid #0f172a">
+      <div style="width:148px;flex-shrink:0;font-size:11px;font-weight:700;color:${fc};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+        r/${sub} <span style="font-size:10px;font-weight:400;color:#475569">${d.final_score.toFixed(1)}</span>
+      </div>
+      ${cells}
     </div>`;
   }).join('');
-  document.getElementById('compBars').innerHTML = rows;
+
+  document.getElementById('compBars').innerHTML = header + dataRows;
 }
 
 // ── score table ───────────────────────────────────────────────────────────────
