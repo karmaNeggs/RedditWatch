@@ -36,37 +36,58 @@ def load_latest_data():
 
 
 # ── Component 1: User account patterns (35%) ─────────────────────────────────
+# Covers both post authors and top 5 commenters per post (when available).
+
+def _suspicious_score(kpd_series, age_series):
+    """Given karma_per_day and account_age_days series, return 0-100 score."""
+    df = pd.DataFrame({'kpd': kpd_series, 'age': age_series}).dropna()
+    if df.empty:
+        return 0.0, 0
+    suspicious_mask = (df['kpd'] > 200) | ((df['age'] < 90) & (df['kpd'] > 50))
+    very_suspicious  = (df['kpd'] > 1000)
+    n = len(df)
+    susp_pct  = suspicious_mask.sum() / n * 100
+    vsusp_pct = very_suspicious.sum()  / n * 100
+    return float(min(max(0, susp_pct * 1.2 + vsusp_pct * 0.28), 100)), n
 
 def analyze_users(df):
+    has_commenters = 'commenter_avg_kpd' in df.columns
     result = {}
     for sub in df['subreddit'].unique():
-        sub_df = df[df['subreddit'] == sub].dropna(subset=['karma_per_day', 'account_age_days'])
-        if sub_df.empty:
-            continue
+        sub_df = df[df['subreddit'] == sub]
 
-        # Suspicious: very high karma/day OR new account with elevated karma
-        suspicious_mask = (sub_df['karma_per_day'] > 200) | (
-            (sub_df['account_age_days'] < 90) & (sub_df['karma_per_day'] > 50)
+        # Poster score
+        poster_score, n_posters = _suspicious_score(
+            sub_df['karma_per_day'], sub_df.get('account_age_days', pd.Series(dtype=float))
         )
-        very_suspicious_mask = sub_df['karma_per_day'] > 1000
 
-        n = len(sub_df)
-        suspicious_pct = (suspicious_mask.sum() / n) * 100
-        very_suspicious_pct = (very_suspicious_mask.sum() / n) * 100
+        # Commenter score (only if new-style CSV has those columns)
+        commenter_score = 0.0
+        n_commenters = 0
+        if has_commenters:
+            c_df = sub_df[['commenter_avg_kpd', 'commenters_checked']].dropna()
+            if not c_df.empty:
+                total_checked = c_df['commenters_checked'].sum()
+                # Approximate: treat avg_kpd per post as a single account proxy
+                suspicious_posts = (c_df['commenter_avg_kpd'] > 200).sum()
+                susp_pct = suspicious_posts / len(c_df) * 100
+                commenter_score = float(min(max(0, susp_pct * 1.2), 100))
+                n_commenters = int(total_checked)
 
-        # Score: scale so 60% suspicious ≈ 72, capped at 100
-        # very_suspicious adds up to 28 bonus points
-        score = min(max(0, suspicious_pct * 1.2 + very_suspicious_pct * 0.28), 100)
+        # Weight: 60% poster, 40% commenter (falls back to poster-only if no data)
+        if n_commenters > 0:
+            score = poster_score * 0.6 + commenter_score * 0.4
+        else:
+            score = poster_score
 
+        poster_df = sub_df.dropna(subset=['karma_per_day'])
         result[sub] = {
-            'users_analyzed': n,
-            'avg_account_age_days': float(sub_df['account_age_days'].mean()),
-            'avg_total_karma': float(sub_df['total_karma'].mean()),
-            'avg_karma_per_day': float(sub_df['karma_per_day'].mean()),
-            'median_karma_per_day': float(sub_df['karma_per_day'].median()),
-            'suspicious_accounts_count': int(suspicious_mask.sum()),
-            'suspicious_accounts_pct': float(suspicious_pct),
-            'very_suspicious_count': int(very_suspicious_mask.sum()),
+            'users_analyzed': n_posters + n_commenters,
+            'posters_analyzed': n_posters,
+            'commenters_analyzed': n_commenters,
+            'avg_karma_per_day': float(poster_df['karma_per_day'].mean()) if not poster_df.empty else 0,
+            'poster_score': float(poster_score),
+            'commenter_score': float(commenter_score),
             'user_score': float(score),
         }
     return result

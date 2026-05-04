@@ -224,23 +224,20 @@ function renderAll() {
 
   document.getElementById('main').innerHTML = `
     <div class="section" style="margin-top:20px">
-      <div class="section-title">Where do subreddits fall? — ${fmtMonth(current.month)}</div>
-      <div class="card card-pad">
-        <div id="spectrumWrap"></div>
-        <div class="zone-grid" id="zoneGrid"></div>
-      </div>
-    </div>
-
-    <div class="section">
-      <div class="section-title">Scores at a glance</div>
+      <div class="section-title">Scores at a glance — ${fmtMonth(current.month)}</div>
       <div class="summary-row" id="summaryRow"></div>
       <div class="card card-pad" id="summaryText" style="margin-top:12px;font-size:13px;line-height:1.7;color:var(--muted)"></div>
     </div>
 
     <div class="section">
+      <div class="section-title">Risk bands</div>
+      <div class="card card-pad" id="zoneBands"></div>
+    </div>
+
+    <div class="section">
       <div class="section-title">Component breakdown — all subreddits</div>
       <div class="card card-pad">
-        <div class="card-title">Each channel scored 0–100 &nbsp;·&nbsp; <span style="color:#58a6ff">■ User</span> &nbsp;<span style="color:#f85149">■ Engagement</span> &nbsp;<span style="color:#d29922">■ Temporal</span> &nbsp;<span style="color:#bc8cff">■ Distribution</span></div>
+        <div class="card-title">Each channel scored 0–100 &nbsp;·&nbsp; <span style="color:#58a6ff">■ User+Commenter</span> &nbsp;<span style="color:#f85149">■ Engagement</span> &nbsp;<span style="color:#d29922">■ Temporal</span> &nbsp;<span style="color:#bc8cff">■ Distribution</span></div>
         <div id="compBars"></div>
       </div>
     </div>
@@ -272,7 +269,7 @@ function renderAll() {
       <div class="meth-grid">
         <div class="meth-card">
           <h4>User Account Patterns <span class="wt">35%</span></h4>
-          <p>Flags accounts earning &gt;200 karma/day or new accounts (&lt;90 days old) posting in top posts. Bot networks use fast-growing accounts to appear legitimate. A subreddit where 50%+ of top posters are suspicious scores near 60 on this component.</p>
+          <p>Checks <strong>posters and top 5 commenters</strong> per post for suspicious karma/age ratios. Accounts earning &gt;200 karma/day, or new accounts (&lt;90 days) with &gt;50 karma/day, are flagged. Bot networks seed fast-growing accounts to appear legitimate — a subreddit where 50%+ of active accounts are suspicious scores near 60 on this component.</p>
           <div class="thr-row">
             <span class="thr" style="background:rgba(248,81,73,.12);color:#f85149">&gt;1000/day = critical</span>
             <span class="thr" style="background:rgba(210,153,34,.12);color:#d29922">&gt;200/day = suspicious</span>
@@ -306,74 +303,38 @@ function renderAll() {
     </div>
   `;
 
-  renderSpectrum(subs);
-  renderZones(subs);
   renderSummaryCards(subs);
   renderSummary(subs);
+  renderZoneBands(subs);
   renderMultiRadar(subs);
   renderTrendChart();
   renderDetailCards(subs);
   renderArchive();
 }
 
-// ── risk spectrum ─────────────────────────────────────────────────────────────
-function renderSpectrum(subs) {
-  const wrap = document.getElementById('spectrumWrap');
-  // Dots only on track — no floating text, no overlap.
-  // Ranked legend grid sits below.
-  const TRACK_Y = 20;
-  const dots = subs.map(([sub, d]) => {
-    const c = COLOR(d.final_score);
-    return `<div title="r/${sub} — ${d.final_score.toFixed(1)}" style="position:absolute;left:${d.final_score}%;top:${TRACK_Y-5}px;transform:translateX(-50%);width:11px;height:11px;border-radius:50%;background:${c};border:2px solid #0d1117;cursor:default"></div>`;
-  }).join('');
+// ── risk zone bands ───────────────────────────────────────────────────────────
+function renderZoneBands(subs) {
+  const zones = [
+    { range:'0 – 30',   label:'Low',      color:'#3fb950', subs:[] },
+    { range:'30 – 50',  label:'Moderate', color:'#e3b341', subs:[] },
+    { range:'50 – 70',  label:'High',     color:'#d29922', subs:[] },
+    { range:'70 – 100', label:'Critical', color:'#f85149', subs:[] },
+  ];
+  subs.forEach(([sub, d]) => {
+    const z = d.final_score >= 70 ? zones[3] : d.final_score >= 50 ? zones[2] : d.final_score >= 30 ? zones[1] : zones[0];
+    z.subs.push({ sub, score: d.final_score });
+  });
 
-  const legend = subs.map(([sub, d], i) => {
-    const c = COLOR(d.final_score);
-    return `<div style="display:flex;align-items:center;gap:5px;min-width:0">
-      <span style="font-size:9px;color:#334155;flex-shrink:0;width:14px;text-align:right">${i+1}.</span>
-      <span style="width:8px;height:8px;border-radius:50%;background:${c};flex-shrink:0"></span>
-      <span style="font-size:10px;font-weight:600;color:${c};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">r/${sub}</span>
-      <span style="font-size:9px;color:#475569;flex-shrink:0">${d.final_score.toFixed(1)}</span>
-    </div>`;
-  }).join('');
-
-  wrap.innerHTML = `
-    <div style="font-size:11px;color:var(--muted);margin-bottom:10px">All subreddits on one bot activity scale — higher is worse</div>
-    <div style="position:relative;height:36px;margin:0 8px">
-      ${dots}
-      <div style="position:absolute;top:${TRACK_Y}px;left:0;right:0;height:6px;border-radius:3px;background:linear-gradient(to right,#3fb950,#e3b341 32%,#d29922 58%,#f85149)"></div>
-      <div style="position:absolute;top:${TRACK_Y+10}px;left:0;right:0;display:flex;justify-content:space-between">
-        <span style="font-size:9px;color:var(--muted)">0 — Clean</span>
-        <span style="font-size:9px;color:var(--muted)">25</span>
-        <span style="font-size:9px;color:var(--muted)">50</span>
-        <span style="font-size:9px;color:var(--muted)">75</span>
-        <span style="font-size:9px;color:var(--muted)">100 — Critical</span>
+  document.getElementById('zoneBands').innerHTML = zones.map(z =>
+    `<div style="display:flex;align-items:flex-start;gap:16px;padding:10px 0;border-bottom:1px solid #1e293b">
+      <div style="flex-shrink:0;width:110px">
+        <div style="font-size:10px;font-weight:700;color:${z.color}">${z.label}</div>
+        <div style="font-size:9px;color:#334155;margin-top:1px">${z.range}</div>
       </div>
-    </div>
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px 12px;margin-top:18px;padding-top:12px;border-top:1px solid #1e293b">
-      ${legend}
-    </div>`;
-}
-
-// ── zone cards ────────────────────────────────────────────────────────────────
-function renderZones(subs) {
-  const zones = {
-    low:      { range:'0–30',  label:'Low',      desc:'Mostly organic. Normal account behaviour, natural posting patterns, healthy engagement variance.', color:'#3fb950', subs:[] },
-    moderate: { range:'30–50', label:'Moderate',  desc:'Notable signals. Some accounts show unusual growth, or posting times are partially concentrated. Worth watching.', color:'#e3b341', subs:[] },
-    high:     { range:'50–70', label:'High',      desc:'Significant coordination likely. Multiple signals firing together — suspicious accounts, low comment engagement, clustered timing.', color:'#d29922', subs:[] },
-    critical: { range:'70–100',label:'Critical',  desc:'Systematic manipulation. Near-uniform voting, bot-like account patterns, and highly concentrated posting windows all present.', color:'#f85149', subs:[] },
-  };
-  subs.forEach(([sub, d]) => zones[SEV(d.final_score)].subs.push({ sub, score: d.final_score }));
-
-  document.getElementById('zoneGrid').innerHTML = Object.entries(zones).map(([key, z]) =>
-    `<div class="zone-card ${key}">
-      <div class="zone-range" style="color:${z.color}">${z.range}</div>
-      <div class="zone-label" style="color:${z.color}">${z.label}</div>
-      <div class="zone-desc">${z.desc}</div>
-      <div class="zone-subs">
-        ${z.subs.length ? z.subs.map(({sub,score}) =>
-          `<span class="zone-sub" style="background:${z.color}22;color:${z.color}">r/${sub} · ${score.toFixed(1)}</span>`
-        ).join('') : `<span style="font-size:11px;color:var(--muted)">None this month</span>`}
+      <div style="display:flex;flex-wrap:wrap;gap:5px;flex:1">
+        ${z.subs.length
+          ? z.subs.map(({sub,score}) => `<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:10px;background:${z.color}1a;font-size:10px;font-weight:600;color:${z.color}">r/${sub} <span style="font-weight:400;opacity:.7">${score.toFixed(1)}</span></span>`).join('')
+          : `<span style="font-size:11px;color:#334155">None this month</span>`}
       </div>
     </div>`
   ).join('');

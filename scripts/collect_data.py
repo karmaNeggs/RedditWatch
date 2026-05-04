@@ -73,7 +73,6 @@ def fetch_with_retry(url, max_retries=12, initial_wait=6):
 def fetch_posts(subreddit, limit=30):
     """Fetch top posts from last 30 days."""
     print(f"\n  Fetching r/{subreddit}...")
-    # t=month = top posts from the last ~30 days (rolling window)
     url = f"https://www.reddit.com/r/{subreddit}/top.json?limit={limit}&t=month"
     data = fetch_with_retry(url)
 
@@ -97,6 +96,22 @@ def fetch_posts(subreddit, limit=30):
 
     print(f"    Got {len(posts)} posts")
     return posts
+
+
+def fetch_top_commenters(subreddit, post_id, limit=5):
+    """Return up to `limit` top-commenter usernames for a post."""
+    url = f"https://www.reddit.com/r/{subreddit}/comments/{post_id}.json?limit={limit}&sort=top&depth=1"
+    data = fetch_with_retry(url)
+    if not data or not isinstance(data, list) or len(data) < 2:
+        return []
+    commenters = []
+    for child in data[1]['data']['children']:
+        author = child['data'].get('author', '[deleted]')
+        if author and author not in ('[deleted]', 'AutoModerator'):
+            commenters.append(author)
+        if len(commenters) >= limit:
+            break
+    return commenters
 
 
 def fetch_user_data(username, max_retries=8):
@@ -150,10 +165,16 @@ def main():
     subreddits = load_subreddits()
 
     all_posts = []
+    post_commenters = {}  # post_id -> [usernames]
     for subreddit in subreddits:
         posts = fetch_posts(subreddit, limit=30)
         all_posts.extend(posts)
-        time.sleep(random.uniform(2, 4))
+        # Fetch top 5 commenters for each post
+        for post in posts:
+            commenters = fetch_top_commenters(subreddit, post['post_id'], limit=5)
+            post_commenters[post['post_id']] = commenters
+            time.sleep(random.uniform(1, 2))
+        time.sleep(random.uniform(2, 3))
 
     if not all_posts:
         print("No posts collected. Exiting.")
@@ -162,24 +183,42 @@ def main():
     df = pd.DataFrame(all_posts)
     print(f"\nTotal posts collected: {len(df)}")
 
-    unique_authors = [a for a in df['author'].unique() if a not in ('[deleted]', 'AutoModerator')]
-    print(f"Fetching user data for {len(unique_authors)} unique authors...")
+    # Collect all unique users: posters + commenters
+    poster_authors = set(df['author'].tolist())
+    commenter_authors = set(u for ulist in post_commenters.values() for u in ulist)
+    all_author_names = [a for a in poster_authors | commenter_authors
+                        if a and a not in ('[deleted]', 'AutoModerator')]
+    print(f"Fetching user data for {len(all_author_names)} unique accounts (posters + commenters)...")
 
     all_users = {}
-    for idx, author in enumerate(unique_authors):
+    for idx, author in enumerate(all_author_names):
         if idx > 0 and idx % 20 == 0:
-            print(f"  Progress: {idx}/{len(unique_authors)}")
-
+            print(f"  Progress: {idx}/{len(all_author_names)}")
         user_data = fetch_user_data(author)
         if user_data:
             all_users[author] = user_data
         time.sleep(random.uniform(1, 2))
 
-    print(f"  User data fetched: {len(all_users)}/{len(unique_authors)}")
+    print(f"  User data fetched: {len(all_users)}/{len(all_author_names)}")
 
+    # Poster columns
     df['total_karma'] = df['author'].map(lambda x: all_users.get(x, {}).get('total_karma'))
     df['account_age_days'] = df['author'].map(lambda x: all_users.get(x, {}).get('account_age_days'))
     df['karma_per_day'] = df['author'].map(lambda x: all_users.get(x, {}).get('karma_per_day'))
+
+    # Commenter aggregate columns per post
+    def commenter_stats(post_id):
+        names = post_commenters.get(post_id, [])
+        kpds = [all_users[n]['karma_per_day'] for n in names if n in all_users]
+        if not kpds:
+            return pd.Series({'commenter_avg_kpd': None, 'commenter_suspicious': None, 'commenters_checked': 0})
+        suspicious = sum(1 for k in kpds if k > 200 or k > 50)  # simplified flag
+        return pd.Series({'commenter_avg_kpd': sum(kpds)/len(kpds),
+                          'commenter_suspicious': suspicious,
+                          'commenters_checked': len(kpds)})
+
+    commenter_df = df['post_id'].apply(commenter_stats)
+    df = pd.concat([df, commenter_df], axis=1)
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     output_file = DATA_DIR / f'reddit_data_{timestamp}.csv'
@@ -192,6 +231,8 @@ def main():
         'posts_per_subreddit': 30,
         'total_posts': len(df),
         'total_users_fetched': len(all_users),
+        'poster_accounts': len(poster_authors),
+        'commenter_accounts': len(commenter_authors),
         'subreddits': subreddits,
         'file': str(output_file),
     }
