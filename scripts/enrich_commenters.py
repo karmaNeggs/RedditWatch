@@ -19,8 +19,11 @@ import time
 import random
 import subprocess
 import sys
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from pathlib import Path
+
+WORKERS = 6  # parallel user-lookup threads; safe without OAuth
 
 ROOT     = Path(__file__).parent.parent
 DATA_DIR = ROOT / 'data'
@@ -113,15 +116,24 @@ def main():
     print(f"\nStep 2: Looking up {len(all_commenters)} unique commenter accounts…\n")
 
     user_cache = {}
-    for idx, name in enumerate(all_commenters):
-        if idx % 20 == 0:
-            print(f"  Progress: {idx}/{len(all_commenters)}")
-        data = fetch_user(name)
-        if data:
-            user_cache[name] = data
-        time.sleep(random.uniform(1.0, 1.8))
+    done = 0
+    total_users = len(all_commenters)
 
-    print(f"  Fetched: {len(user_cache)}/{len(all_commenters)}")
+    def _lookup(name):
+        time.sleep(random.uniform(0.2, 0.5))  # small per-thread jitter
+        return name, fetch_user(name)
+
+    with ThreadPoolExecutor(max_workers=WORKERS) as pool:
+        futures = {pool.submit(_lookup, n): n for n in all_commenters}
+        for f in as_completed(futures):
+            name, data = f.result()
+            if data:
+                user_cache[name] = data
+            done += 1
+            if done % 50 == 0:
+                print(f"  Progress: {done}/{total_users}  ({len(user_cache)} fetched)")
+
+    print(f"  Fetched: {len(user_cache)}/{total_users}")
 
     print("\nStep 3: Computing per-post commenter stats…")
     avg_kpds, suspicions, checked = [], [], []

@@ -11,8 +11,11 @@ import time
 import random
 import json
 import os
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from pathlib import Path
+
+WORKERS = 6  # parallel user-lookup threads
 
 ROOT = Path(__file__).parent.parent
 SUBREDDITS_FILE = ROOT / 'subreddits.txt'
@@ -191,15 +194,24 @@ def main():
     print(f"Fetching user data for {len(all_author_names)} unique accounts (posters + commenters)...")
 
     all_users = {}
-    for idx, author in enumerate(all_author_names):
-        if idx > 0 and idx % 20 == 0:
-            print(f"  Progress: {idx}/{len(all_author_names)}")
-        user_data = fetch_user_data(author)
-        if user_data:
-            all_users[author] = user_data
-        time.sleep(random.uniform(1, 2))
+    done = 0
+    total_users = len(all_author_names)
 
-    print(f"  User data fetched: {len(all_users)}/{len(all_author_names)}")
+    def _lookup(author):
+        time.sleep(random.uniform(0.2, 0.5))
+        return author, fetch_user_data(author)
+
+    with ThreadPoolExecutor(max_workers=WORKERS) as pool:
+        futures = {pool.submit(_lookup, a): a for a in all_author_names}
+        for f in as_completed(futures):
+            author, data = f.result()
+            if data:
+                all_users[author] = data
+            done += 1
+            if done % 50 == 0:
+                print(f"  Progress: {done}/{total_users}  ({len(all_users)} fetched)")
+
+    print(f"  User data fetched: {len(all_users)}/{total_users}")
 
     # Poster columns
     df['total_karma'] = df['author'].map(lambda x: all_users.get(x, {}).get('total_karma'))
