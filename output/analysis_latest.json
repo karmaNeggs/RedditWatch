@@ -1,56 +1,68 @@
 {
-  "analysis_date": "2026-05-04T15:56:04.647451",
+  "analysis_date": "2026-05-04T16:10:38.769426",
   "user_analysis": {
     "india": {
       "users_analyzed": 174,
       "posters_analyzed": 30,
       "commenters_analyzed": 144,
+      "avg_account_age_days": 1929.5735312835884,
       "avg_karma_per_day": 247.93693129543942,
-      "poster_score": 29.866666666666664,
+      "suspicious_accounts_pct": 6.0,
+      "poster_score": 13.866666666666667,
       "commenter_score": 0.0,
-      "user_score": 17.919999999999998
+      "user_score": 8.32
     },
     "unitedstatesofindia": {
       "users_analyzed": 158,
       "posters_analyzed": 29,
       "commenters_analyzed": 129,
+      "avg_account_age_days": 1190.3057037600252,
       "avg_karma_per_day": 236.5684460673521,
-      "poster_score": 49.6551724137931,
+      "suspicious_accounts_pct": 20.0,
+      "poster_score": 37.241379310344826,
       "commenter_score": 4.0,
-      "user_score": 31.393103448275863
+      "user_score": 23.944827586206895
     },
     "indiaspeaks": {
       "users_analyzed": 150,
       "posters_analyzed": 28,
       "commenters_analyzed": 122,
+      "avg_account_age_days": 796.2524115577469,
       "avg_karma_per_day": 1298.5467723219365,
-      "poster_score": 75.28571428571428,
-      "commenter_score": 12.0,
-      "user_score": 49.97142857142856
+      "suspicious_accounts_pct": 27.9,
+      "poster_score": 65.71428571428572,
+      "commenter_score": 0.0,
+      "user_score": 39.42857142857143
     },
     "teenindia": {
       "users_analyzed": 147,
       "posters_analyzed": 29,
       "commenters_analyzed": 118,
+      "avg_account_age_days": 441.65445117117406,
       "avg_karma_per_day": 38.00377472174904,
-      "poster_score": 24.82758620689655,
+      "suspicious_accounts_pct": 4.1,
+      "poster_score": 8.275862068965516,
       "commenter_score": 0.0,
-      "user_score": 14.89655172413793
+      "user_score": 4.96551724137931
     },
     "indiasocial": {
       "users_analyzed": 158,
       "posters_analyzed": 22,
       "commenters_analyzed": 136,
+      "avg_account_age_days": 722.9275168362815,
       "avg_karma_per_day": 226.0105372250474,
-      "poster_score": 39.45454545454545,
+      "suspicious_accounts_pct": 10.9,
+      "poster_score": 23.090909090909093,
       "commenter_score": 0.0,
-      "user_score": 23.672727272727272
+      "user_score": 13.854545454545455
     },
     "AskIndianWomen": {
       "users_analyzed": 144,
       "posters_analyzed": 29,
       "commenters_analyzed": 115,
+      "avg_account_age_days": 635.5236749134903,
       "avg_karma_per_day": 17.38188933767751,
+      "suspicious_accounts_pct": 2.1,
       "poster_score": 4.137931034482758,
       "commenter_score": 0.0,
       "user_score": 2.482758620689655
@@ -59,25 +71,31 @@
       "users_analyzed": 172,
       "posters_analyzed": 30,
       "commenters_analyzed": 142,
+      "avg_account_age_days": 1660.9600762657667,
       "avg_karma_per_day": 14.540013980980266,
-      "poster_score": 4.0,
+      "suspicious_accounts_pct": 0.0,
+      "poster_score": 0.0,
       "commenter_score": 0.0,
-      "user_score": 2.4
+      "user_score": 0.0
     },
     "BollyBlindsNGossip": {
       "users_analyzed": 140,
       "posters_analyzed": 29,
       "commenters_analyzed": 111,
+      "avg_account_age_days": 1254.472269715481,
       "avg_karma_per_day": 957.0836544965534,
-      "poster_score": 39.86206896551724,
+      "suspicious_accounts_pct": 17.1,
+      "poster_score": 35.724137931034484,
       "commenter_score": 8.0,
-      "user_score": 27.117241379310343
+      "user_score": 24.63448275862069
     },
     "developersIndia": {
       "users_analyzed": 147,
       "posters_analyzed": 30,
       "commenters_analyzed": 117,
+      "avg_account_age_days": 1187.8338738061493,
       "avg_karma_per_day": 22.282452705093053,
+      "suspicious_accounts_pct": 0.0,
       "poster_score": 0.0,
       "commenter_score": 0.0,
       "user_score": 0.0
@@ -86,34 +104,42 @@
       "users_analyzed": 147,
       "posters_analyzed": 28,
       "commenters_analyzed": 119,
+      "avg_account_age_days": 546.9200599292022,
       "avg_karma_per_day": 1211.087488028337,
-      "poster_score": 74.28571428571428,
-      "commenter_score": 8.0,
-      "user_score": 47.771428571428565
+      "suspicious_accounts_pct": 25.7,
+      "poster_score": 61.42857142857142,
+      "commenter_score": 0.0,
+      "user_score": 36.857142857142854
     },
     "bollywood": {
       "users_analyzed": 144,
       "posters_analyzed": 30,
       "commenters_analyzed": 114,
+      "avg_account_age_days": 705.0892228708799,
       "avg_karma_per_day": 410.84485357162,
-      "poster_score": 81.59999999999998,
-      "commenter_score": 19.999999999999996,
-      "user_score": 56.95999999999999
+      "suspicious_accounts_pct": 18.0,
+      "poster_score": 36.0,
+      "commenter_score": 0.0,
+      "user_score": 21.599999999999998
     },
     "IndianStockMarket": {
       "users_analyzed": 141,
       "posters_analyzed": 30,
       "commenters_analyzed": 111,
+      "avg_account_age_days": 852.8221857901169,
       "avg_karma_per_day": 81.03313606753471,
-      "poster_score": 8.933333333333334,
+      "suspicious_accounts_pct": 5.3,
+      "poster_score": 8.0,
       "commenter_score": 4.0,
-      "user_score": 6.960000000000001
+      "user_score": 6.4
     },
     "IndiaInvestments": {
       "users_analyzed": 103,
       "posters_analyzed": 14,
       "commenters_analyzed": 89,
+      "avg_account_age_days": 773.9934421516799,
       "avg_karma_per_day": 48.76248648093394,
+      "suspicious_accounts_pct": 0.0,
       "poster_score": 0.0,
       "commenter_score": 0.0,
       "user_score": 0.0
@@ -122,43 +148,53 @@
       "users_analyzed": 141,
       "posters_analyzed": 29,
       "commenters_analyzed": 112,
+      "avg_account_age_days": 879.8893979114375,
       "avg_karma_per_day": 42.70812933551343,
-      "poster_score": 24.82758620689655,
+      "suspicious_accounts_pct": 6.2,
+      "poster_score": 12.413793103448276,
       "commenter_score": 0.0,
-      "user_score": 14.89655172413793
+      "user_score": 7.448275862068965
     },
     "ipl": {
       "users_analyzed": 162,
       "posters_analyzed": 29,
       "commenters_analyzed": 133,
+      "avg_account_age_days": 781.1568377287813,
       "avg_karma_per_day": 232.3748490094224,
-      "poster_score": 42.3448275862069,
+      "suspicious_accounts_pct": 6.2,
+      "poster_score": 13.379310344827585,
       "commenter_score": 0.0,
-      "user_score": 25.406896551724138
+      "user_score": 8.027586206896551
     },
     "IndiaTech": {
       "users_analyzed": 136,
       "posters_analyzed": 24,
       "commenters_analyzed": 112,
+      "avg_account_age_days": 1041.450581587135,
       "avg_karma_per_day": 173.30809848305492,
-      "poster_score": 21.166666666666664,
+      "suspicious_accounts_pct": 10.0,
+      "poster_score": 19.999999999999996,
       "commenter_score": 0.0,
-      "user_score": 12.699999999999998
+      "user_score": 11.999999999999998
     },
     "IndianGaming": {
       "users_analyzed": 149,
       "posters_analyzed": 29,
       "commenters_analyzed": 120,
+      "avg_account_age_days": 1291.1662833324126,
       "avg_karma_per_day": 139.05215694419556,
-      "poster_score": 25.79310344827586,
+      "suspicious_accounts_pct": 4.1,
+      "poster_score": 9.241379310344826,
       "commenter_score": 0.0,
-      "user_score": 15.475862068965515
+      "user_score": 5.544827586206895
     },
     "RelationshipIndia": {
       "users_analyzed": 141,
       "posters_analyzed": 29,
       "commenters_analyzed": 112,
+      "avg_account_age_days": 732.1656541592265,
       "avg_karma_per_day": 7.58668894869915,
+      "suspicious_accounts_pct": 0.0,
       "poster_score": 0.0,
       "commenter_score": 0.0,
       "user_score": 0.0
@@ -167,7 +203,9 @@
       "users_analyzed": 169,
       "posters_analyzed": 24,
       "commenters_analyzed": 145,
+      "avg_account_age_days": 1005.7290310934828,
       "avg_karma_per_day": 7.4021591213233116,
+      "suspicious_accounts_pct": 0.0,
       "poster_score": 0.0,
       "commenter_score": 0.0,
       "user_score": 0.0
@@ -176,7 +214,9 @@
       "users_analyzed": 167,
       "posters_analyzed": 27,
       "commenters_analyzed": 140,
+      "avg_account_age_days": 700.4853198102886,
       "avg_karma_per_day": 97.46035700379245,
+      "suspicious_accounts_pct": 8.9,
       "poster_score": 17.777777777777775,
       "commenter_score": 0.0,
       "user_score": 10.666666666666664
@@ -185,16 +225,20 @@
       "users_analyzed": 129,
       "posters_analyzed": 28,
       "commenters_analyzed": 101,
+      "avg_account_age_days": 483.39140957236947,
       "avg_karma_per_day": 47.93944795655377,
-      "poster_score": 25.71428571428571,
+      "suspicious_accounts_pct": 4.3,
+      "poster_score": 8.571428571428571,
       "commenter_score": 0.0,
-      "user_score": 15.428571428571427
+      "user_score": 5.142857142857142
     },
     "ISRO": {
       "users_analyzed": 105,
       "posters_analyzed": 30,
       "commenters_analyzed": 75,
+      "avg_account_age_days": 4095.0106013627833,
       "avg_karma_per_day": 26.516853645736152,
+      "suspicious_accounts_pct": 0.0,
       "poster_score": 0.0,
       "commenter_score": 0.0,
       "user_score": 0.0
@@ -203,7 +247,9 @@
       "users_analyzed": 169,
       "posters_analyzed": 30,
       "commenters_analyzed": 139,
+      "avg_account_age_days": 796.8758190392998,
       "avg_karma_per_day": 42.58369712806286,
+      "suspicious_accounts_pct": 2.0,
       "poster_score": 4.0,
       "commenter_score": 0.0,
       "user_score": 2.4
@@ -212,7 +258,9 @@
       "users_analyzed": 165,
       "posters_analyzed": 21,
       "commenters_analyzed": 144,
+      "avg_account_age_days": 677.7958307778075,
       "avg_karma_per_day": 23.347157453338106,
+      "suspicious_accounts_pct": 2.9,
       "poster_score": 5.714285714285714,
       "commenter_score": 0.0,
       "user_score": 3.4285714285714284
@@ -221,7 +269,9 @@
       "users_analyzed": 176,
       "posters_analyzed": 29,
       "commenters_analyzed": 147,
+      "avg_account_age_days": 1022.5700208988366,
       "avg_karma_per_day": 27.665667764004777,
+      "suspicious_accounts_pct": 2.1,
       "poster_score": 4.137931034482758,
       "commenter_score": 0.0,
       "user_score": 2.482758620689655
@@ -885,36 +935,36 @@
   },
   "unified_scores": {
     "india": {
-      "final_score": 36.22725627877487,
-      "user_score": 17.919999999999998,
+      "final_score": 32.86725627877487,
+      "user_score": 8.32,
       "engagement_score": 56.26576525972291,
       "temporal_score": 39.106388831798455,
       "distribution_score": 35.028326229988686
     },
     "unitedstatesofindia": {
-      "final_score": 47.71169936212914,
-      "user_score": 31.393103448275863,
+      "final_score": 45.104802810405,
+      "user_score": 23.944827586206895,
       "engagement_score": 61.247521192854975,
       "temporal_score": 53.283675765487615,
       "distribution_score": 51.28747762852382
     },
     "indiaspeaks": {
-      "final_score": 56.09468878044402,
-      "user_score": 49.97142857142856,
+      "final_score": 52.40468878044402,
+      "user_score": 39.42857142857143,
       "engagement_score": 78.23894224612626,
       "temporal_score": 44.29056332015921,
       "distribution_score": 41.83262295049536
     },
     "teenindia": {
-      "final_score": 31.514484076939272,
-      "user_score": 14.89655172413793,
+      "final_score": 28.038622007973753,
+      "user_score": 4.96551724137931,
       "engagement_score": 41.05974177669315,
       "temporal_score": 43.70895187612308,
       "distribution_score": 34.939853768389575
     },
     "indiasocial": {
-      "final_score": 39.78127334825676,
-      "user_score": 23.672727272727272,
+      "final_score": 36.34490971189312,
+      "user_score": 13.854545454545455,
       "engagement_score": 60.03514709399663,
       "temporal_score": 45.34777938657102,
       "distribution_score": 29.438125315260177
@@ -927,15 +977,15 @@
       "distribution_score": 38.093588474219786
     },
     "IndianFood": {
-      "final_score": 8.55810179082949,
-      "user_score": 2.4,
+      "final_score": 7.718101790829491,
+      "user_score": 0.0,
       "engagement_score": 2.1196928635953025,
       "temporal_score": 35.410969658754496,
       "distribution_score": 0.0
     },
     "BollyBlindsNGossip": {
-      "final_score": 37.444269291464266,
-      "user_score": 27.117241379310343,
+      "final_score": 36.57530377422289,
+      "user_score": 24.63448275862069,
       "engagement_score": 50.31937343048865,
       "temporal_score": 31.858110719837043,
       "distribution_score": 43.23867090394432
@@ -948,22 +998,22 @@
       "distribution_score": 16.115232834090428
     },
     "IndiaCricket": {
-      "final_score": 55.044400072472186,
-      "user_score": 47.771428571428565,
+      "final_score": 51.22440007247219,
+      "user_score": 36.857142857142854,
       "engagement_score": 66.74739088142078,
       "temporal_score": 55.26330205536741,
       "distribution_score": 48.316815979816546
     },
     "bollywood": {
-      "final_score": 46.45742685332844,
-      "user_score": 56.95999999999999,
+      "final_score": 34.08142685332845,
+      "user_score": 21.599999999999998,
       "engagement_score": 54.33822936295415,
       "temporal_score": 51.09979022221103,
       "distribution_score": 0.0
     },
     "IndianStockMarket": {
-      "final_score": 26.880057178607927,
-      "user_score": 6.960000000000001,
+      "final_score": 26.684057178607922,
+      "user_score": 6.4,
       "engagement_score": 48.19596073990183,
       "temporal_score": 43.708951876123095,
       "distribution_score": 8.28985720941839
@@ -976,29 +1026,29 @@
       "distribution_score": 2.0855916343398393
     },
     "AskIndia": {
-      "final_score": 20.892294075257716,
-      "user_score": 14.89655172413793,
+      "final_score": 18.28539752353358,
+      "user_score": 7.448275862068965,
       "engagement_score": 13.022290172922826,
       "temporal_score": 41.50979998065917,
       "distribution_score": 23.13235949200508
     },
     "ipl": {
-      "final_score": 48.61110331839302,
-      "user_score": 25.406896551724138,
+      "final_score": 42.52834469770336,
+      "user_score": 8.027586206896551,
       "engagement_score": 73.10813840155939,
       "temporal_score": 56.06443910498765,
       "distribution_score": 43.82240122549483
     },
     "IndiaTech": {
-      "final_score": 38.003722271989325,
-      "user_score": 12.699999999999998,
+      "final_score": 37.75872227198932,
+      "user_score": 11.999999999999998,
       "engagement_score": 67.19472591753934,
       "temporal_score": 48.823672955289496,
       "distribution_score": 24.237132704464138
     },
     "IndianGaming": {
-      "final_score": 26.84169730000752,
-      "user_score": 15.475862068965515,
+      "final_score": 23.365835231042002,
+      "user_score": 5.544827586206895,
       "engagement_score": 41.47959782153333,
       "temporal_score": 35.04888382030249,
       "distribution_score": 13.143263102327268
@@ -1025,8 +1075,8 @@
       "distribution_score": 24.988376429425642
     },
     "JEENEETards": {
-      "final_score": 35.795590736922634,
-      "user_score": 15.428571428571427,
+      "final_score": 32.19559073692263,
+      "user_score": 5.142857142857142,
       "engagement_score": 48.007628163571326,
       "temporal_score": 56.148916438708525,
       "distribution_score": 31.75679333406355
