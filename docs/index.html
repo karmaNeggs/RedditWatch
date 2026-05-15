@@ -258,12 +258,6 @@ function renderAll() {
 
   document.getElementById('main').innerHTML = `
     <div class="section" style="margin-top:20px">
-      <div class="section-title">Scores at a glance — ${fmtMonth(current.month)}</div>
-      <div class="summary-row" id="summaryRow"></div>
-      <div class="card card-pad" id="summaryText" style="margin-top:12px;font-size:13px;line-height:1.7;color:var(--muted)"></div>
-    </div>
-
-    <div class="section">
       <div class="section-title">Risk bands</div>
       <div class="card card-pad" id="zoneBands"></div>
     </div>
@@ -337,8 +331,6 @@ function renderAll() {
     </div>
   `;
 
-  renderSummaryCards(subs);
-  renderSummary(subs);
   renderZoneBands(subs);
   renderMultiRadar(subs);
   renderTrendChart();

@@ -53,8 +53,10 @@
       background: #fff;
       border-radius: 4px;
       box-shadow: 0 1px 4px rgba(0,0,0,0.08);
-      overflow: hidden;
     }
+    .rpt-head { border-radius: 4px 4px 0 0; }
+    .rpt-footer { border-radius: 0 0 4px 4px; }
+    .rank-table-wrap { overflow-x: auto; }
 
     /* Header band */
     .rpt-head {
@@ -186,13 +188,21 @@
 
     /* ── Print styles ── */
     @media print {
-      body { background: #fff; }
+      html, body { width: 100%; overflow: hidden; background: #fff; }
       .print-bar { display: none !important; }
-      .report { margin: 0; box-shadow: none; border-radius: 0; max-width: 100%; }
-      .rpt-head { background: #0f172a !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .report { margin: 0; box-shadow: none; border-radius: 0; width: 100%; max-width: 100%; overflow: hidden; }
+      .rpt-head { background: #0f172a !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; padding: 20px 20px 16px; }
+      .rpt-meta { flex-wrap: wrap; gap: 12px; }
+      .rpt-body { padding: 20px; }
+      .rpt-footer { padding: 10px 20px; }
       .pill, .scale-seg, .meth-box, .comp-bar, .bar-fill, .comp-bar-fill { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      /* hide Scale bar and Component signals columns — too wide for A4 */
+      .rank-table th:nth-child(4), .rank-table td:nth-child(4),
+      .rank-table th:last-child,   .rank-table td:last-child { display: none; }
+      .rank-table { table-layout: fixed; width: 100%; }
+      .rank-table td, .rank-table th { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
       a { color: inherit; text-decoration: none; }
-      @page { margin: 0.5cm; size: A4; }
+      @page { margin: 1cm; size: A4 portrait; }
     }
 
     .loading { text-align: center; padding: 80px; color: var(--muted); font-family: sans-serif; }
@@ -297,6 +307,7 @@ async function render() {
           <div class="scale-seg" style="background:#fef3c7;color:#92400e">50–70<small>High</small></div>
           <div class="scale-seg" style="background:#fee2e2;color:#991b1b">70–100<small>Critical</small></div>
         </div>
+        <div class="rank-table-wrap">
         <table class="rank-table">
           <thead><tr>
             <th>#</th><th>Subreddit</th><th>Score</th><th style="width:130px">Scale</th>
@@ -313,6 +324,7 @@ async function render() {
             </tr>`).join('')}
           </tbody>
         </table>
+        </div>
       </div>
 
       <div class="rpt-section">
