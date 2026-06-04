@@ -19,8 +19,8 @@ DOCS_DATA_DIR = ROOT / 'docs' / 'data'
 
 def get_severity(score):
     if score >= 70: return 'critical'
-    if score >= 50: return 'high'
-    if score >= 30: return 'moderate'
+    if score >= 40: return 'high'
+    if score >= 20: return 'moderate'
     return 'low'
 
 
@@ -72,6 +72,8 @@ def build_month_doc(month, dt, raw):
                 'peak_hour_utc': t.get('peak_hour_utc', 0),
                 'top_3_concentration': round(t.get('top_3_hours_concentration', 0), 1),
                 'entropy': round(t.get('entropy', 0), 2),
+                'score_cv': round(d.get('score_cv', 0), 3),
+                'comments_cv': round(d.get('comments_cv', 0), 3),
             },
         }
 
@@ -111,10 +113,19 @@ def main():
             json.dump(doc, f, indent=2)
         print(f"  Wrote {out_path.name}")
 
+        all_scores = [d['final_score'] for d in doc['subreddits'].values()]
         history_months.append({
             'month': month,
             'analysis_date': dt.isoformat(),
             'data_file': f'{month}.json',
+            'aggregate': {
+                'avg_score': round(sum(all_scores) / len(all_scores), 1) if all_scores else 0,
+                'pct_moderate_plus': round(sum(1 for s in all_scores if s >= 20) / len(all_scores) * 100) if all_scores else 0,
+                'pct_high_plus': round(sum(1 for s in all_scores if s >= 40) / len(all_scores) * 100) if all_scores else 0,
+                'sub_count': len(all_scores),
+                'max_score': round(max(all_scores), 1) if all_scores else 0,
+                'min_score': round(min(all_scores), 1) if all_scores else 0,
+            },
             'summary': {
                 sub: {
                     'final_score': d['final_score'],

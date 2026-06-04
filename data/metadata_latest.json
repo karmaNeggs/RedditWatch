@@ -1,15 +1,37 @@
 {
-  "timestamp": "2026-05-03T21:20:29.729831",
+  "timestamp": "2026-06-02T17:13:02.801377",
   "collection_period": "last_30_days",
   "posts_per_subreddit": 30,
-  "total_posts": 150,
-  "total_users_fetched": 106,
+  "total_posts": 740,
+  "total_users_fetched": 3179,
+  "poster_accounts": 584,
+  "commenter_accounts": 2715,
   "subreddits": [
     "india",
-    "unitedstatesofindia",
+    "BollyBlindsNGossip",
+    "indiasocial",
+    "developersIndia",
+    "IndiaCricket",
+    "bollywood",
+    "IndianStockMarket",
     "indiaspeaks",
+    "IndiaInvestments",
+    "AskIndia",
+    "ipl",
+    "IndiaTech",
+    "IndianGaming",
+    "RelationshipIndia",
+    "personalfinanceindia",
+    "unitedstatesofindia",
+    "IndianStreetBets",
+    "JEENEETards",
+    "ISRO",
+    "UPSC",
+    "StartUpIndia",
+    "TwoXIndia",
     "teenindia",
-    "indiasocial"
+    "AskIndianWomen",
+    "IndianFood"
   ],
-  "file": "/Users/anupamvashist/Documents/Project writeups/reddit-bot-analysis-repo/data/reddit_data_20260503_212029.csv"
+  "file": "/Users/anupamvashist/Documents/Project writeups/reddit-bot-analysis-repo/data/reddit_data_20260602_171302.csv"
 }
