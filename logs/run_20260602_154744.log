@@ -1,0 +1,270 @@
+=== Reddit Bot Analysis — Tue Jun  2 15:47:44 CEST 2026 ===
+[STEP 1] Collecting data...
+
+======================================================================
+REDDIT BOT ANALYSIS — DATA COLLECTION
+Timestamp: 2026-06-02 15:47:45
+======================================================================
+Loaded 25 subreddits from subreddits.txt
+
+  Fetching r/india...
+    Got 30 posts
+
+  Fetching r/BollyBlindsNGossip...
+    Got 30 posts
+
+  Fetching r/indiasocial...
+    Got 30 posts
+
+  Fetching r/developersIndia...
+    Got 30 posts
+
+  Fetching r/IndiaCricket...
+    Got 30 posts
+
+  Fetching r/bollywood...
+    Got 30 posts
+
+  Fetching r/IndianStockMarket...
+    Got 30 posts
+
+  Fetching r/indiaspeaks...
+    Got 30 posts
+
+  Fetching r/IndiaInvestments...
+    Got 20 posts
+
+  Fetching r/AskIndia...
+    Got 30 posts
+
+  Fetching r/ipl...
+    Got 30 posts
+
+  Fetching r/IndiaTech...
+    Got 30 posts
+
+  Fetching r/IndianGaming...
+    Got 30 posts
+
+  Fetching r/RelationshipIndia...
+    Got 30 posts
+
+  Fetching r/personalfinanceindia...
+    Got 30 posts
+
+  Fetching r/unitedstatesofindia...
+    Got 30 posts
+
+  Fetching r/IndianStreetBets...
+    Got 30 posts
+
+  Fetching r/JEENEETards...
+    Got 30 posts
+
+  Fetching r/ISRO...
+    Got 30 posts
+
+  Fetching r/UPSC...
+    Got 30 posts
+
+  Fetching r/StartUpIndia...
+    Got 30 posts
+
+  Fetching r/TwoXIndia...
+    Got 30 posts
+
+  Fetching r/teenindia...
+    Got 30 posts
+
+  Fetching r/AskIndianWomen...
+    Got 30 posts
+
+  Fetching r/IndianFood...
+    Got 30 posts
+
+Total posts collected: 740
+Fetching user data for 3219 unique accounts (posters + commenters)...
+  Progress: 50/3219  (48 fetched)
+  Progress: 100/3219  (98 fetched)
+  Progress: 150/3219  (148 fetched)
+  Progress: 200/3219  (197 fetched)
+  Progress: 250/3219  (247 fetched)
+  Progress: 300/3219  (297 fetched)
+  Progress: 350/3219  (347 fetched)
+  Progress: 400/3219  (397 fetched)
+  Progress: 450/3219  (447 fetched)
+  Progress: 500/3219  (496 fetched)
+  Progress: 550/3219  (543 fetched)
+  Progress: 600/3219  (593 fetched)
+  Progress: 650/3219  (643 fetched)
+  Progress: 700/3219  (691 fetched)
+  Progress: 750/3219  (740 fetched)
+  Progress: 800/3219  (789 fetched)
+  Progress: 850/3219  (838 fetched)
+  Progress: 900/3219  (888 fetched)
+  Progress: 950/3219  (938 fetched)
+  Progress: 1000/3219  (987 fetched)
+  Progress: 1050/3219  (1036 fetched)
+  Progress: 1100/3219  (1086 fetched)
+  Progress: 1150/3219  (1136 fetched)
+  Progress: 1200/3219  (1185 fetched)
+  Progress: 1250/3219  (1233 fetched)
+  Progress: 1300/3219  (1282 fetched)
+  Progress: 1350/3219  (1330 fetched)
+  Progress: 1400/3219  (1380 fetched)
+  Progress: 1450/3219  (1430 fetched)
+  Progress: 1500/3219  (1480 fetched)
+  Progress: 1550/3219  (1530 fetched)
+  Progress: 1600/3219  (1580 fetched)
+  Progress: 1650/3219  (1629 fetched)
+  Progress: 1700/3219  (1679 fetched)
+  Progress: 1750/3219  (1729 fetched)
+  Progress: 1800/3219  (1778 fetched)
+  Progress: 1850/3219  (1828 fetched)
+  Progress: 1900/3219  (1877 fetched)
+  Progress: 1950/3219  (1925 fetched)
+  Progress: 2000/3219  (1975 fetched)
+  Progress: 2050/3219  (2025 fetched)
+  Progress: 2100/3219  (2073 fetched)
+  Progress: 2150/3219  (2122 fetched)
+  Progress: 2200/3219  (2170 fetched)
+  Progress: 2250/3219  (2220 fetched)
+  Progress: 2300/3219  (2269 fetched)
+  Progress: 2350/3219  (2318 fetched)
+  Progress: 2400/3219  (2368 fetched)
+  Progress: 2450/3219  (2418 fetched)
+  Progress: 2500/3219  (2468 fetched)
+  Progress: 2550/3219  (2518 fetched)
+  Progress: 2600/3219  (2567 fetched)
+  Progress: 2650/3219  (2616 fetched)
+  Progress: 2700/3219  (2666 fetched)
+  Progress: 2750/3219  (2716 fetched)
+  Progress: 2800/3219  (2766 fetched)
+  Progress: 2850/3219  (2814 fetched)
+  Progress: 2900/3219  (2864 fetched)
+  Progress: 2950/3219  (2913 fetched)
+  Progress: 3000/3219  (2963 fetched)
+  Progress: 3050/3219  (3012 fetched)
+  Progress: 3100/3219  (3061 fetched)
+  Progress: 3150/3219  (3111 fetched)
+  Progress: 3200/3219  (3160 fetched)
+  User data fetched: 3179/3219
+
+Data saved: /Users/anupamvashist/Documents/Project writeups/reddit-bot-analysis-repo/data/reddit_data_20260602_171302.csv
+Rows: 740  |  Columns: subreddit, post_id, title, score, upvote_ratio, num_comments, created_utc, author, total_karma, account_age_days, karma_per_day, commenter_avg_kpd, commenter_suspicious, commenters_checked
+======================================================================
+
+[STEP 2] Running analysis...
+
+======================================================================
+REDDIT BOT ANALYSIS — SCORING ENGINE
+Timestamp: 2026-06-02 17:13:03
+======================================================================
+
+Loading data...
+  740 posts across 25 subreddits
+
+Running analyses...
+  User account patterns done
+  Engagement patterns done
+  Temporal patterns done
+  Distribution analysis done
+
+======================================================================
+BOT ACTIVITY RANKINGS
+======================================================================
+
+#1 r/IndiaCricket              Score:  48.9/100  [MODERATE]
+     User: 32.7  Engagement: 66.3  Temporal: 48.6  Distribution: 52.6
+
+#2 r/indiasocial               Score:  47.8/100  [MODERATE]
+     User: 16.0  Engagement: 94.2  Temporal: 53.6  Distribution: 21.4
+
+#3 r/unitedstatesofindia       Score:  46.3/100  [MODERATE]
+     User: 19.2  Engagement: 66.7  Temporal: 53.6  Distribution: 59.1
+
+#4 r/indiaspeaks               Score:  46.1/100  [MODERATE]
+     User: 19.6  Engagement: 76.2  Temporal: 43.6  Distribution: 51.1
+
+#5 r/ipl                       Score:  42.8/100  [MODERATE]
+     User:  9.6  Engagement: 61.2  Temporal: 73.4  Distribution: 42.4
+
+#6 r/IndiaTech                 Score:  39.8/100  [MODERATE]
+     User: 17.2  Engagement: 79.3  Temporal: 48.0  Distribution:  2.5
+
+#7 r/JEENEETards               Score:  36.2/100  [MODERATE]
+     User:  7.4  Engagement: 55.0  Temporal: 51.7  Distribution: 44.8
+
+#8 r/IndianStockMarket         Score:  35.1/100  [MODERATE]
+     User:  4.8  Engagement: 65.6  Temporal: 40.7  Distribution: 37.1
+
+#9 r/BollyBlindsNGossip        Score:  34.8/100  [MODERATE]
+     User: 10.5  Engagement: 50.8  Temporal: 48.2  Distribution: 42.0
+
+#10 r/india                     Score:  34.4/100  [MODERATE]
+     User: 12.0  Engagement: 49.5  Temporal: 36.2  Distribution: 54.3
+
+#11 r/bollywood                 Score:  30.4/100  [MODERATE]
+     User: 12.4  Engagement: 43.7  Temporal: 40.1  Distribution: 32.8
+
+#12 r/IndianStreetBets          Score:  29.9/100  [LOW]
+     User:  7.4  Engagement: 56.3  Temporal: 43.9  Distribution: 10.6
+
+#13 r/developersIndia           Score:  28.3/100  [LOW]
+     User:  0.0  Engagement: 44.9  Temporal: 49.4  Distribution: 32.7
+
+#14 r/TwoXIndia                 Score:  27.1/100  [LOW]
+     User:  2.4  Engagement: 34.6  Temporal: 52.5  Distribution: 36.3
+
+#15 r/IndianGaming              Score:  26.1/100  [LOW]
+     User:  9.6  Engagement: 44.3  Temporal: 35.0  Distribution: 15.9
+
+#16 r/UPSC                      Score:  24.6/100  [LOW]
+     User:  7.2  Engagement: 36.7  Temporal: 38.5  Distribution: 22.4
+
+#17 r/teenindia                 Score:  24.6/100  [LOW]
+     User: 12.9  Engagement: 35.5  Temporal: 40.7  Distribution:  8.5
+
+#18 r/AskIndianWomen            Score:  23.1/100  [LOW]
+     User:  4.8  Engagement: 28.6  Temporal: 35.6  Distribution: 38.3
+
+#19 r/IndiaInvestments          Score:  22.3/100  [LOW]
+     User:  0.0  Engagement: 22.9  Temporal: 77.4  Distribution:  0.0
+
+#20 r/StartUpIndia              Score:  20.6/100  [LOW]
+     User:  0.0  Engagement: 44.6  Temporal: 36.2  Distribution:  0.0
+
+#21 r/personalfinanceindia      Score:  20.1/100  [LOW]
+     User:  2.4  Engagement: 22.0  Temporal: 36.4  Distribution: 35.9
+
+#22 r/ISRO                      Score:  17.7/100  [LOW]
+     User:  0.0  Engagement: 26.9  Temporal: 48.2  Distribution:  0.0
+
+#23 r/AskIndia                  Score:  15.3/100  [LOW]
+     User:  2.6  Engagement:  9.5  Temporal: 48.1  Distribution: 12.8
+
+#24 r/RelationshipIndia         Score:  14.8/100  [LOW]
+     User:  0.0  Engagement: 15.5  Temporal: 31.9  Distribution: 25.1
+
+#25 r/IndianFood                Score:   8.1/100  [LOW]
+     User:  0.0  Engagement:  1.8  Temporal: 36.8  Distribution:  1.0
+
+Saved: /Users/anupamvashist/Documents/Project writeups/reddit-bot-analysis-repo/output/analysis_20260602_171303.json
+======================================================================
+
+[STEP 3] Generating site data...
+
+======================================================================
+GENERATE SITE DATA
+Timestamp: 2026-06-02 17:13:03
+======================================================================
+  Wrote 2026-05.json
+  Wrote 2026-06.json
+  Wrote history.json
+
+Done. 2 month(s) written to docs/data/
+======================================================================
+
+
+=== Done. Site data updated in docs/data/ ===
+    Push to GitHub to publish: git add docs/ && git commit -m 'Monthly report' && git push

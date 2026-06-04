@@ -4,6 +4,14 @@
       "month": "2026-05",
       "analysis_date": "2026-05-04T16:10:38.769426",
       "data_file": "2026-05.json",
+      "aggregate": {
+        "avg_score": 29.4,
+        "pct_moderate_plus": 76,
+        "pct_high_plus": 16,
+        "sub_count": 25,
+        "max_score": 52.4,
+        "min_score": 7.7
+      },
       "summary": {
         "india": {
           "final_score": 32.9,
@@ -11,7 +19,7 @@
         },
         "unitedstatesofindia": {
           "final_score": 45.1,
-          "severity": "moderate"
+          "severity": "high"
         },
         "indiaspeaks": {
           "final_score": 52.4,
@@ -19,7 +27,7 @@
         },
         "teenindia": {
           "final_score": 28.0,
-          "severity": "low"
+          "severity": "moderate"
         },
         "indiasocial": {
           "final_score": 36.3,
@@ -27,7 +35,7 @@
         },
         "AskIndianWomen": {
           "final_score": 25.7,
-          "severity": "low"
+          "severity": "moderate"
         },
         "IndianFood": {
           "final_score": 7.7,
@@ -39,7 +47,7 @@
         },
         "developersIndia": {
           "final_score": 26.7,
-          "severity": "low"
+          "severity": "moderate"
         },
         "IndiaCricket": {
           "final_score": 51.2,
@@ -51,7 +59,7 @@
         },
         "IndianStockMarket": {
           "final_score": 26.7,
-          "severity": "low"
+          "severity": "moderate"
         },
         "IndiaInvestments": {
           "final_score": 15.2,
@@ -63,7 +71,7 @@
         },
         "ipl": {
           "final_score": 42.5,
-          "severity": "moderate"
+          "severity": "high"
         },
         "IndiaTech": {
           "final_score": 37.8,
@@ -71,7 +79,7 @@
         },
         "IndianGaming": {
           "final_score": 23.4,
-          "severity": "low"
+          "severity": "moderate"
         },
         "RelationshipIndia": {
           "final_score": 17.3,
@@ -95,14 +103,129 @@
         },
         "UPSC": {
           "final_score": 23.7,
-          "severity": "low"
+          "severity": "moderate"
         },
         "StartUpIndia": {
           "final_score": 21.9,
-          "severity": "low"
+          "severity": "moderate"
         },
         "TwoXIndia": {
           "final_score": 26.0,
+          "severity": "moderate"
+        }
+      }
+    },
+    {
+      "month": "2026-06",
+      "analysis_date": "2026-06-05T00:02:03.708639",
+      "data_file": "2026-06.json",
+      "aggregate": {
+        "avg_score": 29.8,
+        "pct_moderate_plus": 84,
+        "pct_high_plus": 20,
+        "sub_count": 25,
+        "max_score": 48.9,
+        "min_score": 8.1
+      },
+      "summary": {
+        "india": {
+          "final_score": 34.4,
+          "severity": "moderate"
+        },
+        "BollyBlindsNGossip": {
+          "final_score": 34.8,
+          "severity": "moderate"
+        },
+        "indiasocial": {
+          "final_score": 47.8,
+          "severity": "high"
+        },
+        "developersIndia": {
+          "final_score": 28.3,
+          "severity": "moderate"
+        },
+        "IndiaCricket": {
+          "final_score": 48.9,
+          "severity": "high"
+        },
+        "bollywood": {
+          "final_score": 30.4,
+          "severity": "moderate"
+        },
+        "IndianStockMarket": {
+          "final_score": 35.1,
+          "severity": "moderate"
+        },
+        "indiaspeaks": {
+          "final_score": 46.1,
+          "severity": "high"
+        },
+        "IndiaInvestments": {
+          "final_score": 22.3,
+          "severity": "moderate"
+        },
+        "AskIndia": {
+          "final_score": 15.3,
+          "severity": "low"
+        },
+        "ipl": {
+          "final_score": 42.8,
+          "severity": "high"
+        },
+        "IndiaTech": {
+          "final_score": 39.8,
+          "severity": "moderate"
+        },
+        "IndianGaming": {
+          "final_score": 26.1,
+          "severity": "moderate"
+        },
+        "RelationshipIndia": {
+          "final_score": 14.8,
+          "severity": "low"
+        },
+        "personalfinanceindia": {
+          "final_score": 20.1,
+          "severity": "moderate"
+        },
+        "unitedstatesofindia": {
+          "final_score": 46.3,
+          "severity": "high"
+        },
+        "IndianStreetBets": {
+          "final_score": 29.9,
+          "severity": "moderate"
+        },
+        "JEENEETards": {
+          "final_score": 36.2,
+          "severity": "moderate"
+        },
+        "ISRO": {
+          "final_score": 17.7,
+          "severity": "low"
+        },
+        "UPSC": {
+          "final_score": 24.6,
+          "severity": "moderate"
+        },
+        "StartUpIndia": {
+          "final_score": 20.6,
+          "severity": "moderate"
+        },
+        "TwoXIndia": {
+          "final_score": 27.1,
+          "severity": "moderate"
+        },
+        "teenindia": {
+          "final_score": 24.6,
+          "severity": "moderate"
+        },
+        "AskIndianWomen": {
+          "final_score": 23.1,
+          "severity": "moderate"
+        },
+        "IndianFood": {
+          "final_score": 8.1,
           "severity": "low"
         }
       }

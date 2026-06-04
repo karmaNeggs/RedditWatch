@@ -232,8 +232,8 @@ def calculate_scores(user_a, engagement_a, temporal_a, distribution_a):
 
 def severity(score):
     if score >= 70: return 'CRITICAL'
-    if score >= 50: return 'HIGH'
-    if score >= 30: return 'MODERATE'
+    if score >= 40: return 'HIGH'
+    if score >= 20: return 'MODERATE'
     return 'LOW'
 
 
