@@ -44,10 +44,10 @@ Final score = weighted average of four components (0–100 each):
 
 | Component | Weight | What it measures |
 |-----------|--------|-----------------|
-| User accounts | 35% | Karma-per-day anomalies in posters + top 5 commenters per post |
-| Engagement | 30% | Upvote-to-comment ratio (UCR); upvote consensus |
-| Temporal | 20% | Posting hour concentration; entropy vs uniform 24 h distribution |
-| Distribution | 15% | Coefficient of variation of vote counts (low CV = suspicious uniformity) |
+| User + Commenter | 40% | Karma-per-day anomalies in posters + top 5 commenters per post |
+| Engagement | 25% | Upvote-to-comment ratio (UCR); upvote consensus |
+| Temporal Patterns | 20% | Posting hour concentration; entropy vs uniform 24 h distribution |
+| Score Distribution | 15% | Coefficient of variation of vote counts (low CV = suspicious uniformity) |
 
 ### Severity bands
 

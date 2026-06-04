@@ -219,7 +219,7 @@ def calculate_scores(user_a, engagement_a, temporal_a, distribution_a):
         t = temporal_a[sub]['temporal_score']
         d = distribution_a[sub]['distribution_score']
 
-        final = (u * 0.35) + (e * 0.30) + (t * 0.20) + (d * 0.15)
+        final = (u * 0.40) + (e * 0.25) + (t * 0.20) + (d * 0.15)
         scores[sub] = {
             'final_score': float(final),
             'user_score': float(u),
