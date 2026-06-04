@@ -1,5 +1,5 @@
 {
-  "analysis_date": "2026-06-05T00:02:03.708639",
+  "analysis_date": "2026-06-05T00:37:40.559408",
   "user_analysis": {
     "india": {
       "users_analyzed": 174,
@@ -935,175 +935,175 @@
   },
   "unified_scores": {
     "india": {
-      "final_score": 34.4335590226731,
+      "final_score": 32.558416280413354,
       "user_score": 11.999999999999998,
       "engagement_score": 49.502854845195,
       "temporal_score": 36.212106708374726,
       "distribution_score": 54.26854151626439
     },
     "BollyBlindsNGossip": {
-      "final_score": 34.82987857794149,
+      "final_score": 32.815756393256805,
       "user_score": 10.48,
       "engagement_score": 50.76244369369366,
       "temporal_score": 48.17646664858448,
       "distribution_score": 41.98568093410999
     },
     "indiasocial": {
-      "final_score": 47.80566664691683,
+      "final_score": 43.893444424694614,
       "user_score": 15.999999999999998,
       "engagement_score": 94.24444444444441,
       "temporal_score": 53.64576160393962,
       "distribution_score": 21.354539951970605
     },
     "developersIndia": {
-      "final_score": 28.260615703119473,
+      "final_score": 26.014446062905275,
       "user_score": 0.0,
       "engagement_score": 44.92339280428404,
       "temporal_score": 49.36873098685953,
       "distribution_score": 32.73234442974903
     },
     "IndiaCricket": {
-      "final_score": 48.94946423388839,
+      "final_score": 47.26859792764297,
       "user_score": 32.72,
       "engagement_score": 66.33732612490843,
       "temporal_score": 48.567593937239295,
       "distribution_score": 52.55165072645333
     },
     "bollywood": {
-      "final_score": 30.413005435557285,
+      "final_score": 28.846239517224042,
       "user_score": 12.413793103448276,
       "engagement_score": 43.749111470113135,
       "temporal_score": 40.12705148700281,
       "distribution_score": 32.786894072772576
     },
     "IndianStockMarket": {
-      "final_score": 35.06501965416933,
+      "final_score": 32.02606352669942,
       "user_score": 4.8,
       "engagement_score": 65.57912254939839,
       "temporal_score": 40.70866293103893,
       "distribution_score": 37.13033535428018
     },
     "indiaspeaks": {
-      "final_score": 46.1111092072997,
+      "final_score": 43.28063735126287,
       "user_score": 19.599999999999998,
       "engagement_score": 76.20943712073654,
       "temporal_score": 43.60294505446266,
       "distribution_score": 51.11792706790804
     },
     "IndiaInvestments": {
-      "final_score": 22.33782488593306,
+      "final_score": 21.19341224810439,
       "user_score": 0.0,
       "engagement_score": 22.88825275657337,
       "temporal_score": 77.35674529480524,
       "distribution_score": 0.0
     },
     "AskIndia": {
-      "final_score": 15.287436524198935,
+      "final_score": 14.941883127503072,
       "user_score": 2.571428571428571,
       "engagement_score": 9.482496505345841,
       "temporal_score": 48.09950127712686,
       "distribution_score": 12.818582114465398
     },
     "ipl": {
-      "final_score": 42.752950217658004,
+      "final_score": 40.17222723440078,
       "user_score": 9.6,
       "engagement_score": 61.21445966514453,
       "temporal_score": 73.35553376894329,
       "distribution_score": 42.383370428839946
     },
     "IndiaTech": {
-      "final_score": 39.77857020935992,
+      "final_score": 36.678201884542766,
       "user_score": 17.24444444444444,
       "engagement_score": 79.2518109407875,
       "temporal_score": 47.98598249320318,
       "distribution_score": 2.468499152849872
     },
     "IndianGaming": {
-      "final_score": 26.055586924193015,
+      "final_score": 24.318858084974124,
       "user_score": 9.6,
       "engagement_score": 44.3345767843778,
       "temporal_score": 35.0488838203025,
       "distribution_score": 15.902914165461143
     },
     "RelationshipIndia": {
-      "final_score": 14.779206055902279,
+      "final_score": 14.004821247364928,
       "user_score": 0.0,
       "engagement_score": 15.487696170747029,
       "temporal_score": 31.858110719837043,
       "distribution_score": 25.07516707140508
     },
     "personalfinanceindia": {
-      "final_score": 20.10170668841781,
+      "final_score": 19.123916059291233,
       "user_score": 2.4,
       "engagement_score": 21.95581258253158,
       "temporal_score": 36.43163231395885,
       "distribution_score": 35.92424300577712
     },
     "unitedstatesofindia": {
-      "final_score": 46.323456225461534,
+      "final_score": 43.947813142553684,
       "user_score": 19.2,
       "engagement_score": 66.71286165815701,
       "temporal_score": 53.64576160393961,
       "distribution_score": 59.069636048176704
     },
     "IndianStreetBets": {
-      "final_score": 29.870698753739187,
+      "final_score": 27.429175707386168,
       "user_score": 7.448275862068965,
       "engagement_score": 56.27873678912937,
       "temporal_score": 43.928477481707205,
       "distribution_score": 10.629904459565328
     },
     "JEENEETards": {
-      "final_score": 36.15758395631307,
+      "final_score": 33.77992253168097,
       "user_score": 7.448275862068965,
       "engagement_score": 55.00150435471099,
       "temporal_score": 51.65236021604432,
       "distribution_score": 44.7984270331118
     },
     "ISRO": {
-      "final_score": 17.721934953090802,
+      "final_score": 16.375129397535247,
       "user_score": 0.0,
       "engagement_score": 26.936111111111146,
       "temporal_score": 48.20550809878729,
       "distribution_score": 0.0
     },
     "UPSC": {
-      "final_score": 24.6133832419442,
+      "final_score": 23.13630038777411,
       "user_score": 7.199999999999999,
       "engagement_score": 36.74165708340177,
       "temporal_score": 38.524777387762335,
       "distribution_score": 22.439537595807998
     },
     "StartUpIndia": {
-      "final_score": 20.632967039060937,
+      "final_score": 18.40120942282994,
       "user_score": 0.0,
       "engagement_score": 44.635152324619966,
       "temporal_score": 36.21210670837473,
       "distribution_score": 0.0
     },
     "TwoXIndia": {
-      "final_score": 27.147709992922046,
+      "final_score": 25.53921531476695,
       "user_score": 2.4,
       "engagement_score": 34.56989356310187,
       "temporal_score": 52.45349726566456,
       "distribution_score": 36.306949805723804
     },
     "teenindia": {
-      "final_score": 24.56507817938109,
+      "final_score": 23.43440591047353,
       "user_score": 12.857142857142856,
       "engagement_score": 35.4705882352941,
       "temporal_score": 40.70866293103893,
       "distribution_score": 8.547794150567158
     },
     "AskIndianWomen": {
-      "final_score": 23.139196582357602,
+      "final_score": 21.946968742789014,
       "user_score": 4.8,
       "engagement_score": 28.64455679137175,
       "temporal_score": 35.63049526433862,
       "distribution_score": 38.26486994718904
     },
     "IndianFood": {
-      "final_score": 8.06038581763556,
+      "final_score": 7.968497057496509,
       "user_score": 0.0,
       "engagement_score": 1.8377752027809966,
       "temporal_score": 36.793718152410854,
