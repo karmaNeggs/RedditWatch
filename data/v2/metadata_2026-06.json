@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "month": "2026-06",
+  "timestamp": "2026-06-06T00:32:09.624193",
+  "posts": 60,
+  "comment_rows": 614,
+  "unique_accounts": 564,
+  "posts_file": "/Users/anupamvashist/Documents/Project writeups/reddit-bot-analysis-repo/data/v2/posts_2026-06.csv",
+  "commenters_file": "/Users/anupamvashist/Documents/Project writeups/reddit-bot-analysis-repo/data/v2/commenters_2026-06.csv"
+}
