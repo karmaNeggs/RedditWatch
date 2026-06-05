@@ -1,17 +1,25 @@
 #!/usr/bin/env python3
 """
 Reddit Bot Analysis V2 — Enhanced Data Collection
-Outputs two CSVs per run:
-  data/v2/posts_YYYY-MM.csv       — one row per post
-  data/v2/commenters_YYYY-MM.csv  — one row per (post, commenter)
 
-Checkpoint file (data/v2/checkpoint_YYYY-MM.json) survives interruptions.
-Restart the same command to resume from the last completed subreddit.
+Two modes:
+  --year           Paginate top.json?t=year (10 pages × 100 = up to 1000 posts per sub),
+                   split by created_utc month, cap POSTS_CAP_PER_MONTH posts per (sub, month).
+                   Comments collected only for top COMMENT_SAMPLE posts per (sub, month).
+                   Writes one posts_YYYY-MM.csv + commenters_YYYY-MM.csv per calendar month.
+
+  --month YYYY-MM  Single calendar month (default: previous calendar month).
+                   Uses t=month (≤35 days ago) or t=year (≤380 days) filtered to bounds.
+                   Same cap + comment-sample logic as --year.
+
+Checkpoint file (data/v2/checkpoint_<key>.json) survives interruptions.
+Re-run the same command to resume.
 
 Usage:
-  python3 scripts/collect_data_v2.py                        # current month
-  python3 scripts/collect_data_v2.py --month 2026-01        # backfill
-  python3 scripts/collect_data_v2.py --subs india indiaspeaks  # test / subset
+  python3 scripts/collect_data_v2.py --year                      # full year backfill
+  python3 scripts/collect_data_v2.py                             # previous calendar month
+  python3 scripts/collect_data_v2.py --month 2026-05             # specific month
+  python3 scripts/collect_data_v2.py --year --subs india ipl     # test subset
 """
 
 import argparse
@@ -21,8 +29,9 @@ import logging
 import random
 import sys
 import time
+from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
 import pandas as pd
@@ -37,11 +46,16 @@ SUBREDDITS_FILE = ROOT / 'subreddits.txt'
 WORKERS         = 8 if USING_OAUTH else 3
 EXCLUDED        = {'[deleted]', '[removed]', 'AutoModerator', 'None', 'nan'}
 
+POSTS_CAP_PER_MONTH    = 40   # max posts kept per (sub, month) for analysis
+COMMENT_SAMPLE         = 10   # top-N posts per (sub, month) that get deep comment fetch
+THIN_MONTH_WARN        = 15   # warn if a (sub, month) has fewer than this many posts
+
 POST_COLS = [
     'subreddit', 'post_id', 'collection_month', 'collected_utc', 'created_utc',
     'title', 'score', 'upvote_ratio', 'num_comments', 'total_awards',
     'author', 'author_account_age_days', 'author_link_karma',
     'author_comment_karma', 'author_verified_email',
+    'is_top10_for_month',
 ]
 COMM_COLS = [
     'subreddit', 'post_id', 'collection_month',
@@ -54,9 +68,9 @@ COMM_COLS = [
 
 # ── Logging ───────────────────────────────────────────────────────────────────
 
-def setup_logger(month: str) -> logging.Logger:
+def setup_logger(key: str) -> logging.Logger:
     LOGS_DIR.mkdir(exist_ok=True)
-    log_path = LOGS_DIR / f'collect_v2_{month}.log'
+    log_path = LOGS_DIR / f'collect_v2_{key}.log'
     logger = logging.getLogger('collect_v2')
     logger.setLevel(logging.INFO)
     logger.handlers.clear()
@@ -74,10 +88,13 @@ def setup_logger(month: str) -> logging.Logger:
 
 def parse_args():
     p = argparse.ArgumentParser(description='Reddit Bot Analysis V2 — Data Collection')
-    p.add_argument('--month', default=None,
-                   help='Month to collect (YYYY-MM). Defaults to current month.')
+    grp = p.add_mutually_exclusive_group()
+    grp.add_argument('--year',  action='store_true',
+                     help='Collect rolling last year (1000 posts/sub, split by month).')
+    grp.add_argument('--month', default=None,
+                     help='Collect one calendar month (YYYY-MM). Default: previous month.')
     p.add_argument('--subs', nargs='+', default=None,
-                   help='Override subreddits.txt with specific subs (useful for testing).')
+                   help='Override subreddits.txt (e.g. for testing).')
     return p.parse_args()
 
 
@@ -91,41 +108,103 @@ def month_bounds(month_str: str):
 
 # ── Checkpoint ────────────────────────────────────────────────────────────────
 
-def _cp_path(month: str) -> Path:
-    return DATA_DIR / f'checkpoint_{month}.json'
+def _cp_path(key: str) -> Path:
+    return DATA_DIR / f'checkpoint_{key}.json'
 
 
-def load_checkpoint(month: str) -> dict:
-    cp = _cp_path(month)
+def load_checkpoint(key: str) -> dict:
+    cp = _cp_path(key)
     if cp.exists():
         with open(cp) as f:
-            data = json.load(f)
-        return data
+            return json.load(f)
     return {'completed': [], 'posts': [], 'comments': [], 'users': {}}
 
 
-def save_checkpoint(month: str, state: dict):
-    with open(_cp_path(month), 'w') as f:
+def save_checkpoint(key: str, state: dict):
+    with open(_cp_path(key), 'w') as f:
         json.dump({**state, 'saved_at': datetime.now().isoformat()}, f)
 
 
-def clear_checkpoint(month: str):
-    cp = _cp_path(month)
+def clear_checkpoint(key: str):
+    cp = _cp_path(key)
     if cp.exists():
         cp.unlink()
 
 
 # ── Reddit fetch helpers ──────────────────────────────────────────────────────
 
-def fetch_posts(subreddit: str, month=None, limit: int = 30) -> list:
+def _parse_post(item: dict, subreddit: str, collected_utc: int) -> dict | None:
+    p      = item['data']
+    author = p.get('author', '[deleted]')
+    if author in EXCLUDED:
+        return None
+    return {
+        'subreddit':     subreddit,
+        'post_id':       p['id'],
+        '_fullname':     f"t3_{p['id']}",
+        'collected_utc': collected_utc,
+        'created_utc':   int(p['created_utc']),
+        'title':         p['title'][:100],
+        'score':         p['score'],
+        'upvote_ratio':  p['upvote_ratio'],
+        'num_comments':  p['num_comments'],
+        'total_awards':  p.get('total_awards_received', 0),
+        'author':        author,
+    }
+
+
+def fetch_posts_year(subreddit: str) -> list:
+    """
+    Paginate top.json?t=year, up to 10 pages × 100 = 1000 posts.
+    Returns all posts sorted by score descending (Reddit's natural order).
+    """
     collected_utc = int(time.time())
-    if month:
-        start, end = month_bounds(month)
-        url = (f"https://www.reddit.com/r/{subreddit}/search.json"
-               f"?q=&sort=top&t=all&restrict_sr=1"
-               f"&after={start}&before={end}&limit={limit}")
+    all_posts     = []
+    after         = None
+
+    for page in range(10):
+        url = f"https://www.reddit.com/r/{subreddit}/top.json?t=year&limit=100"
+        if after:
+            url += f"&after={after}&count={page * 100}"
+
+        data = _get_json(url)
+        if not data or 'data' not in data:
+            break
+
+        children = data['data']['children']
+        if not children:
+            break
+
+        for item in children:
+            post = _parse_post(item, subreddit, collected_utc)
+            if post:
+                all_posts.append(post)
+
+        after = children[-1]['data'].get('name') or f"t3_{children[-1]['data']['id']}"
+
+        if len(children) < 100:
+            break  # reached end of listing
+
+        time.sleep(random.uniform(0.5, 0.9))
+
+    return all_posts
+
+
+def fetch_posts_month(subreddit: str, month: str) -> list:
+    """
+    Fetch top posts for a single calendar month with strict UTC bounds.
+    Uses t=month (≤35 days) or t=year (≤380 days) endpoint, then filters.
+    """
+    collected_utc = int(time.time())
+    start, end    = month_bounds(month)
+    days_ago      = (collected_utc - start) / 86400
+
+    if days_ago <= 35:
+        url = f"https://www.reddit.com/r/{subreddit}/top.json?t=month&limit=60"
+    elif days_ago <= 380:
+        url = f"https://www.reddit.com/r/{subreddit}/top.json?t=year&limit=100"
     else:
-        url = f"https://www.reddit.com/r/{subreddit}/top.json?t=month&limit={limit}"
+        url = f"https://www.reddit.com/r/{subreddit}/top.json?t=all&limit=100"
 
     data = _get_json(url)
     if not data or 'data' not in data:
@@ -133,32 +212,34 @@ def fetch_posts(subreddit: str, month=None, limit: int = 30) -> list:
 
     posts = []
     for item in data['data']['children']:
-        p      = item['data']
-        author = p.get('author', '[deleted]')
-        if author in EXCLUDED:
+        post = _parse_post(item, subreddit, collected_utc)
+        if not post:
             continue
-        posts.append({
-            'subreddit':     subreddit,
-            'post_id':       p['id'],
-            'collected_utc': collected_utc,
-            'created_utc':   int(p['created_utc']),
-            'title':         p['title'][:100],
-            'score':         p['score'],
-            'upvote_ratio':  p['upvote_ratio'],
-            'num_comments':  p['num_comments'],
-            'total_awards':  p.get('total_awards_received', 0),
-            'author':        author,
-        })
+        if post['created_utc'] < start or post['created_utc'] > end:
+            continue
+        posts.append(post)
+
+    posts.sort(key=lambda x: -x['score'])
+    return posts[:POSTS_CAP_PER_MONTH]
+
+
+def cap_and_mark(posts: list) -> list:
+    """
+    Sort by score, cap at POSTS_CAP_PER_MONTH, mark top COMMENT_SAMPLE as is_top10_for_month.
+    """
+    posts = sorted(posts, key=lambda x: -x['score'])[:POSTS_CAP_PER_MONTH]
+    for i, p in enumerate(posts):
+        p['is_top10_for_month'] = (i < COMMENT_SAMPLE)
     return posts
 
 
 def fetch_comments(subreddit: str, post_id: str, n_top: int = 10, n_first: int = 5) -> list:
     """
-    Fetch up to 30 comments sorted by top (depth ≤ 2).
-    Tag each as in_top10 (highest-scored) and/or in_first5 (earliest direct reply).
+    Fetch up to 30 comments (sort=top, depth≤2).
+    Tag top n_top by score (in_top10) and first n_first direct replies by timestamp (in_first5).
     """
-    url = (f"https://www.reddit.com/r/{subreddit}/comments/{post_id}.json"
-           f"?limit=30&sort=top&depth=2")
+    url  = (f"https://www.reddit.com/r/{subreddit}/comments/{post_id}.json"
+            f"?limit=30&sort=top&depth=2")
     data = _get_json(url)
     if not data or not isinstance(data, list) or len(data) < 2:
         return []
@@ -224,87 +305,74 @@ def fetch_user(username: str) -> dict | None:
     }
 
 
-# ── Main ──────────────────────────────────────────────────────────────────────
+# ── Shared phase 1 logic ──────────────────────────────────────────────────────
 
-def main():
-    args  = parse_args()
-    month = args.month or datetime.now().strftime('%Y-%m')
-    log   = setup_logger(month)
+def collect_sub_year(sub: str, log) -> tuple[list, list]:
+    """Fetch posts + comments for a subreddit in year mode. Returns (posts, comments)."""
+    raw = fetch_posts_year(sub)
+    if not raw:
+        log.info(f'    r/{sub}: no posts returned')
+        return [], []
 
-    log.info('=' * 60)
-    log.info(f'Reddit Bot Analysis V2 — collection  month={month}')
-    print_auth_status()
-    log.info('=' * 60)
+    # Group by month, cap + mark
+    by_month = defaultdict(list)
+    for post in raw:
+        m = datetime.utcfromtimestamp(post['created_utc']).strftime('%Y-%m')
+        by_month[m].append(post)
 
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    all_posts = []
+    for m, month_posts in sorted(by_month.items()):
+        month_posts = cap_and_mark(month_posts)
+        by_month[m] = month_posts
+        all_posts.extend(month_posts)
 
-    # Subreddit list
-    if args.subs:
-        subreddits = args.subs
-        log.info(f'Subreddits (override): {subreddits}')
-    elif SUBREDDITS_FILE.exists():
-        subreddits = [
-            l.strip() for l in SUBREDDITS_FILE.read_text().splitlines()
-            if l.strip() and not l.startswith('#')
-        ]
-        log.info(f'Subreddits (file): {len(subreddits)}')
-    else:
-        log.error('No subreddits found.')
-        return
+    thin = [m for m, mp in by_month.items() if len(mp) < THIN_MONTH_WARN]
+    month_summary = {m: len(mp) for m, mp in sorted(by_month.items())}
+    log.info(f'    r/{sub}: {len(raw)} fetched → {len(all_posts)} kept across '
+             f'{len(by_month)} months  {month_summary}')
+    if thin:
+        log.info(f'    ⚠  thin months (<{THIN_MONTH_WARN} posts): {", ".join(thin)}')
 
-    # ── Resume from checkpoint if one exists ─────────────────────────────────
-    state = load_checkpoint(month)
-    if state['completed']:
-        log.info(f'Resuming: {len(state["completed"])} subs already done '
-                 f'({", ".join(state["completed"])})')
+    # Comments only for top-10-per-month posts
+    comment_posts = [p for p in all_posts if p['is_top10_for_month']]
+    all_comments  = []
+    for post in comment_posts:
+        comments = fetch_comments(sub, post['post_id'])
+        for c in comments:
+            all_comments.append({'subreddit': sub, 'post_id': post['post_id'], **c})
+        time.sleep(random.uniform(0.8, 1.2))
 
-    raw_posts    = state['posts']
-    raw_comments = state['comments']
-    user_cache   = state['users']    # persisted across restarts
-    completed    = set(state['completed'])
+    log.info(f'    r/{sub}: {len(comment_posts)} comment-sampled posts → '
+             f'{len(all_comments)} comment rows')
+    return all_posts, all_comments
 
-    # ── Phase 1: collect posts + comments ─────────────────────────────────────
-    for sub in subreddits:
-        if sub in completed:
-            log.info(f'  r/{sub:<25} skip (checkpoint)')
-            continue
 
-        log.info(f'  r/{sub}')
-        posts = fetch_posts(sub, month=args.month)
-        if not posts:
-            log.info(f'    no posts — skipping')
-            completed.add(sub)
-            save_checkpoint(month, {'completed': list(completed),
-                                    'posts': raw_posts,
-                                    'comments': raw_comments,
-                                    'users': user_cache})
-            continue
+def collect_sub_month(sub: str, month: str, log) -> tuple[list, list]:
+    """Fetch posts + comments for a subreddit in single-month mode."""
+    posts = fetch_posts_month(sub, month)
+    if not posts:
+        return [], []
 
-        n_comments = 0
-        for post in posts:
-            comments = fetch_comments(sub, post['post_id'])
-            for c in comments:
-                raw_comments.append({'subreddit': sub, 'post_id': post['post_id'], **c})
-            n_comments += len(comments)
-            time.sleep(random.uniform(0.8, 1.3))
+    posts = cap_and_mark(posts)
 
-        raw_posts.extend(posts)
-        completed.add(sub)
-        log.info(f'    {len(posts)} posts  {n_comments} comment-rows')
+    comments      = []
+    comment_posts = [p for p in posts if p['is_top10_for_month']]
+    for post in comment_posts:
+        cs = fetch_comments(sub, post['post_id'])
+        for c in cs:
+            comments.append({'subreddit': sub, 'post_id': post['post_id'], **c})
+        time.sleep(random.uniform(0.8, 1.3))
 
-        # Checkpoint after every subreddit — safe to interrupt here
-        save_checkpoint(month, {'completed': list(completed),
-                                'posts': raw_posts,
-                                'comments': raw_comments,
-                                'users': user_cache})
+    log.info(f'    r/{sub}: {len(posts)} posts  '
+             f'{len(comment_posts)} comment-sampled  {len(comments)} comment rows')
+    return posts, comments
 
-        time.sleep(random.uniform(1.5, 2.5))
 
-    log.info(f'Phase 1 done — {len(raw_posts)} posts  {len(raw_comments)} comment-rows')
+# ── Profile fetch phase ───────────────────────────────────────────────────────
 
-    # ── Phase 2: user profiles (deduplicated; cache survives restarts) ────────
-    poster_names    = {p['author']  for p in raw_posts    if p['author']    not in EXCLUDED}
-    commenter_names = {c['author']  for c in raw_comments if c['author']    not in EXCLUDED}
+def fetch_profiles(raw_posts, raw_comments, user_cache, cp_key, state, log):
+    poster_names    = {p['author'] for p in raw_posts    if p['author'] not in EXCLUDED}
+    commenter_names = {c['author'] for c in raw_comments if c['author'] not in EXCLUDED}
     need_fetch      = [a for a in poster_names | commenter_names
                        if a not in EXCLUDED and a not in user_cache]
 
@@ -319,21 +387,24 @@ def main():
     with ThreadPoolExecutor(max_workers=WORKERS) as pool:
         futures = {pool.submit(_lookup, a): a for a in need_fetch}
         for f in as_completed(futures):
-            name, profile = f.result()   # _lookup returns (name, profile)
+            name, profile = f.result()
             if profile:
                 user_cache[name] = profile
             done += 1
             if done % 100 == 0:
                 log.info(f'  profiles {done}/{len(need_fetch)} …')
-                # Persist cache so a crash here doesn't lose progress
-                save_checkpoint(month, {'completed': list(completed),
-                                        'posts': raw_posts,
-                                        'comments': raw_comments,
-                                        'users': user_cache})
+                save_checkpoint(cp_key, state)
 
     log.info(f'Profiles fetched: {len(user_cache)} total in cache')
 
-    # ── Phase 3: enrich + write CSVs ─────────────────────────────────────────
+
+# ── Write output CSVs ─────────────────────────────────────────────────────────
+
+def write_csvs(raw_posts, raw_comments, user_cache, log):
+    """
+    Enrich with profile data, split by collection_month, write per-month CSVs.
+    Returns list of months written.
+    """
     def _author_cols(name):
         u = user_cache.get(name) or {}
         return {
@@ -343,38 +414,153 @@ def main():
             'author_verified_email':   u.get('verified_email'),
         }
 
-    posts_rows = []
+    # Derive collection_month from created_utc
+    posts_by_month    = defaultdict(list)
+    comments_by_month = defaultdict(list)
+
     for p in raw_posts:
-        row = {**p, 'collection_month': month, **_author_cols(p['author'])}
-        posts_rows.append({col: row.get(col) for col in POST_COLS})
+        m = datetime.utcfromtimestamp(p['created_utc']).strftime('%Y-%m')
+        row = {**p, 'collection_month': m, **_author_cols(p['author'])}
+        posts_by_month[m].append({col: row.get(col) for col in POST_COLS})
 
-    comm_rows = []
     for c in raw_comments:
-        row = {**c, 'collection_month': month, **_author_cols(c['author'])}
-        comm_rows.append({col: row.get(col) for col in COMM_COLS})
+        # Find the parent post's month
+        post_id = c['post_id']
+        parent  = next((p for p in raw_posts if p['post_id'] == post_id), None)
+        m = datetime.utcfromtimestamp(parent['created_utc']).strftime('%Y-%m') if parent else 'unknown'
+        row = {**c, 'collection_month': m, **_author_cols(c['author'])}
+        comments_by_month[m].append({col: row.get(col) for col in COMM_COLS})
 
-    posts_path = DATA_DIR / f'posts_{month}.csv'
-    comms_path = DATA_DIR / f'commenters_{month}.csv'
+    months_written = []
+    for m in sorted(posts_by_month):
+        p_rows = posts_by_month[m]
+        c_rows = comments_by_month.get(m, [])
 
-    pd.DataFrame(posts_rows).to_csv(posts_path, index=False)
-    pd.DataFrame(comm_rows).to_csv(comms_path,  index=False)
-    pd.DataFrame(posts_rows).to_csv(DATA_DIR / 'posts_latest.csv',      index=False)
-    pd.DataFrame(comm_rows).to_csv( DATA_DIR / 'commenters_latest.csv', index=False)
+        posts_path = DATA_DIR / f'posts_{m}.csv'
+        comms_path = DATA_DIR / f'commenters_{m}.csv'
+        pd.DataFrame(p_rows).to_csv(posts_path, index=False)
+        pd.DataFrame(c_rows).to_csv(comms_path,  index=False)
+        log.info(f'  {m}: {len(p_rows)} posts ({sum(1 for r in p_rows if r["is_top10_for_month"])} comment-sampled)  '
+                 f'{len(c_rows)} comment rows  → {posts_path.name}')
+        months_written.append(m)
+
+    # Also write latest symlinks
+    if months_written:
+        latest = months_written[-1]
+        pd.DataFrame(posts_by_month[latest]).to_csv(   DATA_DIR / 'posts_latest.csv',      index=False)
+        pd.DataFrame(comments_by_month.get(latest, [])).to_csv(DATA_DIR / 'commenters_latest.csv', index=False)
+
+    return months_written
+
+
+# ── Main ──────────────────────────────────────────────────────────────────────
+
+def main():
+    args = parse_args()
+
+    year_mode = args.year
+    if year_mode:
+        cp_key = 'year'
+        label  = 'YEAR (rolling last 365 days)'
+    else:
+        if args.month:
+            month = args.month
+        else:
+            now   = datetime.now()
+            prev  = now.replace(day=1) - timedelta(days=1)
+            month = prev.strftime('%Y-%m')
+        cp_key = month
+        label  = f'month={month}'
+
+    log = setup_logger(cp_key)
+    log.info('=' * 60)
+    log.info(f'Reddit Bot Analysis V2 — collection  {label}')
+    print_auth_status()
+    log.info(f'Posts cap: {POSTS_CAP_PER_MONTH}/month  Comment sample: {COMMENT_SAMPLE}/month')
+    log.info('=' * 60)
+
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+
+    if args.subs:
+        subreddits = args.subs
+        log.info(f'Subreddits (override): {subreddits}')
+    elif SUBREDDITS_FILE.exists():
+        subreddits = [
+            l.strip() for l in SUBREDDITS_FILE.read_text().splitlines()
+            if l.strip() and not l.startswith('#')
+        ]
+        log.info(f'Subreddits (file): {len(subreddits)}')
+    else:
+        log.error('No subreddits found.')
+        return
+
+    # ── Resume from checkpoint ────────────────────────────────────────────────
+    state      = load_checkpoint(cp_key)
+    raw_posts  = state['posts']
+    raw_comms  = state['comments']
+    user_cache = state['users']
+    completed  = set(state['completed'])
+
+    if completed:
+        log.info(f'Resuming: {len(completed)} subs done ({", ".join(sorted(completed))})')
+
+    # ── Phase 1: posts + comments ─────────────────────────────────────────────
+    for sub in subreddits:
+        if sub in completed:
+            log.info(f'  r/{sub:<25} skip (checkpoint)')
+            continue
+
+        if year_mode:
+            posts, comments = collect_sub_year(sub, log)
+        else:
+            posts, comments = collect_sub_month(sub, month, log)
+
+        if not posts:
+            log.info(f'  r/{sub}: no posts — skipping')
+
+        raw_posts.extend(posts)
+        raw_comms.extend(comments)
+        completed.add(sub)
+
+        save_checkpoint(cp_key, {
+            'completed': list(completed),
+            'posts':     raw_posts,
+            'comments':  raw_comms,
+            'users':     user_cache,
+        })
+        time.sleep(random.uniform(1.5, 2.5))
+
+    log.info(f'Phase 1 done — {len(raw_posts)} posts  {len(raw_comms)} comment rows')
+
+    # ── Phase 2: user profiles ────────────────────────────────────────────────
+    state_ref = {
+        'completed': list(completed),
+        'posts':     raw_posts,
+        'comments':  raw_comms,
+        'users':     user_cache,
+    }
+    fetch_profiles(raw_posts, raw_comms, user_cache, cp_key, state_ref, log)
+
+    # ── Phase 3: write CSVs ───────────────────────────────────────────────────
+    months_written = write_csvs(raw_posts, raw_comms, user_cache, log)
 
     meta = {
-        'version': 2, 'month': month,
-        'timestamp': datetime.now().isoformat(),
-        'posts': len(posts_rows), 'comment_rows': len(comm_rows),
+        'version':        2,
+        'mode':           'year' if year_mode else 'month',
+        'months_written': months_written,
+        'timestamp':      datetime.now().isoformat(),
+        'total_posts':    len(raw_posts),
+        'total_comments': len(raw_comms),
         'unique_accounts': len(user_cache),
-        'posts_file': str(posts_path), 'commenters_file': str(comms_path),
+        'posts_cap_per_month':   POSTS_CAP_PER_MONTH,
+        'comment_sample':        COMMENT_SAMPLE,
     }
-    with open(DATA_DIR / f'metadata_{month}.json', 'w') as f:
+    meta_path = DATA_DIR / (f'metadata_year.json' if year_mode else f'metadata_{month}.json')
+    with open(meta_path, 'w') as f:
         json.dump(meta, f, indent=2)
 
-    clear_checkpoint(month)
-
-    log.info(f'posts    → {posts_path.name}  ({len(posts_rows)} rows)')
-    log.info(f'comments → {comms_path.name}  ({len(comm_rows)} rows)')
+    clear_checkpoint(cp_key)
+    log.info(f'Months written: {months_written}')
     log.info('Checkpoint cleared — collection complete.')
     log.info('=' * 60)
 

@@ -6,11 +6,12 @@
 #   0 2 1 * * cd /path/to/reddit-bot-analysis-repo && bash run_monthly.sh >> logs/run.log 2>&1
 #
 # Usage:
-#   bash run_monthly.sh                        # V1: current month
-#   bash run_monthly.sh --skip-collect         # V1: re-score without new pull
-#   bash run_monthly.sh --v2                   # V2: current month (enhanced)
-#   bash run_monthly.sh --v2 --month 2026-01   # V2: historical backfill
-#   bash run_monthly.sh --v2 --subs india indiaspeaks  # V2: test subset
+#   bash run_monthly.sh                              # V1: current month
+#   bash run_monthly.sh --skip-collect               # V1: re-score without new pull
+#   bash run_monthly.sh --v2                         # V2: previous calendar month
+#   bash run_monthly.sh --v2 --year                  # V2: full year backfill (1000 posts/sub)
+#   bash run_monthly.sh --v2 --month 2026-01         # V2: specific month
+#   bash run_monthly.sh --v2 --subs india ipl        # V2: test subset
 
 set -euo pipefail
 
@@ -26,16 +27,16 @@ echo "=== Reddit Bot Analysis — $(date) ===" | tee -a "$LOG_FILE"
 VERSION=1
 SKIP_COLLECT=false
 MONTH_ARG=""
-SUBS_ARG=""
 EXTRA_ARGS=()
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --v2)           VERSION=2 ;;
     --skip-collect) SKIP_COLLECT=true ;;
+    --year)         EXTRA_ARGS+=(--year) ;;
     --month)        MONTH_ARG="$2"; EXTRA_ARGS+=(--month "$2"); shift ;;
     --subs)
-      SUBS_ARG="$2"; shift
+      shift
       EXTRA_ARGS+=(--subs)
       while [[ $# -gt 0 && "$1" != --* ]]; do
         EXTRA_ARGS+=("$1"); shift
