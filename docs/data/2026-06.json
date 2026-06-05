@@ -1,6 +1,23 @@
 {
   "month": "2026-06",
-  "analysis_date": "2026-06-05T00:37:40.559408",
+  "analysis_date": "2026-06-05T23:26:32.823388",
+  "network": {
+    "total_unique_authors": 582,
+    "cross_sub_authors_2plus": 18,
+    "cross_sub_authors_3plus": 2,
+    "top_cross_sub_authors": {
+      "Broad-Research5220": 3,
+      "GiveMeSomeSunshine3": 3,
+      "Adorable-Grand68": 2,
+      "ChhotaSaHydra": 2,
+      "Curious-Dot-999": 2,
+      "Diligent_Season_6096": 2,
+      "DreamSuccessful1992": 2,
+      "Fearless-Ad-422": 2,
+      "HotLiterature5507": 2,
+      "KenSuvy": 2
+    }
+  },
   "subreddits": {
     "india": {
       "final_score": 32.6,
@@ -22,7 +39,16 @@
         "top_3_concentration": 30.0,
         "entropy": 3.87,
         "score_cv": 0.26,
-        "comments_cv": 0.612
+        "comments_cv": 0.612,
+        "cross_sub_author_pct": 3.3,
+        "multi_sub_author_pct": 0.0,
+        "interval_cv": 0.701,
+        "mean_interval_hours": 23.7,
+        "score_comment_corr": 0.565,
+        "upvote_ratio_std": 0.0289,
+        "fully_coordinated_pct": 3.3,
+        "poster_only_susp_pct": 3.3,
+        "commenter_only_susp_pct": 23.3
       }
     },
     "BollyBlindsNGossip": {
@@ -45,7 +71,16 @@
         "top_3_concentration": 40.0,
         "entropy": 3.65,
         "score_cv": 0.435,
-        "comments_cv": 0.533
+        "comments_cv": 0.533,
+        "cross_sub_author_pct": 6.7,
+        "multi_sub_author_pct": 6.7,
+        "interval_cv": 1.058,
+        "mean_interval_hours": 24.0,
+        "score_comment_corr": 0.537,
+        "upvote_ratio_std": 0.0333,
+        "fully_coordinated_pct": 3.3,
+        "poster_only_susp_pct": 6.7,
+        "commenter_only_susp_pct": 50.0
       }
     },
     "indiasocial": {
@@ -68,7 +103,16 @@
         "top_3_concentration": 43.3,
         "entropy": 3.4,
         "score_cv": 0.556,
-        "comments_cv": 0.936
+        "comments_cv": 0.936,
+        "cross_sub_author_pct": 13.3,
+        "multi_sub_author_pct": 0.0,
+        "interval_cv": 0.694,
+        "mean_interval_hours": 22.1,
+        "score_comment_corr": 0.545,
+        "upvote_ratio_std": 0.0163,
+        "fully_coordinated_pct": 0.0,
+        "poster_only_susp_pct": 13.3,
+        "commenter_only_susp_pct": 30.0
       }
     },
     "developersIndia": {
@@ -91,7 +135,16 @@
         "top_3_concentration": 40.0,
         "entropy": 3.51,
         "score_cv": 0.533,
-        "comments_cv": 0.55
+        "comments_cv": 0.55,
+        "cross_sub_author_pct": 6.7,
+        "multi_sub_author_pct": 0.0,
+        "interval_cv": 1.211,
+        "mean_interval_hours": 23.9,
+        "score_comment_corr": 0.239,
+        "upvote_ratio_std": 0.0272,
+        "fully_coordinated_pct": 0.0,
+        "poster_only_susp_pct": 0.0,
+        "commenter_only_susp_pct": 13.3
       }
     },
     "IndiaCricket": {
@@ -114,7 +167,16 @@
         "top_3_concentration": 40.0,
         "entropy": 3.6,
         "score_cv": 0.286,
-        "comments_cv": 0.599
+        "comments_cv": 0.599,
+        "cross_sub_author_pct": 23.3,
+        "multi_sub_author_pct": 23.3,
+        "interval_cv": 0.905,
+        "mean_interval_hours": 22.5,
+        "score_comment_corr": -0.051,
+        "upvote_ratio_std": 0.0196,
+        "fully_coordinated_pct": 20.0,
+        "poster_only_susp_pct": 13.3,
+        "commenter_only_susp_pct": 30.0
       }
     },
     "bollywood": {
@@ -137,7 +199,16 @@
         "top_3_concentration": 33.3,
         "entropy": 3.81,
         "score_cv": 0.555,
-        "comments_cv": 0.498
+        "comments_cv": 0.498,
+        "cross_sub_author_pct": 0.0,
+        "multi_sub_author_pct": 0.0,
+        "interval_cv": 1.066,
+        "mean_interval_hours": 22.6,
+        "score_comment_corr": 0.146,
+        "upvote_ratio_std": 0.0348,
+        "fully_coordinated_pct": 3.3,
+        "poster_only_susp_pct": 0.0,
+        "commenter_only_susp_pct": 40.0
       }
     },
     "IndianStockMarket": {
@@ -160,7 +231,16 @@
         "top_3_concentration": 33.3,
         "entropy": 3.74,
         "score_cv": 0.495,
-        "comments_cv": 0.522
+        "comments_cv": 0.522,
+        "cross_sub_author_pct": 30.0,
+        "multi_sub_author_pct": 0.0,
+        "interval_cv": 0.917,
+        "mean_interval_hours": 24.0,
+        "score_comment_corr": 0.167,
+        "upvote_ratio_std": 0.0278,
+        "fully_coordinated_pct": 0.0,
+        "poster_only_susp_pct": 6.7,
+        "commenter_only_susp_pct": 6.7
       }
     },
     "indiaspeaks": {
@@ -183,7 +263,16 @@
         "top_3_concentration": 36.7,
         "entropy": 3.79,
         "score_cv": 0.297,
-        "comments_cv": 0.61
+        "comments_cv": 0.61,
+        "cross_sub_author_pct": 13.3,
+        "multi_sub_author_pct": 6.7,
+        "interval_cv": 0.707,
+        "mean_interval_hours": 21.6,
+        "score_comment_corr": 0.231,
+        "upvote_ratio_std": 0.0157,
+        "fully_coordinated_pct": 0.0,
+        "poster_only_susp_pct": 23.3,
+        "commenter_only_susp_pct": 10.0
       }
     },
     "IndiaInvestments": {
@@ -206,7 +295,16 @@
         "top_3_concentration": 65.0,
         "entropy": 2.6,
         "score_cv": 1.687,
-        "comments_cv": 0.803
+        "comments_cv": 0.803,
+        "cross_sub_author_pct": 0.0,
+        "multi_sub_author_pct": 0.0,
+        "interval_cv": 0.713,
+        "mean_interval_hours": 35.4,
+        "score_comment_corr": 0.337,
+        "upvote_ratio_std": 0.0705,
+        "fully_coordinated_pct": 0.0,
+        "poster_only_susp_pct": 0.0,
+        "commenter_only_susp_pct": 5.0
       }
     },
     "AskIndia": {
@@ -229,7 +327,16 @@
         "top_3_concentration": 40.0,
         "entropy": 3.66,
         "score_cv": 0.654,
-        "comments_cv": 0.885
+        "comments_cv": 0.885,
+        "cross_sub_author_pct": 0.0,
+        "multi_sub_author_pct": 0.0,
+        "interval_cv": 0.899,
+        "mean_interval_hours": 22.3,
+        "score_comment_corr": 0.029,
+        "upvote_ratio_std": 0.0774,
+        "fully_coordinated_pct": 0.0,
+        "poster_only_susp_pct": 0.0,
+        "commenter_only_susp_pct": 6.7
       }
     },
     "ipl": {
@@ -252,7 +359,16 @@
         "top_3_concentration": 60.0,
         "entropy": 3.05,
         "score_cv": 0.316,
-        "comments_cv": 0.799
+        "comments_cv": 0.799,
+        "cross_sub_author_pct": 3.3,
+        "multi_sub_author_pct": 0.0,
+        "interval_cv": 0.959,
+        "mean_interval_hours": 20.8,
+        "score_comment_corr": 0.318,
+        "upvote_ratio_std": 0.0229,
+        "fully_coordinated_pct": 0.0,
+        "poster_only_susp_pct": 3.3,
+        "commenter_only_susp_pct": 60.0
       }
     },
     "IndiaTech": {
@@ -275,7 +391,16 @@
         "top_3_concentration": 40.0,
         "entropy": 3.67,
         "score_cv": 0.923,
-        "comments_cv": 0.734
+        "comments_cv": 0.734,
+        "cross_sub_author_pct": 10.0,
+        "multi_sub_author_pct": 0.0,
+        "interval_cv": 1.087,
+        "mean_interval_hours": 23.9,
+        "score_comment_corr": 0.56,
+        "upvote_ratio_std": 0.0178,
+        "fully_coordinated_pct": 0.0,
+        "poster_only_susp_pct": 13.3,
+        "commenter_only_susp_pct": 23.3
       }
     },
     "IndianGaming": {
@@ -298,7 +423,16 @@
         "top_3_concentration": 30.0,
         "entropy": 4.01,
         "score_cv": 0.618,
-        "comments_cv": 1.224
+        "comments_cv": 1.224,
+        "cross_sub_author_pct": 0.0,
+        "multi_sub_author_pct": 0.0,
+        "interval_cv": 0.979,
+        "mean_interval_hours": 23.0,
+        "score_comment_corr": -0.202,
+        "upvote_ratio_std": 0.0173,
+        "fully_coordinated_pct": 0.0,
+        "poster_only_susp_pct": 3.3,
+        "commenter_only_susp_pct": 10.0
       }
     },
     "RelationshipIndia": {
@@ -321,7 +455,16 @@
         "top_3_concentration": 26.7,
         "entropy": 3.99,
         "score_cv": 0.588,
-        "comments_cv": 0.626
+        "comments_cv": 0.626,
+        "cross_sub_author_pct": 0.0,
+        "multi_sub_author_pct": 0.0,
+        "interval_cv": 0.769,
+        "mean_interval_hours": 22.7,
+        "score_comment_corr": 0.623,
+        "upvote_ratio_std": 0.0604,
+        "fully_coordinated_pct": 0.0,
+        "poster_only_susp_pct": 0.0,
+        "commenter_only_susp_pct": 3.3
       }
     },
     "personalfinanceindia": {
@@ -344,7 +487,16 @@
         "top_3_concentration": 30.0,
         "entropy": 3.85,
         "score_cv": 0.414,
-        "comments_cv": 0.743
+        "comments_cv": 0.743,
+        "cross_sub_author_pct": 3.3,
+        "multi_sub_author_pct": 3.3,
+        "interval_cv": 1.001,
+        "mean_interval_hours": 22.7,
+        "score_comment_corr": 0.516,
+        "upvote_ratio_std": 0.0739,
+        "fully_coordinated_pct": 0.0,
+        "poster_only_susp_pct": 0.0,
+        "commenter_only_susp_pct": 3.3
       }
     },
     "unitedstatesofindia": {
@@ -367,7 +519,16 @@
         "top_3_concentration": 43.3,
         "entropy": 3.4,
         "score_cv": 0.196,
-        "comments_cv": 0.634
+        "comments_cv": 0.634,
+        "cross_sub_author_pct": 10.0,
+        "multi_sub_author_pct": 0.0,
+        "interval_cv": 0.835,
+        "mean_interval_hours": 23.6,
+        "score_comment_corr": 0.14,
+        "upvote_ratio_std": 0.0163,
+        "fully_coordinated_pct": 16.7,
+        "poster_only_susp_pct": 10.0,
+        "commenter_only_susp_pct": 36.7
       }
     },
     "IndianStreetBets": {
@@ -390,7 +551,16 @@
         "top_3_concentration": 36.7,
         "entropy": 3.75,
         "score_cv": 0.679,
-        "comments_cv": 1.02
+        "comments_cv": 1.02,
+        "cross_sub_author_pct": 50.0,
+        "multi_sub_author_pct": 3.3,
+        "interval_cv": 0.919,
+        "mean_interval_hours": 22.6,
+        "score_comment_corr": 0.69,
+        "upvote_ratio_std": 0.0501,
+        "fully_coordinated_pct": 0.0,
+        "poster_only_susp_pct": 3.3,
+        "commenter_only_susp_pct": 13.3
       }
     },
     "JEENEETards": {
@@ -413,7 +583,16 @@
         "top_3_concentration": 43.3,
         "entropy": 3.63,
         "score_cv": 0.369,
-        "comments_cv": 0.61
+        "comments_cv": 0.61,
+        "cross_sub_author_pct": 16.7,
+        "multi_sub_author_pct": 0.0,
+        "interval_cv": 1.13,
+        "mean_interval_hours": 22.8,
+        "score_comment_corr": 0.105,
+        "upvote_ratio_std": 0.0208,
+        "fully_coordinated_pct": 0.0,
+        "poster_only_susp_pct": 3.3,
+        "commenter_only_susp_pct": 13.3
       }
     },
     "ISRO": {
@@ -436,7 +615,16 @@
         "top_3_concentration": 40.0,
         "entropy": 3.64,
         "score_cv": 0.878,
-        "comments_cv": 1.225
+        "comments_cv": 1.225,
+        "cross_sub_author_pct": 0.0,
+        "multi_sub_author_pct": 0.0,
+        "interval_cv": 1.054,
+        "mean_interval_hours": 21.7,
+        "score_comment_corr": 0.47,
+        "upvote_ratio_std": 0.0428,
+        "fully_coordinated_pct": 0.0,
+        "poster_only_susp_pct": 0.0,
+        "commenter_only_susp_pct": 0.0
       }
     },
     "UPSC": {
@@ -459,7 +647,16 @@
         "top_3_concentration": 33.3,
         "entropy": 3.99,
         "score_cv": 0.544,
-        "comments_cv": 1.548
+        "comments_cv": 1.548,
+        "cross_sub_author_pct": 6.7,
+        "multi_sub_author_pct": 0.0,
+        "interval_cv": 0.938,
+        "mean_interval_hours": 20.5,
+        "score_comment_corr": -0.128,
+        "upvote_ratio_std": 0.0168,
+        "fully_coordinated_pct": 0.0,
+        "poster_only_susp_pct": 3.3,
+        "commenter_only_susp_pct": 6.7
       }
     },
     "StartUpIndia": {
@@ -482,7 +679,16 @@
         "top_3_concentration": 30.0,
         "entropy": 3.87,
         "score_cv": 2.22,
-        "comments_cv": 0.864
+        "comments_cv": 0.864,
+        "cross_sub_author_pct": 10.0,
+        "multi_sub_author_pct": 3.3,
+        "interval_cv": 0.807,
+        "mean_interval_hours": 22.7,
+        "score_comment_corr": 0.064,
+        "upvote_ratio_std": 0.0404,
+        "fully_coordinated_pct": 0.0,
+        "poster_only_susp_pct": 0.0,
+        "commenter_only_susp_pct": 0.0
       }
     },
     "TwoXIndia": {
@@ -505,7 +711,16 @@
         "top_3_concentration": 43.3,
         "entropy": 3.54,
         "score_cv": 0.431,
-        "comments_cv": 0.692
+        "comments_cv": 0.692,
+        "cross_sub_author_pct": 0.0,
+        "multi_sub_author_pct": 0.0,
+        "interval_cv": 0.955,
+        "mean_interval_hours": 22.3,
+        "score_comment_corr": 0.087,
+        "upvote_ratio_std": 0.0389,
+        "fully_coordinated_pct": 0.0,
+        "poster_only_susp_pct": 0.0,
+        "commenter_only_susp_pct": 6.7
       }
     },
     "teenindia": {
@@ -528,7 +743,16 @@
         "top_3_concentration": 33.3,
         "entropy": 3.74,
         "score_cv": 0.702,
-        "comments_cv": 2.587
+        "comments_cv": 2.587,
+        "cross_sub_author_pct": 3.3,
+        "multi_sub_author_pct": 0.0,
+        "interval_cv": 0.831,
+        "mean_interval_hours": 24.0,
+        "score_comment_corr": -0.05,
+        "upvote_ratio_std": 0.0401,
+        "fully_coordinated_pct": 0.0,
+        "poster_only_susp_pct": 3.3,
+        "commenter_only_susp_pct": 50.0
       }
     },
     "AskIndianWomen": {
@@ -551,7 +775,16 @@
         "top_3_concentration": 30.0,
         "entropy": 3.94,
         "score_cv": 0.43,
-        "comments_cv": 0.643
+        "comments_cv": 0.643,
+        "cross_sub_author_pct": 0.0,
+        "multi_sub_author_pct": 0.0,
+        "interval_cv": 0.948,
+        "mean_interval_hours": 22.7,
+        "score_comment_corr": 0.4,
+        "upvote_ratio_std": 0.0464,
+        "fully_coordinated_pct": 0.0,
+        "poster_only_susp_pct": 3.3,
+        "commenter_only_susp_pct": 16.7
       }
     },
     "IndianFood": {
@@ -574,7 +807,16 @@
         "top_3_concentration": 30.0,
         "entropy": 3.81,
         "score_cv": 0.799,
-        "comments_cv": 0.776
+        "comments_cv": 0.776,
+        "cross_sub_author_pct": 0.0,
+        "multi_sub_author_pct": 0.0,
+        "interval_cv": 0.887,
+        "mean_interval_hours": 20.4,
+        "score_comment_corr": 0.434,
+        "upvote_ratio_std": 0.0731,
+        "fully_coordinated_pct": 0.0,
+        "poster_only_susp_pct": 0.0,
+        "commenter_only_susp_pct": 30.0
       }
     }
   }
