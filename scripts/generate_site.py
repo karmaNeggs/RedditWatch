@@ -40,46 +40,71 @@ def load_analysis_files():
 
 
 def build_month_doc(month, dt, raw):
-    scores = raw.get('unified_scores', {})
-    user_a = raw.get('user_analysis', {})
-    post_a = raw.get('post_analysis', {})
+    scores     = raw.get('unified_scores', {})
+    user_a     = raw.get('user_analysis', {})
+    post_a     = raw.get('post_analysis', {})
     temporal_a = raw.get('temporal_analysis', {})
-    dist_a = raw.get('distribution_analysis', {})
+    dist_a     = raw.get('distribution_analysis', {})
+    network_a  = raw.get('network_analysis', {})
+    regular_a  = raw.get('post_regularity', {})
+    eng_str_a  = raw.get('engagement_structure', {})
+    astro_a    = raw.get('astroturf_density', {})
 
     subreddits = {}
     for sub, sc in scores.items():
-        u = user_a.get(sub, {})
-        p = post_a.get(sub, {})
-        t = temporal_a.get(sub, {})
-        d = dist_a.get(sub, {})
+        u  = user_a.get(sub, {})
+        p  = post_a.get(sub, {})
+        t  = temporal_a.get(sub, {})
+        d  = dist_a.get(sub, {})
+        n  = network_a.get(sub, {})
+        r  = regular_a.get(sub, {})
+        es = eng_str_a.get(sub, {})
+        at = astro_a.get(sub, {})
 
         subreddits[sub] = {
-            'final_score': round(sc.get('final_score', 0), 1),
-            'user_score': round(sc.get('user_score', 0), 1),
-            'engagement_score': round(sc.get('engagement_score', 0), 1),
-            'temporal_score': round(sc.get('temporal_score', 0), 1),
+            'final_score':        round(sc.get('final_score', 0), 1),
+            'user_score':         round(sc.get('user_score', 0), 1),
+            'engagement_score':   round(sc.get('engagement_score', 0), 1),
+            'temporal_score':     round(sc.get('temporal_score', 0), 1),
             'distribution_score': round(sc.get('distribution_score', 0), 1),
             'details': {
-                'posts_analyzed': p.get('posts_analyzed', 0),
-                'users_analyzed': u.get('users_analyzed', 0),
+                'posts_analyzed':       p.get('posts_analyzed', 0),
+                'users_analyzed':       u.get('users_analyzed', 0),
                 'avg_account_age_days': round(u.get('avg_account_age_days', 0)),
-                'avg_karma_per_day': round(u.get('avg_karma_per_day', 0), 1),
-                'suspicious_pct': round(u.get('suspicious_accounts_pct', 0), 1),
-                'avg_upvote_ratio': round(p.get('avg_upvote_ratio', 0), 3),
-                'avg_score': round(p.get('avg_score', 0)),
-                'avg_comments': round(p.get('avg_comments', 0), 1),
-                'ucr': round(p.get('ucr', 0), 1),
-                'peak_hour_utc': t.get('peak_hour_utc', 0),
-                'top_3_concentration': round(t.get('top_3_hours_concentration', 0), 1),
-                'entropy': round(t.get('entropy', 0), 2),
-                'score_cv': round(d.get('score_cv', 0), 3),
-                'comments_cv': round(d.get('comments_cv', 0), 3),
+                'avg_karma_per_day':    round(u.get('avg_karma_per_day', 0), 1),
+                'suspicious_pct':       round(u.get('suspicious_accounts_pct', 0), 1),
+                'avg_upvote_ratio':     round(p.get('avg_upvote_ratio', 0), 3),
+                'avg_score':            round(p.get('avg_score', 0)),
+                'avg_comments':         round(p.get('avg_comments', 0), 1),
+                'ucr':                  round(p.get('ucr', 0), 1),
+                'peak_hour_utc':        t.get('peak_hour_utc', 0),
+                'top_3_concentration':  round(t.get('top_3_hours_concentration', 0), 1),
+                'entropy':              round(t.get('entropy', 0), 2),
+                'score_cv':             round(d.get('score_cv', 0), 3),
+                'comments_cv':          round(d.get('comments_cv', 0), 3),
+                # new signals
+                'cross_sub_author_pct':    n.get('cross_sub_author_pct'),
+                'multi_sub_author_pct':    n.get('multi_sub_author_pct'),
+                'interval_cv':             r.get('interval_cv'),
+                'mean_interval_hours':     r.get('mean_interval_hours'),
+                'score_comment_corr':      es.get('score_comment_corr'),
+                'upvote_ratio_std':        es.get('upvote_ratio_std'),
+                'fully_coordinated_pct':   at.get('fully_coordinated_pct'),
+                'poster_only_susp_pct':    at.get('poster_only_susp_pct'),
+                'commenter_only_susp_pct': at.get('commenter_only_susp_pct'),
             },
         }
 
+    net_summary = network_a.get('_network', {})
     return {
-        'month': month,
+        'month':         month,
         'analysis_date': dt.isoformat(),
+        'network': {
+            'total_unique_authors':     net_summary.get('total_unique_authors', 0),
+            'cross_sub_authors_2plus':  net_summary.get('cross_sub_2plus', 0),
+            'cross_sub_authors_3plus':  net_summary.get('cross_sub_3plus', 0),
+            'top_cross_sub_authors':    net_summary.get('top_cross_sub_authors', {}),
+        },
         'subreddits': subreddits,
     }
 

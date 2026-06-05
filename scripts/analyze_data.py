@@ -35,7 +35,7 @@ def load_latest_data():
     return df
 
 
-# ── Component 1: User account patterns (35%) ─────────────────────────────────
+# ── Component 1: User account patterns (40%) ─────────────────────────────────
 # Covers both post authors and top 5 commenters per post (when available).
 
 def _suspicious_score(kpd_series, age_series):
@@ -103,7 +103,7 @@ def analyze_users(df):
     return result
 
 
-# ── Component 2: Engagement patterns (30%) ───────────────────────────────────
+# ── Component 2: Engagement patterns (25%) ───────────────────────────────────
 
 def analyze_engagement(df):
     result = {}
@@ -206,6 +206,123 @@ def analyze_distribution(df):
     return result
 
 
+# ── Signal: Cross-subreddit author network ────────────────────────────────────
+
+def analyze_author_network(df):
+    """
+    Detects accounts posting across multiple subreddits this period.
+    A single user in r/india + r/IndiaCricket is normal.
+    The same account in r/indiaspeaks + r/india + r/unitedstatesofindia is a coordination signal.
+    """
+    EXCLUDED = {'[deleted]', '[removed]', 'AutoModerator', 'None', 'nan'}
+    valid = df[~df['author'].astype(str).isin(EXCLUDED)].copy()
+
+    author_sub_counts = valid.groupby('author')['subreddit'].nunique()
+    cross_2 = set(author_sub_counts[author_sub_counts >= 2].index)
+    cross_3 = set(author_sub_counts[author_sub_counts >= 3].index)
+
+    result = {
+        '_network': {
+            'total_unique_authors': int(len(author_sub_counts)),
+            'cross_sub_2plus': int(len(cross_2)),
+            'cross_sub_3plus': int(len(cross_3)),
+            'top_cross_sub_authors': {
+                str(k): int(v)
+                for k, v in author_sub_counts.nlargest(10).items()
+                if str(k) not in EXCLUDED
+            },
+        }
+    }
+    for sub in df['subreddit'].unique():
+        sub_df = df[df['subreddit'] == sub]
+        n = len(sub_df)
+        result[sub] = {
+            'cross_sub_author_pct': round(sub_df['author'].isin(cross_2).sum() / n * 100, 1),
+            'multi_sub_author_pct': round(sub_df['author'].isin(cross_3).sum() / n * 100, 1),
+        }
+    return result
+
+
+# ── Signal: Post interval regularity ─────────────────────────────────────────
+
+def analyze_post_regularity(df):
+    """
+    Bots post on machine schedules (low CV of inter-post intervals).
+    Humans are irregular. CV < 0.5 is suspect; CV > 1.2 is organic.
+    Uses the 30 collected posts sorted by UTC timestamp.
+    """
+    result = {}
+    for sub in df['subreddit'].unique():
+        sub_df = df[df['subreddit'] == sub].sort_values('created_utc')
+        if len(sub_df) < 4:
+            result[sub] = {'interval_cv': None, 'mean_interval_hours': None}
+            continue
+        intervals = sub_df['created_utc'].diff().dropna().values.astype(float)
+        mean_iv = float(np.mean(intervals))
+        std_iv  = float(np.std(intervals))
+        cv      = std_iv / mean_iv if mean_iv > 0 else 0.0
+        result[sub] = {
+            'interval_cv':          round(cv, 3),
+            'mean_interval_hours':  round(mean_iv / 3600, 1),
+        }
+    return result
+
+
+# ── Signal: Engagement structure ─────────────────────────────────────────────
+
+def analyze_engagement_structure(df):
+    """
+    Two independent engagement signals:
+    1. Score↔comment correlation: organic posts get both upvotes AND discussion (r ~ 0.5-0.8).
+       Bot-inflated posts get upvotes without discussion (r near 0 or negative).
+    2. Upvote ratio variance: bots vote uniformly → eerily low std.
+       Organic communities have high variance (some controversial, some beloved posts).
+    """
+    result = {}
+    for sub in df['subreddit'].unique():
+        sub_df = df[df['subreddit'] == sub]
+        if len(sub_df) < 5:
+            continue
+        corr      = float(sub_df['score'].corr(sub_df['num_comments']))
+        ratio_std = float(sub_df['upvote_ratio'].std())
+        result[sub] = {
+            'score_comment_corr': round(corr, 3),
+            'upvote_ratio_std':   round(ratio_std, 4),
+        }
+    return result
+
+
+# ── Signal: Fully coordinated posts ──────────────────────────────────────────
+
+def analyze_astroturf_density(df):
+    """
+    Posts where BOTH the poster (kpd > 500) AND >= 2 of 5 commenters are suspicious.
+    These are fully coordinated: planted by a suspicious account AND amplified by a
+    suspicious comment network. Stronger signal than either alone.
+    """
+    has_commenters = 'commenter_suspicious' in df.columns
+    result = {}
+    for sub in df['subreddit'].unique():
+        sub_df = df[df['subreddit'] == sub]
+        n = len(sub_df)
+        poster_susp = sub_df['karma_per_day'] > 500
+        if has_commenters:
+            comm_susp   = sub_df['commenter_suspicious'].fillna(0) >= 2
+            both        = (poster_susp & comm_susp).sum()
+            poster_only = (poster_susp & ~comm_susp).sum()
+            comm_only   = (~poster_susp & comm_susp).sum()
+        else:
+            both = int(poster_susp.sum())
+            poster_only = 0
+            comm_only = 0
+        result[sub] = {
+            'fully_coordinated_pct':    round(both / n * 100, 1),
+            'poster_only_susp_pct':     round(poster_only / n * 100, 1),
+            'commenter_only_susp_pct':  round(comm_only / n * 100, 1),
+        }
+    return result
+
+
 # ── Unified scoring ───────────────────────────────────────────────────────────
 
 def calculate_scores(user_a, engagement_a, temporal_a, distribution_a):
@@ -258,6 +375,14 @@ def main():
     print("  Temporal patterns done")
     distribution_a = analyze_distribution(df)
     print("  Distribution analysis done")
+    network_a = analyze_author_network(df)
+    print("  Author network done")
+    regularity_a = analyze_post_regularity(df)
+    print("  Post regularity done")
+    eng_struct_a = analyze_engagement_structure(df)
+    print("  Engagement structure done")
+    astroturf_a = analyze_astroturf_density(df)
+    print("  Astroturf density done")
 
     scores = calculate_scores(user_a, engagement_a, temporal_a, distribution_a)
 
@@ -279,6 +404,10 @@ def main():
         'temporal_analysis': temporal_a,
         'distribution_analysis': distribution_a,
         'unified_scores': scores,
+        'network_analysis': network_a,
+        'post_regularity': regularity_a,
+        'engagement_structure': eng_struct_a,
+        'astroturf_density': astroturf_a,
     }
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
