@@ -1,0 +1,70 @@
+{
+  "version": 2,
+  "month": "2026-06",
+  "analysis_date": "2026-06-06T00:32:34.978752",
+  "weights": {
+    "account": 0.3,
+    "ring": 0.25,
+    "engagement": 0.2,
+    "temporal": 0.15,
+    "distribution": 0.1
+  },
+  "subreddits": {
+    "india": {
+      "final_score": 39.4,
+      "account_score": 26.2,
+      "ring_score": 67.5,
+      "engagement_score": 13.8,
+      "temporal_score": 27.7,
+      "distribution_score": 77.2,
+      "details": {
+        "new_poster_pct": 33.3,
+        "new_commenter_pct": 6.0,
+        "unverified_comm_pct": 7.7,
+        "overlap_rate": 0.92,
+        "burst_score": 59.1,
+        "avg_ttfc_minutes": 8.7,
+        "recurrence_rate": 0.6,
+        "self_amp_rate": 0.1,
+        "score_comment_corr": 0.506,
+        "upvote_ratio_std": 0.0417,
+        "ucr": 10.4,
+        "avg_awards": 0.0,
+        "interval_cv": 0.697,
+        "top3_concentration": 26.7,
+        "entropy": 3.99,
+        "peak_hour_utc": 3,
+        "score_cv": 0.229,
+        "avg_comment_depth": 0.0
+      }
+    },
+    "indiaspeaks": {
+      "final_score": 44.1,
+      "account_score": 22.8,
+      "ring_score": 62.7,
+      "engagement_score": 40.2,
+      "temporal_score": 43.6,
+      "distribution_score": 70.5,
+      "details": {
+        "new_poster_pct": 6.9,
+        "new_commenter_pct": 1.8,
+        "unverified_comm_pct": 4.2,
+        "overlap_rate": 0.947,
+        "burst_score": 67.2,
+        "avg_ttfc_minutes": 8.7,
+        "recurrence_rate": 0.2,
+        "self_amp_rate": 0.067,
+        "score_comment_corr": 0.353,
+        "upvote_ratio_std": 0.0157,
+        "ucr": 21.7,
+        "avg_awards": 0.0,
+        "interval_cv": 0.727,
+        "top3_concentration": 46.7,
+        "entropy": 3.5,
+        "peak_hour_utc": 7,
+        "score_cv": 0.332,
+        "avg_comment_depth": 0.0
+      }
+    }
+  }
+}

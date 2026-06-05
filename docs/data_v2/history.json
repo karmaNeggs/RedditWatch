@@ -1,0 +1,28 @@
+{
+  "version": 2,
+  "months": [
+    {
+      "month": "2026-06",
+      "analysis_date": "2026-06-06T00:32:34.978752",
+      "data_file": "2026-06.json",
+      "aggregate": {
+        "avg_score": 41.8,
+        "pct_moderate_plus": 100,
+        "pct_high_plus": 50,
+        "sub_count": 2,
+        "max_score": 44.1,
+        "min_score": 39.4
+      },
+      "summary": {
+        "india": {
+          "final_score": 39.4,
+          "severity": "moderate"
+        },
+        "indiaspeaks": {
+          "final_score": 44.1,
+          "severity": "high"
+        }
+      }
+    }
+  ]
+}

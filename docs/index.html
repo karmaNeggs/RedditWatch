@@ -122,6 +122,11 @@
     <div class="month-tabs">
       <span class="month-label">Report:</span>
       <div id="monthTabs" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:6px">
+        <span class="month-label">Version:</span>
+        <button id="v1Btn" class="month-tab active" onclick="setVersion(1)" title="V1: post/user signals, 4 components">V1</button>
+        <button id="v2Btn" class="month-tab" onclick="setVersion(2)" title="V2: comment rings, account cohorts, 5 components">V2 ✦</button>
+      </div>
     </div>
   </div>
 </div>
@@ -162,6 +167,18 @@ function initThemeToggle() {
 document.addEventListener('DOMContentLoaded', initThemeToggle);
 
 let history = null, current = null, charts = {};
+let v2Mode = false;
+function dataDir() { return v2Mode ? 'data_v2' : 'data'; }
+function setVersion(v) {
+  v2Mode = v === 2;
+  document.getElementById('v1Btn').classList.toggle('active', !v2Mode);
+  document.getElementById('v2Btn').classList.toggle('active',  v2Mode);
+  ['trendChart','histUser','histAcct','histRing','histEng','histTemp','histDist','histFinal'].forEach(id => {
+    if (charts[id]) { charts[id].destroy(); delete charts[id]; }
+  });
+  history = null; current = null;
+  init();
+}
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 const SEV       = s => s >= 70 ? 'critical' : s >= 40 ? 'high' : s >= 20 ? 'moderate' : 'low';
@@ -199,20 +216,21 @@ function renderTabs(active) {
     ).join('');
 }
 
-const HIST_IDS = ['histUser','histEng','histTemp','histDist','histFinal'];
+const HIST_IDS = ['histUser','histAcct','histRing','histEng','histTemp','histDist','histFinal'];
 
 async function switchMonth(month) {
   ['trendChart', ...HIST_IDS].forEach(destroyChart);
   renderTabs(month);
-  const r = await fetch(`data/${month}.json?v=${Date.now()}`);
-  if (!r.ok) { showError(`Could not load data/${month}.json`); return; }
+  const r = await fetch(`${dataDir()}/${month}.json?v=${Date.now()}`);
+  if (!r.ok) { showError(`Could not load ${dataDir()}/${month}.json`); return; }
   current = await r.json();
   renderAll();
 }
 
 // ── main render ───────────────────────────────────────────────────────────────
 function renderAll() {
-  const subs = Object.entries(current.subreddits).sort((a,b) => b[1].final_score - a[1].final_score);
+  const subs   = Object.entries(current.subreddits).sort((a,b) => b[1].final_score - a[1].final_score);
+  const isV2   = current.version === 2;
   const isDemo = current.month < '2026-01';
 
   document.getElementById('lastUpdated').textContent = 'Updated ' + fmtDate(current.analysis_date);
@@ -231,12 +249,7 @@ function renderAll() {
     <div class="section">
       <div class="section-title">Component breakdown — all subreddits</div>
       <div class="card card-pad">
-        <div class="card-title">Each channel scored 0–100 &nbsp;·&nbsp;
-          <span style="color:#58a6ff">■ User + Commenter</span> &nbsp;
-          <span style="color:#f85149">■ Engagement</span> &nbsp;
-          <span style="color:#d29922">■ Temporal Patterns</span> &nbsp;
-          <span style="color:#bc8cff">■ Score Distribution</span>
-        </div>
+        <div class="card-title" id="compLegend"></div>
         <div id="compBars"></div>
       </div>
     </div>
@@ -355,23 +368,38 @@ function renderIntelligencePanel(subs) {
   const nModPlus  = subs.filter(([,d]) => d.final_score >= 20).length;
 
   // Dominant signal
-  const cMeans = {
-    user:         subs.reduce((a,[,d]) => a+d.user_score, 0) / total,
-    engagement:   subs.reduce((a,[,d]) => a+d.engagement_score, 0) / total,
-    temporal:     subs.reduce((a,[,d]) => a+d.temporal_score, 0) / total,
-    distribution: subs.reduce((a,[,d]) => a+d.distribution_score, 0) / total,
+  const isV2panel = current.version === 2;
+  const cMeans = isV2panel ? {
+    account:      subs.reduce((a,[,d]) => a+(d.account_score||0), 0) / total,
+    ring:         subs.reduce((a,[,d]) => a+(d.ring_score||0),    0) / total,
+    engagement:   subs.reduce((a,[,d]) => a+(d.engagement_score||0), 0) / total,
+    temporal:     subs.reduce((a,[,d]) => a+(d.temporal_score||0), 0) / total,
+    distribution: subs.reduce((a,[,d]) => a+(d.distribution_score||0), 0) / total,
+  } : {
+    user:         subs.reduce((a,[,d]) => a+(d.user_score||0), 0) / total,
+    engagement:   subs.reduce((a,[,d]) => a+(d.engagement_score||0), 0) / total,
+    temporal:     subs.reduce((a,[,d]) => a+(d.temporal_score||0), 0) / total,
+    distribution: subs.reduce((a,[,d]) => a+(d.distribution_score||0), 0) / total,
   };
   const dominant = Object.entries(cMeans).sort((a,b) => b[1]-a[1])[0];
-  const cLabels  = {
-    user: 'suspicious account patterns',
-    engagement: 'engagement ratios (upvote/comment imbalance)',
-    temporal: 'posting hour concentration',
+  const cLabels  = isV2panel ? {
+    account:      'new/unverified account concentration',
+    ring:         'comment ring patterns (early + top commenter overlap)',
+    engagement:   'engagement ratios (upvote/comment imbalance)',
+    temporal:     'posting hour concentration',
+    distribution: 'vote count uniformity',
+  } : {
+    user:         'suspicious account patterns',
+    engagement:   'engagement ratios (upvote/comment imbalance)',
+    temporal:     'posting hour concentration',
     distribution: 'vote count uniformity',
   };
 
   // Distribution health checks
   const notes = [];
-  const pctUserZero = subs.filter(([,d]) => d.user_score === 0).length / total * 100;
+  const pctUserZero = isV2panel
+    ? subs.filter(([,d]) => d.account_score === 0).length / total * 100
+    : subs.filter(([,d]) => d.user_score === 0).length / total * 100;
   if (pctUserZero > 40)
     notes.push(`<strong>User component:</strong> ${pctUserZero.toFixed(0)}% of subs score 0 — the kpd&nbsp;&gt;&nbsp;500 threshold skips mid-level patterns. Consider whether the calibration is still appropriate for next run.`);
 
@@ -437,7 +465,7 @@ function renderIntelligencePanel(subs) {
 
   const withSigs = subs.filter(([,d]) => d.details && d.details.fully_coordinated_pct != null);
   let networkHTML = '';
-  if (withSigs.length > 0) {
+  if (!isV2panel && withSigs.length > 0) {
     const mostAstro   = [...withSigs].sort((a,b) => (b[1].details.fully_coordinated_pct||0) - (a[1].details.fully_coordinated_pct||0))[0];
     const lowestCorr  = [...withSigs].filter(([,d]) => d.details.score_comment_corr != null)
                           .sort((a,b) => a[1].details.score_comment_corr - b[1].details.score_comment_corr)[0];
@@ -508,12 +536,22 @@ function renderIntelligencePanel(subs) {
 
 // ── component crosstab bars ───────────────────────────────────────────────────
 function renderMultiRadar(subs) {
-  const COMPS = [
+  const isV2  = current.version === 2;
+  const COMPS = isV2 ? [
+    { key:'account_score',      color:'#58a6ff', label:'Accounts',  wt:'30%' },
+    { key:'ring_score',         color:'#f85149', label:'Ring',       wt:'25%' },
+    { key:'engagement_score',   color:'#d29922', label:'Eng',        wt:'20%' },
+    { key:'temporal_score',     color:'#bc8cff', label:'Temporal',   wt:'15%' },
+    { key:'distribution_score', color:'#3fb950', label:'Dist',       wt:'10%' },
+  ] : [
     { key:'user_score',         color:'#58a6ff', label:'User+Comm', wt:'40%' },
-    { key:'engagement_score',   color:'#f85149', label:'Eng',       wt:'25%' },
-    { key:'temporal_score',     color:'#d29922', label:'Temporal',  wt:'20%' },
-    { key:'distribution_score', color:'#bc8cff', label:'Score Dist',wt:'15%' },
+    { key:'engagement_score',   color:'#f85149', label:'Eng',        wt:'25%' },
+    { key:'temporal_score',     color:'#d29922', label:'Temporal',   wt:'20%' },
+    { key:'distribution_score', color:'#bc8cff', label:'Score Dist', wt:'15%' },
   ];
+  const leg = document.getElementById('compLegend');
+  if (leg) leg.innerHTML = 'Each channel scored 0–100 &nbsp;·&nbsp; ' +
+    COMPS.map(c => `<span style="color:${c.color}">■ ${c.label} <span style="color:var(--muted);font-weight:400">${c.wt}</span></span>`).join(' &nbsp; ');
   const colStyle = 'flex:1;min-width:0';
   const cell = (v, color) =>
     `<div style="${colStyle}">
@@ -610,11 +648,18 @@ function renderAggregateTrend() {
 
 // ── score distribution histograms ─────────────────────────────────────────────
 function renderScoreHistograms(subs) {
-  const COMPS = [
+  const isV2  = current.version === 2;
+  const COMPS = isV2 ? [
+    { key:'account_score',      id:'histAcct', label:'Account Signals',    color:'#58a6ff', weight:'30%' },
+    { key:'ring_score',         id:'histRing', label:'Comment Ring',        color:'#f85149', weight:'25%' },
+    { key:'engagement_score',   id:'histEng',  label:'Engagement',          color:'#d29922', weight:'20%' },
+    { key:'temporal_score',     id:'histTemp', label:'Temporal Patterns',   color:'#bc8cff', weight:'15%' },
+    { key:'distribution_score', id:'histDist', label:'Score Distribution',  color:'#3fb950', weight:'10%' },
+  ] : [
     { key:'user_score',         id:'histUser', label:'User + Commenter',   color:'#58a6ff', weight:'40%' },
-    { key:'engagement_score',   id:'histEng',  label:'Engagement',         color:'#f85149', weight:'25%' },
-    { key:'temporal_score',     id:'histTemp', label:'Temporal Patterns',  color:'#d29922', weight:'20%' },
-    { key:'distribution_score', id:'histDist', label:'Score Distribution', color:'#bc8cff', weight:'15%' },
+    { key:'engagement_score',   id:'histEng',  label:'Engagement',          color:'#f85149', weight:'25%' },
+    { key:'temporal_score',     id:'histTemp', label:'Temporal Patterns',   color:'#d29922', weight:'20%' },
+    { key:'distribution_score', id:'histDist', label:'Score Distribution',  color:'#bc8cff', weight:'15%' },
   ];
   const BINS = ['0–10','10–20','20–30','30–40','40–50','50–60','60–70','70–80','80–90','90–100'];
   const BG   = ['#3fb95044','#3fb95044','#3fb95044','#e3b34144','#e3b34144','#d2992244','#d2992244','#f8514944','#f8514944','#f8514944'];
@@ -722,39 +767,77 @@ function renderScoreHistograms(subs) {
 
 // ── detail cards ──────────────────────────────────────────────────────────────
 function renderDetailCards(subs) {
+  const isV2 = current.version === 2;
   document.getElementById('detailGrid').innerHTML = subs.map(([sub, d]) => {
     const det = d.details || {}, c = COLOR(d.final_score);
-    const flag = (val, threshold) => val > threshold ? `color:${COLOR(70)}` : '';
-    return `<div class="det-card">
-      <div class="det-hdr">
-        <div>
-          <div class="det-title">r/${sub}</div>
-          <div class="det-sub-link"><a href="https://reddit.com/r/${sub}" target="_blank">reddit.com/r/${sub} ↗</a></div>
-        </div>
-        <div>
-          <div class="det-score-big" style="color:${c}">${d.final_score.toFixed(1)}</div>
-          <span class="badge ${SEV(d.final_score)}" style="float:right;margin-top:4px">${SEV_LABEL(d.final_score)}</span>
-        </div>
+    const flag = (val, threshold) => val != null && val > threshold ? `color:${COLOR(70)}` : '';
+    const fmt  = (v, dec=1) => v != null ? (+v).toFixed(dec) : '—';
+    const fmtP = v => v != null ? (+v).toFixed(1)+'%' : '—';
+
+    const hdr = `<div class="det-hdr">
+      <div>
+        <div class="det-title">r/${sub}</div>
+        <div class="det-sub-link"><a href="https://reddit.com/r/${sub}" target="_blank">reddit.com/r/${sub} ↗</a></div>
       </div>
       <div>
-        <div class="mrow"><span class="ml">Posts analyzed</span><span class="mv">${det.posts_analyzed||'—'}</span></div>
-        <div class="mrow"><span class="ml">Users analyzed</span><span class="mv">${det.users_analyzed||'—'}</span></div>
-        <div class="mrow"><span class="ml">Avg account age</span><span class="mv">${det.avg_account_age_days ? Math.round(det.avg_account_age_days)+' days' : '—'}</span></div>
-        <div class="mrow"><span class="ml">Avg karma / day</span><span class="mv" style="${flag(det.avg_karma_per_day,200)}">${det.avg_karma_per_day??'—'}</span></div>
-        <div class="mrow"><span class="ml">Suspicious accounts</span><span class="mv" style="${flag(det.suspicious_pct,20)}">${det.suspicious_pct!=null ? det.suspicious_pct+'%' : '—'}</span></div>
-        <div class="mrow"><span class="ml">Avg upvote ratio</span><span class="mv" style="${flag(det.avg_upvote_ratio,0.92)}">${det.avg_upvote_ratio ? (det.avg_upvote_ratio*100).toFixed(1)+'%' : '—'}</span></div>
-        <div class="mrow"><span class="ml">Upvote:Comment ratio</span><span class="mv" style="${flag(det.ucr,25)}">${det.ucr??'—'}</span></div>
-        <div class="mrow"><span class="ml">Top-3 hour concentration</span><span class="mv" style="${flag(det.top_3_concentration,50)}">${det.top_3_concentration!=null ? det.top_3_concentration+'%' : '—'}</span></div>
-        <div class="mrow"><span class="ml">Posting entropy</span><span class="mv">${det.entropy!=null ? det.entropy+' / 4.58' : '—'}</span></div>
-        ${det.fully_coordinated_pct!=null ? `
-        <div class="mrow" style="margin-top:6px;border-top:1px solid var(--border);padding-top:6px"><span class="ml" style="color:var(--muted);font-style:italic">Network signals</span><span class="mv"></span></div>
-        <div class="mrow"><span class="ml">Fully coordinated posts</span><span class="mv" style="${det.fully_coordinated_pct>20?`color:${COLOR(70)}`:''}">  ${det.fully_coordinated_pct}%</span></div>
-        <div class="mrow"><span class="ml">Cross-sub authors</span><span class="mv" style="${det.cross_sub_author_pct>40?`color:${COLOR(70)}`:''}">  ${det.cross_sub_author_pct!=null?det.cross_sub_author_pct+'%':'—'}</span></div>
-        <div class="mrow"><span class="ml">Score↔comment corr.</span><span class="mv" style="${det.score_comment_corr!=null&&det.score_comment_corr<0.15?`color:${COLOR(70)}`:''}">  ${det.score_comment_corr!=null?det.score_comment_corr.toFixed(2):'—'}</span></div>
-        <div class="mrow"><span class="ml">Interval regularity (CV)</span><span class="mv" style="${det.interval_cv!=null&&det.interval_cv<0.5?`color:${COLOR(50)}`:''}">  ${det.interval_cv!=null?det.interval_cv:'—'}</span></div>
-        ` : ''}
+        <div class="det-score-big" style="color:${c}">${d.final_score.toFixed(1)}</div>
+        <span class="badge ${SEV(d.final_score)}" style="float:right;margin-top:4px">${SEV_LABEL(d.final_score)}</span>
       </div>
     </div>`;
+
+    const body = isV2 ? `
+      <div class="mrow" style="padding:7px 16px;background:var(--surface2)"><span class="ml" style="font-weight:700;color:var(--blue)">Account Signals</span>
+        <span class="mv" style="color:var(--blue)">${fmt(d.account_score)}/100</span></div>
+      <div class="mrow"><span class="ml">New posters (&lt;90 days)</span><span class="mv" style="${flag(det.new_poster_pct,30)}">${fmtP(det.new_poster_pct)}</span></div>
+      <div class="mrow"><span class="ml">New commenters (&lt;90 days)</span><span class="mv" style="${flag(det.new_commenter_pct,30)}">${fmtP(det.new_commenter_pct)}</span></div>
+      <div class="mrow"><span class="ml">Unverified email (comm.)</span><span class="mv" style="${flag(det.unverified_comm_pct,60)}">${fmtP(det.unverified_comm_pct)}</span></div>
+
+      <div class="mrow" style="padding:7px 16px;background:var(--surface2);margin-top:2px"><span class="ml" style="font-weight:700;color:#f85149">Comment Ring</span>
+        <span class="mv" style="color:#f85149">${fmt(d.ring_score)}/100</span></div>
+      <div class="mrow"><span class="ml">First↔top overlap rate</span><span class="mv" style="${flag(det.overlap_rate,0.5)}">${det.overlap_rate!=null?(+det.overlap_rate*100).toFixed(0)+'%':'—'}</span></div>
+      <div class="mrow"><span class="ml">Burst score</span><span class="mv" style="${flag(det.burst_score,50)}">${fmt(det.burst_score)}</span></div>
+      <div class="mrow"><span class="ml">Avg time to first comment</span><span class="mv" style="${det.avg_ttfc_minutes!=null&&det.avg_ttfc_minutes<15?`color:${COLOR(70)}`:''}">
+        ${det.avg_ttfc_minutes!=null ? (+det.avg_ttfc_minutes).toFixed(0)+' min' : '—'}</span></div>
+      <div class="mrow"><span class="ml">Commenter recurrence</span><span class="mv" style="${flag(det.recurrence_rate,0.4)}">${fmtP(det.recurrence_rate!=null?det.recurrence_rate*100:null)}</span></div>
+      <div class="mrow"><span class="ml">Self-amplification rate</span><span class="mv" style="${flag(det.self_amp_rate,0.2)}">${fmtP(det.self_amp_rate!=null?det.self_amp_rate*100:null)}</span></div>
+
+      <div class="mrow" style="padding:7px 16px;background:var(--surface2);margin-top:2px"><span class="ml" style="font-weight:700;color:#d29922">Engagement</span>
+        <span class="mv" style="color:#d29922">${fmt(d.engagement_score)}/100</span></div>
+      <div class="mrow"><span class="ml">Score↔comment corr.</span><span class="mv" style="${det.score_comment_corr!=null&&det.score_comment_corr<0.15?`color:${COLOR(70)}`:''}">
+        ${det.score_comment_corr!=null?'r='+fmt(det.score_comment_corr,2):'—'}</span></div>
+      <div class="mrow"><span class="ml">Upvote ratio std</span><span class="mv">${fmt(det.upvote_ratio_std,3)}</span></div>
+      <div class="mrow"><span class="ml">Upvote:Comment ratio</span><span class="mv" style="${flag(det.ucr,25)}">${fmt(det.ucr)}</span></div>
+
+      <div class="mrow" style="padding:7px 16px;background:var(--surface2);margin-top:2px"><span class="ml" style="font-weight:700;color:#bc8cff">Temporal</span>
+        <span class="mv" style="color:#bc8cff">${fmt(d.temporal_score)}/100</span></div>
+      <div class="mrow"><span class="ml">Top-3 hour concentration</span><span class="mv" style="${flag(det.top3_concentration,50)}">${fmtP(det.top3_concentration)}</span></div>
+      <div class="mrow"><span class="ml">Posting entropy</span><span class="mv">${det.entropy!=null?fmt(det.entropy,2)+' / 4.58':'—'}</span></div>
+      <div class="mrow"><span class="ml">Interval regularity (CV)</span><span class="mv">${fmt(det.interval_cv,2)}</span></div>
+
+      <div class="mrow" style="padding:7px 16px;background:var(--surface2);margin-top:2px"><span class="ml" style="font-weight:700;color:#3fb950">Distribution</span>
+        <span class="mv" style="color:#3fb950">${fmt(d.distribution_score)}/100</span></div>
+      <div class="mrow"><span class="ml">Score CV</span><span class="mv">${fmt(det.score_cv,3)}</span></div>
+      <div class="mrow"><span class="ml">Avg comment depth</span><span class="mv">${fmt(det.avg_comment_depth,2)}</span></div>
+    ` : `
+      <div class="mrow"><span class="ml">Posts analyzed</span><span class="mv">${det.posts_analyzed||'—'}</span></div>
+      <div class="mrow"><span class="ml">Users analyzed</span><span class="mv">${det.users_analyzed||'—'}</span></div>
+      <div class="mrow"><span class="ml">Avg account age</span><span class="mv">${det.avg_account_age_days ? Math.round(det.avg_account_age_days)+' days' : '—'}</span></div>
+      <div class="mrow"><span class="ml">Avg karma / day</span><span class="mv" style="${flag(det.avg_karma_per_day,200)}">${det.avg_karma_per_day??'—'}</span></div>
+      <div class="mrow"><span class="ml">Suspicious accounts</span><span class="mv" style="${flag(det.suspicious_pct,20)}">${det.suspicious_pct!=null ? det.suspicious_pct+'%' : '—'}</span></div>
+      <div class="mrow"><span class="ml">Avg upvote ratio</span><span class="mv" style="${flag(det.avg_upvote_ratio,0.92)}">${det.avg_upvote_ratio ? (det.avg_upvote_ratio*100).toFixed(1)+'%' : '—'}</span></div>
+      <div class="mrow"><span class="ml">Upvote:Comment ratio</span><span class="mv" style="${flag(det.ucr,25)}">${det.ucr??'—'}</span></div>
+      <div class="mrow"><span class="ml">Top-3 hour concentration</span><span class="mv" style="${flag(det.top_3_concentration,50)}">${det.top_3_concentration!=null ? det.top_3_concentration+'%' : '—'}</span></div>
+      <div class="mrow"><span class="ml">Posting entropy</span><span class="mv">${det.entropy!=null ? det.entropy+' / 4.58' : '—'}</span></div>
+      ${det.fully_coordinated_pct!=null ? `
+      <div class="mrow" style="margin-top:6px;border-top:1px solid var(--border);padding-top:6px"><span class="ml" style="color:var(--muted);font-style:italic">Network signals</span><span class="mv"></span></div>
+      <div class="mrow"><span class="ml">Fully coordinated posts</span><span class="mv" style="${det.fully_coordinated_pct>20?`color:${COLOR(70)}`:''}">  ${det.fully_coordinated_pct}%</span></div>
+      <div class="mrow"><span class="ml">Cross-sub authors</span><span class="mv" style="${det.cross_sub_author_pct>40?`color:${COLOR(70)}`:''}">  ${det.cross_sub_author_pct!=null?det.cross_sub_author_pct+'%':'—'}</span></div>
+      <div class="mrow"><span class="ml">Score↔comment corr.</span><span class="mv" style="${det.score_comment_corr!=null&&det.score_comment_corr<0.15?`color:${COLOR(70)}`:''}">  ${det.score_comment_corr!=null?det.score_comment_corr.toFixed(2):'—'}</span></div>
+      <div class="mrow"><span class="ml">Interval regularity (CV)</span><span class="mv" style="${det.interval_cv!=null&&det.interval_cv<0.5?`color:${COLOR(50)}`:''}">  ${det.interval_cv!=null?det.interval_cv:'—'}</span></div>
+      ` : ''}
+    `;
+
+    return `<div class="det-card">${hdr}<div>${body}</div></div>`;
   }).join('');
 }
 
@@ -770,7 +853,7 @@ function renderArchive() {
       <td>${fmtMonth(m.month)}</td>
       <td style="font-weight:700;color:${COLOR(avg)}">${avg}</td>
       <td>r/${top[0]} <span class="badge ${SEV(top[1].final_score)}">${top[1].final_score.toFixed(1)}</span></td>
-      <td><a class="dl-btn" href="data/${m.data_file}" download>JSON</a></td>
+      <td><a class="dl-btn" href="${dataDir()}/${m.data_file}" download>JSON</a></td>
     </tr>`;
   }).join('');
 }
@@ -782,8 +865,8 @@ function showError(msg) {
 
 async function init() {
   try {
-    const r = await fetch(`data/history.json?v=${Date.now()}`);
-    if (!r.ok) throw new Error('data/history.json not found');
+    const r = await fetch(`${dataDir()}/history.json?v=${Date.now()}`);
+    if (!r.ok) throw new Error(`${dataDir()}/history.json not found`);
     history = await r.json();
     if (!history.months?.length) { showError('No data yet. Run <code>bash run_monthly.sh</code>.'); return; }
     const latest = history.months[history.months.length - 1];

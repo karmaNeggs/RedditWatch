@@ -1,0 +1,35 @@
+00:02:26  ============================================================
+00:02:26  Reddit Bot Analysis V2 — collection  month=2026-06
+00:02:26  ============================================================
+00:02:26  Subreddits (override): ['india', 'indiaspeaks']
+00:02:26    r/india
+00:03:15      30 posts  312 comment-rows
+00:03:17    r/indiaspeaks
+00:04:06      30 posts  302 comment-rows
+00:04:07  Phase 1 done — 60 posts  614 comment-rows
+00:04:07  Accounts: 42 posters + 540 commenters = 576 unique  (576 to fetch, 0 cached)
+00:05:59    profiles 100/576 …
+00:07:51    profiles 200/576 …
+00:09:44    profiles 300/576 …
+00:11:36    profiles 400/576 …
+00:13:28    profiles 500/576 …
+00:14:54  Profiles fetched: 576 total in cache
+00:21:21  ============================================================
+00:21:21  Reddit Bot Analysis V2 — collection  month=2026-06
+00:21:21  ============================================================
+00:21:21  Subreddits (override): ['india', 'indiaspeaks']
+00:21:21  Resuming: 2 subs already done (indiaspeaks, india)
+00:21:21    r/india                     skip (checkpoint)
+00:21:21    r/indiaspeaks               skip (checkpoint)
+00:21:21  Phase 1 done — 60 posts  614 comment-rows
+00:21:21  Accounts: 42 posters + 540 commenters = 576 unique  (576 to fetch, 0 cached)
+00:23:13    profiles 100/576 …
+00:25:05    profiles 200/576 …
+00:26:59    profiles 300/576 …
+00:28:51    profiles 400/576 …
+00:30:44    profiles 500/576 …
+00:32:09  Profiles fetched: 564 total in cache
+00:32:09  posts    → posts_2026-06.csv  (60 rows)
+00:32:09  comments → commenters_2026-06.csv  (614 rows)
+00:32:09  Checkpoint cleared — collection complete.
+00:32:09  ============================================================
