@@ -182,6 +182,7 @@ def build_month_doc_v2(month, dt, raw):
     eng_a    = raw.get('engagement_analysis', {})
     temp_a   = raw.get('temporal_analysis', {})
     dist_a   = raw.get('distribution_analysis', {})
+    net_a    = raw.get('network_analysis', {})
 
     subreddits = {}
     for sub, sc in scores.items():
@@ -190,6 +191,7 @@ def build_month_doc_v2(month, dt, raw):
         en = eng_a.get(sub, {})
         te = temp_a.get(sub, {})
         di = dist_a.get(sub, {})
+        ne = net_a.get(sub, {})
 
         subreddits[sub] = {
             'final_score':        round(sc.get('final_score', 0), 1),
@@ -212,12 +214,19 @@ def build_month_doc_v2(month, dt, raw):
                 'upvote_ratio_std':    en.get('upvote_ratio_std'),
                 'ucr':                 en.get('ucr'),
                 'avg_awards':          en.get('avg_awards'),
+                'simulacra_rate':      en.get('simulacra_rate'),
                 'interval_cv':         te.get('interval_cv'),
                 'top3_concentration':  te.get('top3_concentration'),
                 'entropy':             te.get('entropy'),
                 'peak_hour_utc':       te.get('peak_hour_utc'),
+                'decay_slope':         di.get('decay_slope'),
+                'decay_r2':            di.get('decay_r2'),
+                'comments_cv':         di.get('comments_cv'),
                 'score_cv':            di.get('score_cv'),
                 'avg_comment_depth':   di.get('avg_comment_depth'),
+                'near_dupe_rate':      ne.get('near_dupe_rate'),
+                'cross_sub_rate':      ne.get('cross_sub_rate'),
+                'gini_score':          ne.get('gini_score'),
             },
         }
 

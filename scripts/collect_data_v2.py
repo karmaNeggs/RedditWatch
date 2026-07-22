@@ -193,32 +193,28 @@ def fetch_posts_year(subreddit: str) -> list:
 def fetch_posts_month(subreddit: str, month: str) -> list:
     """
     Fetch top posts for a single calendar month with strict UTC bounds.
-    Uses t=month (≤35 days) or t=year (≤380 days) endpoint, then filters.
+    Recent months (≤35 days) use t=month directly. Older months paginate
+    t=year (like year mode) — a single 100-post page of the year's top only
+    surfaces a handful of posts from any one month, which is what produced
+    thin months in earlier backfills.
     """
     collected_utc = int(time.time())
     start, end    = month_bounds(month)
     days_ago      = (collected_utc - start) / 86400
 
     if days_ago <= 35:
-        url = f"https://www.reddit.com/r/{subreddit}/top.json?t=month&limit=60"
-    elif days_ago <= 380:
-        url = f"https://www.reddit.com/r/{subreddit}/top.json?t=year&limit=100"
+        data = _get_json(f"https://www.reddit.com/r/{subreddit}/top.json?t=month&limit=60")
+        if not data or 'data' not in data:
+            return []
+        raw = []
+        for item in data['data']['children']:
+            post = _parse_post(item, subreddit, collected_utc)
+            if post:
+                raw.append(post)
     else:
-        url = f"https://www.reddit.com/r/{subreddit}/top.json?t=all&limit=100"
+        raw = fetch_posts_year(subreddit)
 
-    data = _get_json(url)
-    if not data or 'data' not in data:
-        return []
-
-    posts = []
-    for item in data['data']['children']:
-        post = _parse_post(item, subreddit, collected_utc)
-        if not post:
-            continue
-        if post['created_utc'] < start or post['created_utc'] > end:
-            continue
-        posts.append(post)
-
+    posts = [p for p in raw if start <= p['created_utc'] <= end]
     posts.sort(key=lambda x: -x['score'])
     return posts[:POSTS_CAP_PER_MONTH]
 
