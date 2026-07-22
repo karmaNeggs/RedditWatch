@@ -21,10 +21,29 @@ import pandas as pd
 ROOT        = Path(__file__).parent.parent
 DATA_DIR    = ROOT / 'data' / 'v2'
 OUTPUT_DIR  = ROOT / 'output' / 'v2'
+FINDINGS    = ROOT / 'reports' / 'findings.json'
 
 NEW_ACCOUNT_DAYS = 90   # accounts younger than this are "new"
-KPD_SUSPICIOUS   = 500  # karma/day threshold (top ~10% observed)
-KPD_VERY_SUSP    = 2000 # karma/day threshold (top ~5% observed)
+KPD_SUSPICIOUS   = 200  # lowered from 500 — analysis shows 500 was too conservative
+KPD_VERY_SUSP    = 1000
+
+
+def _load_weights():
+    """Load calibrated weights from analysis findings, fall back to defaults."""
+    defaults = {'account': 0.30, 'ring': 0.122, 'engagement': 0.419,
+                'temporal': 0.08, 'distribution': 0.08}
+    if FINDINGS.exists():
+        try:
+            with open(FINDINGS) as f:
+                d = json.load(f)
+            w = d.get('calibrated_weights', {})
+            if w and abs(sum(w.values()) - 1.0) < 0.01:
+                print(f"  Weights loaded from findings.json")
+                return w
+        except Exception:
+            pass
+    print("  Using default weights (findings.json not found)")
+    return defaults
 
 
 # ── Data loading ──────────────────────────────────────────────────────────────
@@ -182,22 +201,29 @@ def analyze_comment_ring(posts: pd.DataFrame, comms: pd.DataFrame) -> dict:
                 self_amp_posts += 1
         self_amp_rate = self_amp_posts / len(sub_posts) if len(sub_posts) > 0 else 0.0
 
-        # -- Ring score --------------------------------------------------------
+        # Fast time-to-first-comment: % posts where first comment < 5 min
+        fast_ttfc_pct = 0.0
+        if ttfc_list:
+            fast_ttfc_pct = sum(1 for t in ttfc_list if t < 5) / len(ttfc_list) * 100
+
+        # Ring score — overlap_rate removed (proven organic, r≈0.075 with final)
+        # burst_score is the strongest ring signal; fast_ttfc and recurrence are secondary
         ring_score = min(
-            overlap_rate   * 40   +   # up to 40 pts: same accounts both early & promoted
-            burst_score    * 0.30 +   # up to 30 pts: tight timing cluster
-            recurrence_rate * 20  +   # up to 20 pts: same commenters across many posts
-            self_amp_rate  * 10,      # up to 10 pts: poster also in early comments
+            burst_score     * 0.60 +   # up to 60 pts: coordinated tight timing
+            fast_ttfc_pct   * 0.25 +   # up to 25 pts: sub-5-min first comments
+            recurrence_rate * 10  +    # up to 10 pts: same commenters across posts
+            self_amp_rate   * 5,       # up to  5 pts: poster in early comments
             100
         )
 
         result[sub] = {
             'ring_score':          round(float(ring_score), 1),
-            'overlap_rate':        round(float(overlap_rate), 3),
             'burst_score':         round(float(burst_score), 1),
+            'fast_ttfc_pct':       round(float(fast_ttfc_pct), 1),
             'avg_ttfc_minutes':    avg_ttfc_min,
             'recurrence_rate':     round(float(recurrence_rate), 3),
             'self_amp_rate':       round(float(self_amp_rate), 3),
+            'overlap_rate':        round(float(overlap_rate), 3),  # retained for reference, not scored
         }
     return result
 
@@ -216,6 +242,8 @@ def analyze_engagement(posts: pd.DataFrame) -> dict:
         ratio_std     = float(p['upvote_ratio'].std())
         avg_awards    = float(p['total_awards'].mean())
         ucr           = float(p['score'].mean() / max(p['num_comments'].mean(), 1))
+        # Simulacra: high score, near-zero comments — pure upvote manipulation (finding F9)
+        simulacra_rate = float(((p['score'] > 500) & (p['num_comments'] < 5)).mean() * 100)
 
         # Low correlation = upvotes without discussion (threshold 0.30)
         corr_pts  = max(0, min((0.30 - corr) / 0.30 * 50, 50)) if corr < 0.30 else 0
@@ -225,8 +253,10 @@ def analyze_engagement(posts: pd.DataFrame) -> dict:
         ucr_pts   = min((ucr / 30) * 40, 40)
         # Awards: systematic gifting (>0.5 avg awards/post is suspicious)
         award_pts = min(avg_awards / 0.5 * 10, 10)
+        # Simulacra rate: >10% of posts with this pattern is suspicious
+        simulacra_pts = min(simulacra_rate / 10 * 20, 20)
 
-        eng_score = min(corr_pts + ratio_pts + ucr_pts + award_pts, 100)
+        eng_score = min(corr_pts + ratio_pts + ucr_pts + award_pts + simulacra_pts, 100)
 
         result[sub] = {
             'engagement_score':   round(float(eng_score), 1),
@@ -234,6 +264,7 @@ def analyze_engagement(posts: pd.DataFrame) -> dict:
             'upvote_ratio_std':   round(ratio_std, 4),
             'ucr':                round(ucr, 1),
             'avg_awards':         round(avg_awards, 2),
+            'simulacra_rate':     round(simulacra_rate, 1),
         }
     return result
 
@@ -279,6 +310,69 @@ def analyze_temporal(posts: pd.DataFrame) -> dict:
     return result
 
 
+# ── Component 6 (observational — not yet weighted into final_score): Network/Text ──
+# Near-duplicate titles, cross-sub account overlap, vote concentration (Gini).
+# Computed and exposed here so it's visible in the output, but the production
+# ensemble intentionally does not fold it in yet — adding a 6th component changes
+# every historical score and needs a recalibration pass + review first, not a
+# silent change. See reports/findings.json component_signals for the 5 that are live.
+
+def _gini(values) -> float:
+    arr = np.sort(np.asarray([v for v in values if v is not None and v >= 0], dtype=float))
+    n = len(arr)
+    if n == 0 or arr.sum() == 0:
+        return 0.0
+    cum = np.cumsum(arr)
+    return float((n + 1 - 2 * np.sum(cum) / cum[-1]) / n)
+
+
+def _title_words(title) -> set:
+    return set(str(title).lower().split())
+
+
+def analyze_network(posts: pd.DataFrame, comms: pd.DataFrame) -> dict:
+    result = {}
+    for sub in posts['subreddit'].unique():
+        p = posts[posts['subreddit'] == sub]
+
+        # -- Near-duplicate titles: Jaccard word-overlap > 0.6 between any post pair --
+        titles = [_title_words(t) for t in p['title']]
+        dupe_pairs, total_pairs = 0, 0
+        for i in range(len(titles)):
+            for j in range(i + 1, len(titles)):
+                a, b = titles[i], titles[j]
+                if not a or not b:
+                    continue
+                total_pairs += 1
+                jac = len(a & b) / len(a | b)
+                if jac > 0.6:
+                    dupe_pairs += 1
+        near_dupe_rate = (dupe_pairs / total_pairs * 100) if total_pairs > 0 else 0.0
+
+        # -- Cross-sub account overlap: % of this sub's active accounts also active
+        #    (poster or commenter) in >=1 other subreddit this same month --
+        sub_posters    = set(p['author'].dropna())
+        sub_commenters = set(comms[comms['subreddit'] == sub]['author'].dropna())
+        sub_accounts   = sub_posters | sub_commenters
+
+        other_posters    = set(posts[posts['subreddit'] != sub]['author'].dropna())
+        other_commenters = set(comms[comms['subreddit'] != sub]['author'].dropna())
+        other_accounts   = other_posters | other_commenters
+
+        cross_sub_rate = (len(sub_accounts & other_accounts) / len(sub_accounts) * 100) if sub_accounts else 0.0
+
+        # -- Vote concentration: Gini of post scores within the sub-month --
+        gini_score = _gini(p['score'].tolist()) * 100
+
+        result[sub] = {
+            'near_dupe_rate':  round(float(near_dupe_rate), 1),
+            'cross_sub_rate':  round(float(cross_sub_rate), 1),
+            'gini_score':      round(float(gini_score), 1),
+            'n_title_pairs':   int(total_pairs),
+        }
+    return result
+
+
 # ── Component 5: Vote Distribution (10%) ──────────────────────────────────────
 # Score CV, comment depth distribution (shallow = bot-like)
 
@@ -316,8 +410,7 @@ def analyze_distribution(posts: pd.DataFrame, comms: pd.DataFrame) -> dict:
 
 # ── Unified scoring ───────────────────────────────────────────────────────────
 
-WEIGHTS = {'account': 0.30, 'ring': 0.25, 'engagement': 0.20,
-           'temporal': 0.15, 'distribution': 0.10}
+WEIGHTS = _load_weights()
 
 def severity(score: float) -> str:
     if score >= 70: return 'CRITICAL'
@@ -378,6 +471,7 @@ def main():
     eng  = analyze_engagement(posts);          print("  Engagement structure done")
     temp = analyze_temporal(posts);            print("  Temporal patterns done")
     dist = analyze_distribution(posts, comms); print("  Vote distribution done")
+    net  = analyze_network(posts, comms);      print("  Network/text signals done (observational, not yet weighted into final_score)")
 
     scores = calculate_scores(acct, ring, eng, temp, dist)
 
@@ -404,6 +498,7 @@ def main():
         'engagement_analysis': eng,
         'temporal_analysis':   temp,
         'distribution_analysis': dist,
+        'network_analysis':    net,
     }
 
     ts        = datetime.now().strftime("%Y%m%d_%H%M%S")
