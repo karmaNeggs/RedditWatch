@@ -13,6 +13,7 @@ import argparse
 import json
 import glob
 import os
+import shutil
 from datetime import datetime
 from pathlib import Path
 
@@ -23,7 +24,43 @@ def parse_args():
     p = argparse.ArgumentParser()
     p.add_argument('--v2', action='store_true', help='Generate V2 site data')
     p.add_argument('--month', default=None, help='Limit to specific YYYY-MM month')
+    p.add_argument('--min-sub-coverage', type=float, default=0.6,
+                   help='Warn (not block) if a month covers fewer than this fraction of tracked subreddits')
     return p.parse_args()
+
+
+def expected_sub_count() -> int:
+    subs_file = ROOT / 'subreddits.txt'
+    if not subs_file.exists():
+        return 0
+    return len([l for l in subs_file.read_text().splitlines()
+                if l.strip() and not l.startswith('#')])
+
+
+def validate_month(month, doc, min_coverage, expected_subs):
+    """
+    Collection/scoring bugs upstream (thin scrape, a broken analysis run) should be
+    loud at publish time, not silently baked into the public dashboard. Non-blocking —
+    warnings are surfaced in the JSON itself and printed, but the month still publishes,
+    since a genuinely thin in-progress current month is a legitimate case, not a bug.
+    """
+    warnings = []
+    subs = doc.get('subreddits', {})
+
+    if expected_subs and len(subs) < expected_subs * min_coverage:
+        warnings.append(f'only {len(subs)}/{expected_subs} tracked subreddits present '
+                         f'(<{min_coverage*100:.0f}% coverage) — check for a partial/failed collection run')
+
+    bad_scores = [sub for sub, d in subs.items()
+                  if d.get('final_score') is None or not isinstance(d.get('final_score'), (int, float))]
+    if bad_scores:
+        warnings.append(f'{len(bad_scores)} subreddit(s) missing a valid final_score: {bad_scores[:5]}')
+
+    if warnings:
+        print(f"  ⚠ VALIDATION WARNINGS for {month}:")
+        for w in warnings:
+            print(f"      - {w}")
+    return warnings
 
 
 def _dirs(v2: bool):
@@ -165,11 +202,12 @@ def build_month_doc_v2(month, dt, raw):
                 'new_poster_pct':      ac.get('new_poster_pct'),
                 'new_commenter_pct':   ac.get('new_commenter_pct'),
                 'unverified_comm_pct': ac.get('unverified_comm_pct'),
-                'overlap_rate':        ri.get('overlap_rate'),
                 'burst_score':         ri.get('burst_score'),
+                'fast_ttfc_pct':       ri.get('fast_ttfc_pct'),
                 'avg_ttfc_minutes':    ri.get('avg_ttfc_minutes'),
                 'recurrence_rate':     ri.get('recurrence_rate'),
                 'self_amp_rate':       ri.get('self_amp_rate'),
+                'overlap_rate':        ri.get('overlap_rate'),
                 'score_comment_corr':  en.get('score_comment_corr'),
                 'upvote_ratio_std':    en.get('upvote_ratio_std'),
                 'ucr':                 en.get('ucr'),
@@ -216,10 +254,15 @@ def main():
         if month not in by_month or dt > by_month[month][0]:
             by_month[month] = (dt, raw)
 
+    expected_subs = expected_sub_count()
     history_months = []
     for month in sorted(by_month):
         dt, raw = by_month[month]
         doc = build_month_doc_v2(month, dt, raw) if v2 else build_month_doc(month, dt, raw)
+
+        warnings = validate_month(month, doc, args.min_sub_coverage, expected_subs)
+        if warnings:
+            doc['validation_warnings'] = warnings
 
         out_path = docs_dir / f'{month}.json'
         with open(out_path, 'w') as f:
@@ -250,6 +293,12 @@ def main():
     with open(hist_path, 'w') as f:
         json.dump(history, f, indent=2)
     print(f"  Wrote {hist_path.name}")
+
+    if v2:
+        findings_src = ROOT / 'reports' / 'findings.json'
+        if findings_src.exists():
+            shutil.copy(findings_src, docs_dir / 'findings.json')
+            print(f"  Copied findings.json")
 
     print(f"\nDone. {len(by_month)} month(s) written to {docs_dir.relative_to(ROOT)}/")
     print("=" * 70 + "\n")

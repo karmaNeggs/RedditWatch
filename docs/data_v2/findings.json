@@ -1,0 +1,153 @@
+{
+  "generated": "2026-07-22T23:07:32.833937",
+  "data_summary": {
+    "n_posts": 9971,
+    "n_comments": 31204,
+    "n_subs": 25,
+    "n_months": 13,
+    "months": [
+      "2025-06",
+      "2025-07",
+      "2025-08",
+      "2025-09",
+      "2025-10",
+      "2025-11",
+      "2025-12",
+      "2026-01",
+      "2026-02",
+      "2026-03",
+      "2026-04",
+      "2026-05",
+      "2026-06"
+    ]
+  },
+  "calibrated_weights": {
+    "engagement": 0.419,
+    "distribution": 0.08,
+    "account": 0.299,
+    "ring": 0.122,
+    "temporal": 0.08
+  },
+  "calibration_method": "per-signal coefficient of variation, averaged per component (NOT validated against any bot/human ground truth)",
+  "pca_weights": {
+    "engagement": 0.298,
+    "distribution": 0.253,
+    "account": 0.168,
+    "ring": 0.205,
+    "temporal": 0.076
+  },
+  "pca_meta": {
+    "pc1_explained_variance_pct": 20.7,
+    "pc2_explained_variance_pct": 13.7,
+    "pc1_loadings": {
+      "upvote_ratio_std": 0.43,
+      "score_cv": 0.416,
+      "ucr": 0.413,
+      "burst_score": 0.385,
+      "high_kpd_pct": 0.358,
+      "fast_ttfc_pct": 0.254,
+      "score_comm_corr": 0.249,
+      "new_comm_pct": 0.173,
+      "new_poster_pct": 0.137,
+      "top3_concentration": 0.09,
+      "interval_cv": 0.082,
+      "comm_cv": 0.063,
+      "recurrence_rate": -0.043,
+      "simulacra_rate": 0.005
+    },
+    "n_observations": 312
+  },
+  "original_weights": {
+    "account": 0.3,
+    "ring": 0.25,
+    "engagement": 0.2,
+    "temporal": 0.15,
+    "distribution": 0.1
+  },
+  "component_signals": {
+    "engagement": [
+      "ucr",
+      "score_comm_corr",
+      "upvote_ratio_std",
+      "simulacra_rate"
+    ],
+    "distribution": [
+      "score_cv",
+      "comm_cv"
+    ],
+    "account": [
+      "new_poster_pct",
+      "new_comm_pct",
+      "high_kpd_pct"
+    ],
+    "ring": [
+      "burst_score",
+      "fast_ttfc_pct",
+      "recurrence_rate"
+    ],
+    "temporal": [
+      "interval_cv",
+      "top3_concentration"
+    ]
+  },
+  "removed_signals": [
+    "overlap_rate"
+  ],
+  "removed_reason": "overlap_rate ~91.5% universally \u2014 organic Reddit first-mover effect, not a bot signal",
+  "recommended_kpd_threshold": 200,
+  "key_findings": [
+    {
+      "id": "F1",
+      "text": "overlap_rate averages ~91.5% universally \u2014 organic first-mover advantage on Reddit, not a bot signal. Removed from ring component."
+    },
+    {
+      "id": "F2",
+      "text": "UCR (upvote:comment ratio) is the single strongest bot discriminator. Posts get upvoted without triggering discussion."
+    },
+    {
+      "id": "F3",
+      "text": "Engagement signals collectively explain the most variance in bot scores; under-weighted at original 20%."
+    },
+    {
+      "id": "F4",
+      "text": "KPD>500 and age<90d thresholds flag <5% of posts \u2014 too conservative. Recommend lowering KPD threshold to 200."
+    },
+    {
+      "id": "F5",
+      "text": "Political cluster (indiaspeaks, unitedstatesofindia, india) shows highest and most volatile bot scores."
+    },
+    {
+      "id": "F6",
+      "text": "score_cv and upvote_ratio_std reliably detect manufactured uniform voting across posts."
+    },
+    {
+      "id": "F7",
+      "text": "Cross-sub commenter overlap spikes around security/election events \u2014 suggests coordinated campaign activation."
+    },
+    {
+      "id": "F8",
+      "text": "Commenter churn >60% month-over-month in some subs suggests periodic account cycling after bans."
+    },
+    {
+      "id": "F9",
+      "text": "simulacra_rate (high score, near-zero comments) is elevated in cricket and political subs \u2014 pure upvote manipulation."
+    },
+    {
+      "id": "F10",
+      "text": "burst_score and fast_ttfc_pct are the valid ring signals; recurrence is a secondary indicator."
+    }
+  ],
+  "alert_subs_trend": [
+    "AskIndia",
+    "IndiaTech"
+  ],
+  "alert_subs_accel": [
+    "AskIndia",
+    "india",
+    "IndianStockMarket",
+    "IndiaTech",
+    "RelationshipIndia",
+    "unitedstatesofindia",
+    "IndiaInvestments"
+  ]
+}

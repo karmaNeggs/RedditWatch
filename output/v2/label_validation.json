@@ -1,0 +1,16 @@
+{
+  "generated": "2026-07-22T23:14:11.069710",
+  "method": "current suspended/deleted status as a weak, noisy proxy for \"bad account\" \u2014 NOT a validated bot label; ordinary account deletion/inactivity is also captured",
+  "top_anomaly_group": {
+    "n": 60,
+    "n_gone": 5,
+    "gone_rate": 0.083
+  },
+  "baseline_group": {
+    "n": 60,
+    "n_gone": 2,
+    "gone_rate": 0.033
+  },
+  "rate_ratio": 2.5,
+  "interpretation": "ratio > ~1.5 suggests the anomaly score tracks something real (higher-flagged accounts vanish more); ratio ~1 means the score is not distinguishing meaningfully from ordinary account churn on this sample size"
+}

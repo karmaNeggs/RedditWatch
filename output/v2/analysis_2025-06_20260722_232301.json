@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "analysis_date": "2026-06-14T01:55:20.111717",
+  "analysis_date": "2026-07-22T23:23:01.385177",
   "month": "2025-06",
   "weights": {
     "engagement": 0.419,
@@ -696,175 +696,200 @@
       "score_comment_corr": 0.464,
       "upvote_ratio_std": 0.0502,
       "ucr": 7.3,
-      "avg_awards": 0.0
+      "avg_awards": 0.0,
+      "simulacra_rate": 0.0
     },
     "BollyBlindsNGossip": {
       "engagement_score": 39.4,
       "score_comment_corr": 0.173,
       "upvote_ratio_std": 0.0398,
       "ucr": 13.7,
-      "avg_awards": 0.0
+      "avg_awards": 0.0,
+      "simulacra_rate": 0.0
     },
     "indiasocial": {
       "engagement_score": 60.9,
       "score_comment_corr": 0.057,
       "upvote_ratio_std": 0.0324,
       "ucr": 15.3,
-      "avg_awards": 0.0
+      "avg_awards": 0.0,
+      "simulacra_rate": 0.0
     },
     "developersIndia": {
       "engagement_score": 56.4,
       "score_comment_corr": 0.022,
       "upvote_ratio_std": 0.027,
       "ucr": 7.6,
-      "avg_awards": 0.0
+      "avg_awards": 0.0,
+      "simulacra_rate": 0.0
     },
     "IndiaCricket": {
       "engagement_score": 31.6,
       "score_comment_corr": 0.562,
       "upvote_ratio_std": 0.0228,
       "ucr": 21.7,
-      "avg_awards": 0.0
+      "avg_awards": 0.0,
+      "simulacra_rate": 0.0
     },
     "bollywood": {
       "engagement_score": 59.8,
       "score_comment_corr": 0.001,
       "upvote_ratio_std": 0.0261,
       "ucr": 7.5,
-      "avg_awards": 0.0
+      "avg_awards": 0.0,
+      "simulacra_rate": 0.0
     },
     "IndianStockMarket": {
       "engagement_score": 12.4,
       "score_comment_corr": 0.379,
       "upvote_ratio_std": 0.0227,
       "ucr": 7.3,
-      "avg_awards": 0.0
+      "avg_awards": 0.0,
+      "simulacra_rate": 0.0
     },
     "indiaspeaks": {
       "engagement_score": 57.7,
       "score_comment_corr": 0.123,
       "upvote_ratio_std": 0.0283,
       "ucr": 21.2,
-      "avg_awards": 0.0
+      "avg_awards": 0.0,
+      "simulacra_rate": 0.0
     },
     "IndiaInvestments": {
       "engagement_score": 3.7,
       "score_comment_corr": 0.439,
       "upvote_ratio_std": 0.1755,
       "ucr": 2.8,
-      "avg_awards": 0.0
+      "avg_awards": 0.0,
+      "simulacra_rate": 0.0
     },
     "AskIndia": {
       "engagement_score": 32.6,
       "score_comment_corr": 0.12,
       "upvote_ratio_std": 0.068,
       "ucr": 1.9,
-      "avg_awards": 0.0
+      "avg_awards": 0.0,
+      "simulacra_rate": 0.0
     },
     "ipl": {
       "engagement_score": 67.0,
       "score_comment_corr": 0.202,
       "upvote_ratio_std": 0.0161,
       "ucr": 30.6,
-      "avg_awards": 0.0
+      "avg_awards": 0.0,
+      "simulacra_rate": 0.0
     },
     "IndiaTech": {
       "engagement_score": 14.9,
       "score_comment_corr": 0.494,
       "upvote_ratio_std": 0.026,
       "ucr": 11.2,
-      "avg_awards": 0.0
+      "avg_awards": 0.0,
+      "simulacra_rate": 0.0
     },
     "IndianGaming": {
       "engagement_score": 15.5,
       "score_comment_corr": 0.465,
       "upvote_ratio_std": 0.0222,
       "ucr": 9.2,
-      "avg_awards": 0.0
+      "avg_awards": 0.0,
+      "simulacra_rate": 0.0
     },
     "RelationshipIndia": {
       "engagement_score": 3.2,
       "score_comment_corr": 0.564,
       "upvote_ratio_std": 0.0536,
       "ucr": 2.4,
-      "avg_awards": 0.0
+      "avg_awards": 0.0,
+      "simulacra_rate": 0.0
     },
     "personalfinanceindia": {
       "engagement_score": 6.1,
       "score_comment_corr": 0.298,
       "upvote_ratio_std": 0.0408,
       "ucr": 4.3,
-      "avg_awards": 0.0
+      "avg_awards": 0.0,
+      "simulacra_rate": 0.0
     },
     "unitedstatesofindia": {
       "engagement_score": 17.7,
       "score_comment_corr": 0.533,
       "upvote_ratio_std": 0.0243,
       "ucr": 12.7,
-      "avg_awards": 0.0
+      "avg_awards": 0.0,
+      "simulacra_rate": 0.0
     },
     "IndianStreetBets": {
       "engagement_score": 14.3,
       "score_comment_corr": 0.546,
       "upvote_ratio_std": 0.0355,
       "ucr": 10.7,
-      "avg_awards": 0.0
+      "avg_awards": 0.0,
+      "simulacra_rate": 0.0
     },
     "JEENEETards": {
       "engagement_score": 27.0,
       "score_comment_corr": 0.559,
       "upvote_ratio_std": 0.0155,
       "ucr": 11.7,
-      "avg_awards": 0.0
+      "avg_awards": 0.0,
+      "simulacra_rate": 0.0
     },
     "ISRO": {
       "engagement_score": 64.7,
       "score_comment_corr": -0.01,
       "upvote_ratio_std": 0.0218,
       "ucr": 8.2,
-      "avg_awards": 0.0
+      "avg_awards": 0.0,
+      "simulacra_rate": 0.0
     },
     "UPSC": {
       "engagement_score": 12.6,
       "score_comment_corr": 0.667,
       "upvote_ratio_std": 0.0224,
       "ucr": 7.1,
-      "avg_awards": 0.0
+      "avg_awards": 0.0,
+      "simulacra_rate": 0.0
     },
     "StartUpIndia": {
       "engagement_score": 12.6,
       "score_comment_corr": 0.494,
       "upvote_ratio_std": 0.0753,
       "ucr": 9.4,
-      "avg_awards": 0.0
+      "avg_awards": 0.0,
+      "simulacra_rate": 0.0
     },
     "TwoXIndia": {
       "engagement_score": 10.8,
       "score_comment_corr": 0.583,
       "upvote_ratio_std": 0.0381,
       "ucr": 8.1,
-      "avg_awards": 0.0
+      "avg_awards": 0.0,
+      "simulacra_rate": 0.0
     },
     "teenindia": {
       "engagement_score": 11.8,
       "score_comment_corr": 0.314,
       "upvote_ratio_std": 0.031,
       "ucr": 8.9,
-      "avg_awards": 0.0
+      "avg_awards": 0.0,
+      "simulacra_rate": 0.0
     },
     "AskIndianWomen": {
       "engagement_score": 6.3,
       "score_comment_corr": 0.677,
       "upvote_ratio_std": 0.0792,
       "ucr": 4.7,
-      "avg_awards": 0.0
+      "avg_awards": 0.0,
+      "simulacra_rate": 0.0
     },
     "IndianFood": {
       "engagement_score": 1.7,
       "score_comment_corr": 0.572,
       "upvote_ratio_std": 0.0817,
       "ucr": 1.2,
-      "avg_awards": 0.0
+      "avg_awards": 0.0,
+      "simulacra_rate": 0.0
     }
   },
   "temporal_analysis": {
@@ -1194,6 +1219,158 @@
       "score_cv": 1.331,
       "comments_cv": 0.634,
       "avg_comment_depth": 0.0
+    }
+  },
+  "network_analysis": {
+    "india": {
+      "near_dupe_rate": 0.0,
+      "cross_sub_rate": 11.9,
+      "gini_score": 23.0,
+      "n_title_pairs": 703
+    },
+    "BollyBlindsNGossip": {
+      "near_dupe_rate": 0.0,
+      "cross_sub_rate": 6.1,
+      "gini_score": 18.4,
+      "n_title_pairs": 300
+    },
+    "indiasocial": {
+      "near_dupe_rate": 0.0,
+      "cross_sub_rate": 8.7,
+      "gini_score": 33.3,
+      "n_title_pairs": 780
+    },
+    "developersIndia": {
+      "near_dupe_rate": 0.0,
+      "cross_sub_rate": 3.1,
+      "gini_score": 30.0,
+      "n_title_pairs": 780
+    },
+    "IndiaCricket": {
+      "near_dupe_rate": 0.0,
+      "cross_sub_rate": 12.6,
+      "gini_score": 26.8,
+      "n_title_pairs": 780
+    },
+    "bollywood": {
+      "near_dupe_rate": 0.0,
+      "cross_sub_rate": 6.9,
+      "gini_score": 40.1,
+      "n_title_pairs": 190
+    },
+    "IndianStockMarket": {
+      "near_dupe_rate": 0.0,
+      "cross_sub_rate": 13.4,
+      "gini_score": 24.1,
+      "n_title_pairs": 276
+    },
+    "indiaspeaks": {
+      "near_dupe_rate": 0.0,
+      "cross_sub_rate": 9.0,
+      "gini_score": 15.8,
+      "n_title_pairs": 780
+    },
+    "IndiaInvestments": {
+      "near_dupe_rate": 0.0,
+      "cross_sub_rate": 6.4,
+      "gini_score": 50.9,
+      "n_title_pairs": 153
+    },
+    "AskIndia": {
+      "near_dupe_rate": 0.0,
+      "cross_sub_rate": 11.9,
+      "gini_score": 26.7,
+      "n_title_pairs": 780
+    },
+    "ipl": {
+      "near_dupe_rate": 0.1,
+      "cross_sub_rate": 13.2,
+      "gini_score": 24.5,
+      "n_title_pairs": 780
+    },
+    "IndiaTech": {
+      "near_dupe_rate": 0.0,
+      "cross_sub_rate": 10.3,
+      "gini_score": 36.0,
+      "n_title_pairs": 276
+    },
+    "IndianGaming": {
+      "near_dupe_rate": 0.0,
+      "cross_sub_rate": 5.9,
+      "gini_score": 28.7,
+      "n_title_pairs": 276
+    },
+    "RelationshipIndia": {
+      "near_dupe_rate": 0.0,
+      "cross_sub_rate": 3.1,
+      "gini_score": 42.2,
+      "n_title_pairs": 496
+    },
+    "personalfinanceindia": {
+      "near_dupe_rate": 0.0,
+      "cross_sub_rate": 17.1,
+      "gini_score": 42.5,
+      "n_title_pairs": 741
+    },
+    "unitedstatesofindia": {
+      "near_dupe_rate": 0.0,
+      "cross_sub_rate": 12.0,
+      "gini_score": 21.0,
+      "n_title_pairs": 666
+    },
+    "IndianStreetBets": {
+      "near_dupe_rate": 0.0,
+      "cross_sub_rate": 14.5,
+      "gini_score": 35.6,
+      "n_title_pairs": 300
+    },
+    "JEENEETards": {
+      "near_dupe_rate": 0.0,
+      "cross_sub_rate": 5.5,
+      "gini_score": 23.4,
+      "n_title_pairs": 780
+    },
+    "ISRO": {
+      "near_dupe_rate": 0.0,
+      "cross_sub_rate": 0.0,
+      "gini_score": 50.2,
+      "n_title_pairs": 378
+    },
+    "UPSC": {
+      "near_dupe_rate": 0.0,
+      "cross_sub_rate": 2.3,
+      "gini_score": 33.4,
+      "n_title_pairs": 703
+    },
+    "StartUpIndia": {
+      "near_dupe_rate": 0.0,
+      "cross_sub_rate": 12.7,
+      "gini_score": 69.2,
+      "n_title_pairs": 528
+    },
+    "TwoXIndia": {
+      "near_dupe_rate": 0.0,
+      "cross_sub_rate": 11.3,
+      "gini_score": 20.3,
+      "n_title_pairs": 190
+    },
+    "teenindia": {
+      "near_dupe_rate": 0.0,
+      "cross_sub_rate": 8.8,
+      "gini_score": 27.0,
+      "n_title_pairs": 171
+    },
+    "AskIndianWomen": {
+      "near_dupe_rate": 0.0,
+      "cross_sub_rate": 6.7,
+      "gini_score": 46.4,
+      "n_title_pairs": 435
+    },
+    "IndianFood": {
+      "near_dupe_rate": 0.0,
+      "cross_sub_rate": 3.8,
+      "gini_score": 54.4,
+      "n_title_pairs": 561
     }
   }
 }

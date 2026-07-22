@@ -1,0 +1,623 @@
+{
+  "generated": "2026-07-22T23:08:50.641026",
+  "method": "IsolationForest, unsupervised, no ground-truth labels \u2014 anomalous means far from the account population in feature space, not confirmed-bot",
+  "contamination": 0.05,
+  "n_accounts": 25611,
+  "features_used": [
+    "kpd",
+    "link_ratio",
+    "account_age_days",
+    "unverified",
+    "n_posts",
+    "n_comments",
+    "n_subs",
+    "n_months",
+    "pct_first5",
+    "pct_top10",
+    "avg_comment_depth"
+  ],
+  "subreddit_rollup": [
+    {
+      "subreddit": "ISRO",
+      "avg_anomaly_score": 59.9,
+      "pct_flagged": 61.9,
+      "n_activity_rows": 901
+    },
+    {
+      "subreddit": "unitedstatesofindia",
+      "avg_anomaly_score": 38.5,
+      "pct_flagged": 35.2,
+      "n_activity_rows": 1630
+    },
+    {
+      "subreddit": "IndiaCricket",
+      "avg_anomaly_score": 36.9,
+      "pct_flagged": 33.6,
+      "n_activity_rows": 1523
+    },
+    {
+      "subreddit": "BollyBlindsNGossip",
+      "avg_anomaly_score": 36.6,
+      "pct_flagged": 32.4,
+      "n_activity_rows": 1631
+    },
+    {
+      "subreddit": "bollywood",
+      "avg_anomaly_score": 33.1,
+      "pct_flagged": 30.1,
+      "n_activity_rows": 1496
+    },
+    {
+      "subreddit": "indiaspeaks",
+      "avg_anomaly_score": 32.3,
+      "pct_flagged": 27.0,
+      "n_activity_rows": 1468
+    },
+    {
+      "subreddit": "IndianStreetBets",
+      "avg_anomaly_score": 32.0,
+      "pct_flagged": 28.7,
+      "n_activity_rows": 1608
+    },
+    {
+      "subreddit": "ipl",
+      "avg_anomaly_score": 30.2,
+      "pct_flagged": 24.1,
+      "n_activity_rows": 1433
+    },
+    {
+      "subreddit": "india",
+      "avg_anomaly_score": 30.1,
+      "pct_flagged": 23.3,
+      "n_activity_rows": 1666
+    },
+    {
+      "subreddit": "IndiaInvestments",
+      "avg_anomaly_score": 29.9,
+      "pct_flagged": 23.7,
+      "n_activity_rows": 1162
+    },
+    {
+      "subreddit": "IndianFood",
+      "avg_anomaly_score": 28.2,
+      "pct_flagged": 20.2,
+      "n_activity_rows": 1665
+    },
+    {
+      "subreddit": "IndianStockMarket",
+      "avg_anomaly_score": 28.1,
+      "pct_flagged": 22.6,
+      "n_activity_rows": 1630
+    },
+    {
+      "subreddit": "IndiaTech",
+      "avg_anomaly_score": 27.6,
+      "pct_flagged": 20.0,
+      "n_activity_rows": 1544
+    },
+    {
+      "subreddit": "TwoXIndia",
+      "avg_anomaly_score": 26.8,
+      "pct_flagged": 17.1,
+      "n_activity_rows": 1617
+    },
+    {
+      "subreddit": "AskIndianWomen",
+      "avg_anomaly_score": 26.1,
+      "pct_flagged": 17.9,
+      "n_activity_rows": 1542
+    },
+    {
+      "subreddit": "personalfinanceindia",
+      "avg_anomaly_score": 26.1,
+      "pct_flagged": 17.5,
+      "n_activity_rows": 1689
+    },
+    {
+      "subreddit": "indiasocial",
+      "avg_anomaly_score": 23.5,
+      "pct_flagged": 14.4,
+      "n_activity_rows": 1568
+    },
+    {
+      "subreddit": "AskIndia",
+      "avg_anomaly_score": 23.2,
+      "pct_flagged": 14.7,
+      "n_activity_rows": 1409
+    },
+    {
+      "subreddit": "StartUpIndia",
+      "avg_anomaly_score": 22.9,
+      "pct_flagged": 12.2,
+      "n_activity_rows": 1614
+    },
+    {
+      "subreddit": "UPSC",
+      "avg_anomaly_score": 22.2,
+      "pct_flagged": 10.4,
+      "n_activity_rows": 1495
+    },
+    {
+      "subreddit": "developersIndia",
+      "avg_anomaly_score": 18.8,
+      "pct_flagged": 9.1,
+      "n_activity_rows": 1651
+    },
+    {
+      "subreddit": "RelationshipIndia",
+      "avg_anomaly_score": 18.7,
+      "pct_flagged": 6.2,
+      "n_activity_rows": 1622
+    },
+    {
+      "subreddit": "JEENEETards",
+      "avg_anomaly_score": 18.4,
+      "pct_flagged": 7.8,
+      "n_activity_rows": 1464
+    },
+    {
+      "subreddit": "IndianGaming",
+      "avg_anomaly_score": 18.0,
+      "pct_flagged": 7.3,
+      "n_activity_rows": 1656
+    },
+    {
+      "subreddit": "teenindia",
+      "avg_anomaly_score": 17.0,
+      "pct_flagged": 6.3,
+      "n_activity_rows": 1414
+    }
+  ],
+  "top_anomalous_accounts": [
+    {
+      "account": "imfrom_mars_",
+      "anomaly_score": 100.0,
+      "kpd": 3322.6,
+      "account_age_days": 364.3,
+      "n_subs": 7,
+      "n_posts": 41,
+      "n_comments": 0
+    },
+    {
+      "account": "GiveMeSomeSunshine3",
+      "anomaly_score": 99.0,
+      "kpd": 4544.6,
+      "account_age_days": 448.8,
+      "n_subs": 5,
+      "n_posts": 94,
+      "n_comments": 20
+    },
+    {
+      "account": "Oopsforgotagain",
+      "anomaly_score": 95.5,
+      "kpd": 802.2,
+      "account_age_days": 288.2,
+      "n_subs": 3,
+      "n_posts": 5,
+      "n_comments": 0
+    },
+    {
+      "account": "Sharp-potential7935",
+      "anomaly_score": 94.2,
+      "kpd": 9836.1,
+      "account_age_days": 310.8,
+      "n_subs": 4,
+      "n_posts": 20,
+      "n_comments": 2
+    },
+    {
+      "account": "Capable_Control_2845",
+      "anomaly_score": 93.2,
+      "kpd": 1250.1,
+      "account_age_days": 246.2,
+      "n_subs": 2,
+      "n_posts": 5,
+      "n_comments": 0
+    },
+    {
+      "account": "Kindly_Department142",
+      "anomaly_score": 93.1,
+      "kpd": 928.8,
+      "account_age_days": 501.1,
+      "n_subs": 4,
+      "n_posts": 8,
+      "n_comments": 0
+    },
+    {
+      "account": "God_Emperor__Doom",
+      "anomaly_score": 93.0,
+      "kpd": 2437.5,
+      "account_age_days": 93.3,
+      "n_subs": 5,
+      "n_posts": 15,
+      "n_comments": 2
+    },
+    {
+      "account": "NoMedicine3572",
+      "anomaly_score": 92.7,
+      "kpd": 560.8,
+      "account_age_days": 660.1,
+      "n_subs": 8,
+      "n_posts": 10,
+      "n_comments": 10
+    },
+    {
+      "account": "littleArtsy",
+      "anomaly_score": 92.6,
+      "kpd": 600.8,
+      "account_age_days": 102.3,
+      "n_subs": 1,
+      "n_posts": 25,
+      "n_comments": 0
+    },
+    {
+      "account": "Admirable_Move6933",
+      "anomaly_score": 92.5,
+      "kpd": 1112.3,
+      "account_age_days": 149.8,
+      "n_subs": 2,
+      "n_posts": 4,
+      "n_comments": 0
+    },
+    {
+      "account": "Ohsin",
+      "anomaly_score": 92.4,
+      "kpd": 30.2,
+      "account_age_days": 6317.2,
+      "n_subs": 2,
+      "n_posts": 241,
+      "n_comments": 89
+    },
+    {
+      "account": "ConstructionAny8440",
+      "anomaly_score": 92.1,
+      "kpd": 726.6,
+      "account_age_days": 1725.9,
+      "n_subs": 4,
+      "n_posts": 14,
+      "n_comments": 6
+    },
+    {
+      "account": "0Layscheetoskurkure0",
+      "anomaly_score": 92.0,
+      "kpd": 1441.6,
+      "account_age_days": 311.0,
+      "n_subs": 1,
+      "n_posts": 24,
+      "n_comments": 2
+    },
+    {
+      "account": "bhodrolok",
+      "anomaly_score": 92.0,
+      "kpd": 237.1,
+      "account_age_days": 4005.9,
+      "n_subs": 2,
+      "n_posts": 30,
+      "n_comments": 13
+    },
+    {
+      "account": "Snehith220",
+      "anomaly_score": 90.5,
+      "kpd": 472.1,
+      "account_age_days": 1139.9,
+      "n_subs": 6,
+      "n_posts": 8,
+      "n_comments": 5
+    },
+    {
+      "account": "find_a_rare_uuid",
+      "anomaly_score": 89.3,
+      "kpd": 364.2,
+      "account_age_days": 670.7,
+      "n_subs": 8,
+      "n_posts": 5,
+      "n_comments": 31
+    },
+    {
+      "account": "Manoos",
+      "anomaly_score": 89.3,
+      "kpd": 16.4,
+      "account_age_days": 6023.8,
+      "n_subs": 5,
+      "n_posts": 0,
+      "n_comments": 9
+    },
+    {
+      "account": "SatoruGojo232",
+      "anomaly_score": 89.2,
+      "kpd": 2994.4,
+      "account_age_days": 864.4,
+      "n_subs": 1,
+      "n_posts": 47,
+      "n_comments": 0
+    },
+    {
+      "account": "Inside_One_9147",
+      "anomaly_score": 89.2,
+      "kpd": 278.8,
+      "account_age_days": 878.8,
+      "n_subs": 4,
+      "n_posts": 43,
+      "n_comments": 1
+    },
+    {
+      "account": "ciao-adios",
+      "anomaly_score": 88.6,
+      "kpd": 688.5,
+      "account_age_days": 222.8,
+      "n_subs": 6,
+      "n_posts": 8,
+      "n_comments": 8
+    },
+    {
+      "account": "Moongfali4president",
+      "anomaly_score": 88.5,
+      "kpd": 376.6,
+      "account_age_days": 582.1,
+      "n_subs": 4,
+      "n_posts": 6,
+      "n_comments": 24
+    },
+    {
+      "account": "Embarrassed_Look9200",
+      "anomaly_score": 87.5,
+      "kpd": 271.0,
+      "account_age_days": 425.0,
+      "n_subs": 5,
+      "n_posts": 5,
+      "n_comments": 36
+    },
+    {
+      "account": "Broad-Research5220",
+      "anomaly_score": 87.5,
+      "kpd": 82.0,
+      "account_age_days": 1579.6,
+      "n_subs": 4,
+      "n_posts": 62,
+      "n_comments": 6
+    },
+    {
+      "account": "Sambharsupreme",
+      "anomaly_score": 87.2,
+      "kpd": 305.0,
+      "account_age_days": 275.0,
+      "n_subs": 2,
+      "n_posts": 4,
+      "n_comments": 0
+    },
+    {
+      "account": "cricfanatic4518",
+      "anomaly_score": 87.1,
+      "kpd": 717.8,
+      "account_age_days": 335.1,
+      "n_subs": 2,
+      "n_posts": 21,
+      "n_comments": 3
+    },
+    {
+      "account": "stocktwitsindia",
+      "anomaly_score": 86.7,
+      "kpd": 42.3,
+      "account_age_days": 949.3,
+      "n_subs": 1,
+      "n_posts": 37,
+      "n_comments": 0
+    },
+    {
+      "account": "hotcoolhot",
+      "anomaly_score": 86.7,
+      "kpd": 19.7,
+      "account_age_days": 5258.5,
+      "n_subs": 7,
+      "n_posts": 0,
+      "n_comments": 19
+    },
+    {
+      "account": "Obvious_Shoe7302",
+      "anomaly_score": 86.1,
+      "kpd": 137.0,
+      "account_age_days": 2070.8,
+      "n_subs": 4,
+      "n_posts": 12,
+      "n_comments": 0
+    },
+    {
+      "account": "SuperbHealth5023",
+      "anomaly_score": 86.1,
+      "kpd": 1166.8,
+      "account_age_days": 634.9,
+      "n_subs": 5,
+      "n_posts": 5,
+      "n_comments": 1
+    },
+    {
+      "account": "UndeadReborn",
+      "anomaly_score": 86.1,
+      "kpd": 250.6,
+      "account_age_days": 691.5,
+      "n_subs": 2,
+      "n_posts": 15,
+      "n_comments": 11
+    },
+    {
+      "account": "markelonn",
+      "anomaly_score": 85.9,
+      "kpd": 46.6,
+      "account_age_days": 4619.7,
+      "n_subs": 4,
+      "n_posts": 1,
+      "n_comments": 17
+    },
+    {
+      "account": "Altruistic-Issue-887",
+      "anomaly_score": 85.5,
+      "kpd": 555.9,
+      "account_age_days": 1417.7,
+      "n_subs": 2,
+      "n_posts": 17,
+      "n_comments": 1
+    },
+    {
+      "account": "yellow_pills",
+      "anomaly_score": 85.4,
+      "kpd": 176.6,
+      "account_age_days": 1407.8,
+      "n_subs": 4,
+      "n_posts": 10,
+      "n_comments": 0
+    },
+    {
+      "account": "Mirror-On-The-Wall",
+      "anomaly_score": 85.0,
+      "kpd": 83.1,
+      "account_age_days": 2367.9,
+      "n_subs": 1,
+      "n_posts": 51,
+      "n_comments": 10
+    },
+    {
+      "account": "Frosty_Jeweler911",
+      "anomaly_score": 84.8,
+      "kpd": 3571.7,
+      "account_age_days": 395.0,
+      "n_subs": 4,
+      "n_posts": 5,
+      "n_comments": 1
+    },
+    {
+      "account": "pritam_ram",
+      "anomaly_score": 84.8,
+      "kpd": 417.5,
+      "account_age_days": 244.8,
+      "n_subs": 1,
+      "n_posts": 15,
+      "n_comments": 0
+    },
+    {
+      "account": "Interesting-Take781",
+      "anomaly_score": 84.7,
+      "kpd": 679.8,
+      "account_age_days": 473.0,
+      "n_subs": 3,
+      "n_posts": 16,
+      "n_comments": 6
+    },
+    {
+      "account": "Ranger_Hawk3046",
+      "anomaly_score": 84.6,
+      "kpd": 463.0,
+      "account_age_days": 390.1,
+      "n_subs": 2,
+      "n_posts": 3,
+      "n_comments": 14
+    },
+    {
+      "account": "Kimi_Raikkonen2001",
+      "anomaly_score": 84.6,
+      "kpd": 13.5,
+      "account_age_days": 2312.0,
+      "n_subs": 1,
+      "n_posts": 24,
+      "n_comments": 14
+    },
+    {
+      "account": "Oppyhead",
+      "anomaly_score": 84.5,
+      "kpd": 575.8,
+      "account_age_days": 640.8,
+      "n_subs": 1,
+      "n_posts": 7,
+      "n_comments": 0
+    },
+    {
+      "account": "nomnommish",
+      "anomaly_score": 84.4,
+      "kpd": 63.2,
+      "account_age_days": 4077.7,
+      "n_subs": 3,
+      "n_posts": 0,
+      "n_comments": 9
+    },
+    {
+      "account": "Yournewbestfriend_01",
+      "anomaly_score": 84.3,
+      "kpd": 202.3,
+      "account_age_days": 1184.2,
+      "n_subs": 3,
+      "n_posts": 8,
+      "n_comments": 0
+    },
+    {
+      "account": "Same_Investigator_46",
+      "anomaly_score": 83.9,
+      "kpd": 1099.5,
+      "account_age_days": 1094.5,
+      "n_subs": 1,
+      "n_posts": 4,
+      "n_comments": 6
+    },
+    {
+      "account": "ibarmy",
+      "anomaly_score": 83.8,
+      "kpd": 60.6,
+      "account_age_days": 3504.3,
+      "n_subs": 4,
+      "n_posts": 2,
+      "n_comments": 17
+    },
+    {
+      "account": "romka79",
+      "anomaly_score": 83.7,
+      "kpd": 46.5,
+      "account_age_days": 1955.1,
+      "n_subs": 5,
+      "n_posts": 2,
+      "n_comments": 16
+    },
+    {
+      "account": "Fearless-Ad-422",
+      "anomaly_score": 83.6,
+      "kpd": 148.3,
+      "account_age_days": 212.8,
+      "n_subs": 2,
+      "n_posts": 15,
+      "n_comments": 1
+    },
+    {
+      "account": "SubstantialAct4212",
+      "anomaly_score": 83.3,
+      "kpd": 126.0,
+      "account_age_days": 804.3,
+      "n_subs": 4,
+      "n_posts": 0,
+      "n_comments": 9
+    },
+    {
+      "account": "Almost_Infamous",
+      "anomaly_score": 83.1,
+      "kpd": 38.8,
+      "account_age_days": 4768.6,
+      "n_subs": 2,
+      "n_posts": 6,
+      "n_comments": 11
+    },
+    {
+      "account": "kamleshsulochan",
+      "anomaly_score": 83.0,
+      "kpd": 1218.9,
+      "account_age_days": 279.7,
+      "n_subs": 3,
+      "n_posts": 1,
+      "n_comments": 10
+    },
+    {
+      "account": "Rabbidraccoon18",
+      "anomaly_score": 83.0,
+      "kpd": 354.4,
+      "account_age_days": 1904.0,
+      "n_subs": 3,
+      "n_posts": 6,
+      "n_comments": 0
+    }
+  ]
+}
