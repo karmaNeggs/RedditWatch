@@ -43,6 +43,7 @@
     .month-tab { padding: 4px 14px; border-radius: 20px; border: 1px solid var(--border); color: var(--muted); cursor: pointer; font-size: 12px; background: transparent; transition: all 0.15s; }
     .month-tab:hover { border-color: var(--blue); color: var(--text); }
     .month-tab.active { background: var(--blue); border-color: var(--blue); color: #fff; font-weight: 600; }
+    .month-dropdown { padding: 4px 10px; border-radius: 8px; border: 1px solid var(--border); color: var(--text); background: var(--surface); font-size: 12px; cursor: pointer; }
 
     main { padding: 24px 0 48px; }
     .section { margin-bottom: 32px; }
@@ -123,9 +124,7 @@
       <span class="month-label">Report:</span>
       <div id="monthTabs" style="display:flex;gap:6px;flex-wrap:wrap"></div>
       <div style="margin-left:auto;display:flex;align-items:center;gap:6px">
-        <span class="month-label">Version:</span>
-        <button id="v1Btn" class="month-tab active" onclick="setVersion(1)" title="V1: post/user signals, 4 components">V1</button>
-        <button id="v2Btn" class="month-tab" onclick="setVersion(2)" title="V2: comment rings, account cohorts, 5 components">V2 ✦</button>
+        <span class="month-label" title="V1 (post/user signals, 4 components) is archived — see archive/v1/">V2 ✦</span>
       </div>
     </div>
   </div>
@@ -166,19 +165,9 @@ function initThemeToggle() {
 }
 document.addEventListener('DOMContentLoaded', initThemeToggle);
 
-let history = null, current = null, charts = {};
-let v2Mode = false;
-function dataDir() { return v2Mode ? 'data_v2' : 'data'; }
-function setVersion(v) {
-  v2Mode = v === 2;
-  document.getElementById('v1Btn').classList.toggle('active', !v2Mode);
-  document.getElementById('v2Btn').classList.toggle('active',  v2Mode);
-  ['trendChart','histUser','histAcct','histRing','histEng','histTemp','histDist','histFinal'].forEach(id => {
-    if (charts[id]) { charts[id].destroy(); delete charts[id]; }
-  });
-  history = null; current = null;
-  init();
-}
+let history = null, current = null, charts = {}, findings = null;
+const v2Mode = true; // V1 archived — see archive/v1/. Single-pipeline site now.
+function dataDir() { return 'data_v2'; }
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 const SEV       = s => s >= 70 ? 'critical' : s >= 40 ? 'high' : s >= 20 ? 'moderate' : 'low';
@@ -208,12 +197,19 @@ function chartColors() {
   };
 }
 
-// ── tabs ──────────────────────────────────────────────────────────────────────
+// ── month nav — tabs ≤6 months, dropdown >6 ──────────────────────────────────
 function renderTabs(active) {
-  document.getElementById('monthTabs').innerHTML =
-    history.months.slice().reverse().map(m =>
+  const el     = document.getElementById('monthTabs');
+  const months = history.months.slice().reverse();
+  if (months.length > 6) {
+    el.innerHTML = `<select class="month-dropdown" onchange="switchMonth(this.value)">
+      ${months.map(m => `<option value="${m.month}"${m.month===active?' selected':''}>${fmtMonth(m.month)}</option>`).join('')}
+    </select>`;
+  } else {
+    el.innerHTML = months.map(m =>
       `<button class="month-tab${m.month===active?' active':''}" onclick="switchMonth('${m.month}')">${fmtMonth(m.month)}</button>`
     ).join('');
+  }
 }
 
 const HIST_IDS = ['histUser','histAcct','histRing','histEng','histTemp','histDist','histFinal'];
@@ -246,8 +242,10 @@ function renderAll() {
 
     <div style="border-top:1px solid var(--border);margin:4px 0 32px"></div>
 
+    ${isV2 ? '<div class="section" id="findingsPanel"></div>' : ''}
+
     <div class="section">
-      <div class="section-title">Component breakdown — all subreddits</div>
+      <div class="section-title">Component breakdown — all subreddits ${isV2 ? '<span style="font-size:10px;font-weight:400;color:var(--muted);text-transform:none;letter-spacing:0">&nbsp;— weights calibrated from data · ordered by impact</span>' : ''}</div>
       <div class="card card-pad">
         <div class="card-title" id="compLegend"></div>
         <div id="compBars"></div>
@@ -292,44 +290,7 @@ function renderAll() {
       </div>
     </div>
 
-    <div class="section">
-      <div class="section-title">Methodology — how scores are calculated</div>
-      <div class="meth-grid">
-        <div class="meth-card">
-          <h4>User + Commenter <span class="wt">40%</span></h4>
-          <p>Checks <strong>posters and top 5 commenters</strong> per post for suspicious karma-per-day (kpd). Calibrated to May 2026 data (717 accounts): median kpd = 22.5, p90 = 600, p95 = 2,400. Suspicious accounts contribute 1.2 pts/%; very suspicious add a 0.28 pts/% bonus on top. Poster and commenter signals are blended 60/40.</p>
-          <div class="thr-row">
-            <span class="thr" style="background:rgba(248,81,73,.12);color:#f85149">kpd &gt; 2,000 = very suspicious (top 5%)</span>
-            <span class="thr" style="background:rgba(210,153,34,.12);color:#d29922">kpd &gt; 500 = suspicious (top 10%)</span>
-            <span class="thr" style="background:rgba(210,153,34,.12);color:#d29922">&lt; 90 days old + kpd &gt; 100 = flagged</span>
-          </div>
-        </div>
-        <div class="meth-card">
-          <h4>Engagement <span class="wt">25%</span></h4>
-          <p>Measures upvote-to-comment ratio (UCR = avg score ÷ avg comments). Bots upvote without joining discussion. UCR contributes up to 65 pts (ceiling at UCR = 30); upvote consensus above 85% adds up to 35 pts. High-engagement content subs (memes, viral posts) may score higher due to content type rather than coordination.</p>
-          <div class="thr-row">
-            <span class="thr" style="background:rgba(248,81,73,.12);color:#f85149">UCR ≥ 30 → max 65 pts</span>
-            <span class="thr" style="background:rgba(210,153,34,.12);color:#d29922">Upvote ratio &gt; 85% → up to 35 pts</span>
-          </div>
-        </div>
-        <div class="meth-card">
-          <h4>Temporal Patterns <span class="wt">20%</span></h4>
-          <p>Automated systems post in tight windows. Measures: (1) % of posts in the top 3 busiest UTC hours, max 60 pts; (2) posting entropy relative to a perfectly uniform 24 h distribution (max = 4.58 bits), contributing up to 40 pts. Event-driven subs (sports, news) may show natural clustering during live events — check context before flagging.</p>
-          <div class="thr-row">
-            <span class="thr" style="background:rgba(248,81,73,.12);color:#f85149">≥ 60% posts in top-3 hours → 60 pts</span>
-            <span class="thr" style="background:rgba(210,153,34,.12);color:#d29922">Entropy &lt; 3.0 bits → elevated score</span>
-          </div>
-        </div>
-        <div class="meth-card">
-          <h4>Score Distribution <span class="wt">15%</span></h4>
-          <p>Organic communities have high vote variance — a few posts go viral, most get modest upvotes (CV typically 1.5–3.0). Coordinated bots produce unnaturally uniform vote counts (CV &lt; 0.8). Vote and comment CVs scored separately (70 / 30 split). Note: with only 30 posts sampled, CV estimates are noisy for low-traffic subreddits.</p>
-          <div class="thr-row">
-            <span class="thr" style="background:rgba(248,81,73,.12);color:#f85149">CV = 0 → max 70 pts (votes) + 30 pts (comments)</span>
-            <span class="thr" style="background:rgba(63,185,80,.12);color:#3fb950">CV ≥ 0.8 → 0 pts (organic variance)</span>
-          </div>
-        </div>
-      </div>
-    </div>
+    <div class="section" id="methSection"></div>
 
     <div class="section">
       <div class="section-title">Subreddit details</div>
@@ -348,9 +309,11 @@ function renderAll() {
   `;
 
   renderIntelligencePanel(subs);
+  if (isV2) renderFindings();
   renderMultiRadar(subs);
   renderAggregateTrend();
   renderScoreHistograms(subs);
+  renderMethodologySection(isV2);
   renderDetailCards(subs);
   renderArchive();
 }
@@ -497,6 +460,20 @@ function renderIntelligencePanel(subs) {
       </div>`;
   }
 
+  const alertTrend = findings?.alert_subs_trend || [];
+  const alertAccel = findings?.alert_subs_accel || [];
+  const isAlertSub = sub => alertAccel.includes(sub) || alertTrend.includes(sub);
+
+  const alertBannerHTML = isV2panel && (alertTrend.length || alertAccel.length) ? `
+    <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border)">
+      <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Watch list — from 13-month trend analysis</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px">
+        ${alertTrend.map(s => `<span style="padding:3px 10px;border-radius:12px;background:rgba(248,81,73,.13);border:1px solid rgba(248,81,73,.3);color:#f85149;font-size:11px;font-weight:700">▲ r/${s} <span style="font-size:10px;font-weight:400">trend alert</span></span>`).join('')}
+        ${alertAccel.filter(s => !alertTrend.includes(s)).map(s => `<span style="padding:3px 10px;border-radius:12px;background:rgba(210,153,34,.12);border:1px solid rgba(210,153,34,.3);color:#d29922;font-size:11px;font-weight:700">⚡ r/${s} <span style="font-size:10px;font-weight:400">accelerating</span></span>`).join('')}
+      </div>
+      <div style="font-size:10px;color:var(--muted);margin-top:6px">▲ Trend alert = statistically worsening slope (p &lt; 0.15) · ⚡ Accelerating = last 3 months above 12-month baseline</div>
+    </div>` : '';
+
   document.getElementById('intelligencePanel').innerHTML = `
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:28px">
 
@@ -526,6 +503,7 @@ function renderIntelligencePanel(subs) {
             <div style="font-size:10px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:.05em;margin-bottom:7px">Distribution checks</div>
             ${notes.map(n => `<div style="margin-bottom:3px">${n}</div>`).join('')}
           </div>` : ''}
+        ${alertBannerHTML}
       </div>
 
       <div>${momHTML}</div>
@@ -537,12 +515,14 @@ function renderIntelligencePanel(subs) {
 // ── component crosstab bars ───────────────────────────────────────────────────
 function renderMultiRadar(subs) {
   const isV2  = current.version === 2;
+  const wts   = current.weights || {};
+  const pct   = k => wts[k] != null ? Math.round(wts[k] * 100) + '%' : '?%';
   const COMPS = isV2 ? [
-    { key:'account_score',      color:'#58a6ff', label:'Accounts',  wt:'30%' },
-    { key:'ring_score',         color:'#f85149', label:'Ring',       wt:'25%' },
-    { key:'engagement_score',   color:'#d29922', label:'Eng',        wt:'20%' },
-    { key:'temporal_score',     color:'#bc8cff', label:'Temporal',   wt:'15%' },
-    { key:'distribution_score', color:'#3fb950', label:'Dist',       wt:'10%' },
+    { key:'engagement_score',   color:'#d29922', label:'Eng',        wt:pct('engagement') },
+    { key:'account_score',      color:'#58a6ff', label:'Accounts',   wt:pct('account') },
+    { key:'ring_score',         color:'#f85149', label:'Ring',        wt:pct('ring') },
+    { key:'temporal_score',     color:'#bc8cff', label:'Temporal',   wt:pct('temporal') },
+    { key:'distribution_score', color:'#3fb950', label:'Dist',       wt:pct('distribution') },
   ] : [
     { key:'user_score',         color:'#58a6ff', label:'User+Comm', wt:'40%' },
     { key:'engagement_score',   color:'#f85149', label:'Eng',        wt:'25%' },
@@ -649,12 +629,14 @@ function renderAggregateTrend() {
 // ── score distribution histograms ─────────────────────────────────────────────
 function renderScoreHistograms(subs) {
   const isV2  = current.version === 2;
+  const wts2  = current.weights || {};
+  const pct2  = k => wts2[k] != null ? Math.round(wts2[k] * 100) + '%' : '?%';
   const COMPS = isV2 ? [
-    { key:'account_score',      id:'histAcct', label:'Account Signals',    color:'#58a6ff', weight:'30%' },
-    { key:'ring_score',         id:'histRing', label:'Comment Ring',        color:'#f85149', weight:'25%' },
-    { key:'engagement_score',   id:'histEng',  label:'Engagement',          color:'#d29922', weight:'20%' },
-    { key:'temporal_score',     id:'histTemp', label:'Temporal Patterns',   color:'#bc8cff', weight:'15%' },
-    { key:'distribution_score', id:'histDist', label:'Score Distribution',  color:'#3fb950', weight:'10%' },
+    { key:'engagement_score',   id:'histEng',  label:'Engagement',          color:'#d29922', weight:pct2('engagement') },
+    { key:'account_score',      id:'histAcct', label:'Account Signals',     color:'#58a6ff', weight:pct2('account') },
+    { key:'ring_score',         id:'histRing', label:'Comment Ring',         color:'#f85149', weight:pct2('ring') },
+    { key:'temporal_score',     id:'histTemp', label:'Temporal Patterns',   color:'#bc8cff', weight:pct2('temporal') },
+    { key:'distribution_score', id:'histDist', label:'Score Distribution',  color:'#3fb950', weight:pct2('distribution') },
   ] : [
     { key:'user_score',         id:'histUser', label:'User + Commenter',   color:'#58a6ff', weight:'40%' },
     { key:'engagement_score',   id:'histEng',  label:'Engagement',          color:'#f85149', weight:'25%' },
@@ -794,12 +776,12 @@ function renderDetailCards(subs) {
 
       <div class="mrow" style="padding:7px 16px;background:var(--surface2);margin-top:2px"><span class="ml" style="font-weight:700;color:#f85149">Comment Ring</span>
         <span class="mv" style="color:#f85149">${fmt(d.ring_score)}/100</span></div>
-      <div class="mrow"><span class="ml">First↔top overlap rate</span><span class="mv" style="${flag(det.overlap_rate,0.5)}">${det.overlap_rate!=null?(+det.overlap_rate*100).toFixed(0)+'%':'—'}</span></div>
-      <div class="mrow"><span class="ml">Burst score</span><span class="mv" style="${flag(det.burst_score,50)}">${fmt(det.burst_score)}</span></div>
-      <div class="mrow"><span class="ml">Avg time to first comment</span><span class="mv" style="${det.avg_ttfc_minutes!=null&&det.avg_ttfc_minutes<15?`color:${COLOR(70)}`:''}">
+      <div class="mrow"><span class="ml">Burst score (tight timing)</span><span class="mv" style="${flag(det.burst_score,50)}">${fmt(det.burst_score)}</span></div>
+      <div class="mrow"><span class="ml">Sub-5-min first comments</span><span class="mv" style="${flag(det.fast_ttfc_pct,40)}">${fmtP(det.fast_ttfc_pct)}</span></div>
+      <div class="mrow"><span class="ml">Avg time to first comment</span><span class="mv" style="${det.avg_ttfc_minutes!=null&&det.avg_ttfc_minutes<10?`color:${COLOR(70)}`:''}">
         ${det.avg_ttfc_minutes!=null ? (+det.avg_ttfc_minutes).toFixed(0)+' min' : '—'}</span></div>
       <div class="mrow"><span class="ml">Commenter recurrence</span><span class="mv" style="${flag(det.recurrence_rate,0.4)}">${fmtP(det.recurrence_rate!=null?det.recurrence_rate*100:null)}</span></div>
-      <div class="mrow"><span class="ml">Self-amplification rate</span><span class="mv" style="${flag(det.self_amp_rate,0.2)}">${fmtP(det.self_amp_rate!=null?det.self_amp_rate*100:null)}</span></div>
+      <div class="mrow"><span class="ml">Overlap rate (ref. only)</span><span class="mv" style="color:var(--muted);font-size:11px">${det.overlap_rate!=null?(+det.overlap_rate*100).toFixed(0)+'% (organic baseline ~91%)':'—'}</span></div>
 
       <div class="mrow" style="padding:7px 16px;background:var(--surface2);margin-top:2px"><span class="ml" style="font-weight:700;color:#d29922">Engagement</span>
         <span class="mv" style="color:#d29922">${fmt(d.engagement_score)}/100</span></div>
@@ -841,6 +823,203 @@ function renderDetailCards(subs) {
   }).join('');
 }
 
+// ── findings panel ────────────────────────────────────────────────────────────
+function renderFindings() {
+  const el = document.getElementById('findingsPanel');
+  if (!el) return;
+  if (!findings) { el.style.display = 'none'; return; }
+
+  const orig = findings.original_weights || {};
+  const cal  = findings.calibrated_weights || {};
+  const kf   = findings.key_findings || [];
+  const alertT = findings.alert_subs_trend || [];
+  const alertA = findings.alert_subs_accel || [];
+  const removed = findings.removed_signals || [];
+  const removedReason = findings.removed_reason || '';
+  const summary = findings.data_summary || {};
+
+  const comps = [
+    { key:'engagement',   label:'Engagement',   color:'#d29922' },
+    { key:'account',      label:'Account',      color:'#58a6ff' },
+    { key:'ring',         label:'Ring',         color:'#f85149' },
+    { key:'distribution', label:'Distribution', color:'#3fb950' },
+    { key:'temporal',     label:'Temporal',     color:'#bc8cff' },
+  ];
+
+  const weightRow = c => {
+    const o = Math.round((orig[c.key] || 0) * 100);
+    const n = Math.round((cal[c.key]  || 0) * 100);
+    const delta = n - o;
+    const deltaStr = delta > 0 ? `+${delta}` : `${delta}`;
+    const deltaColor = delta > 0 ? '#f85149' : delta < 0 ? '#3fb950' : '#8b949e';
+    return `<div style="display:grid;grid-template-columns:90px 40px 1fr 40px 36px;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)">
+      <span style="font-size:12px;font-weight:600;color:${c.color}">${c.label}</span>
+      <span style="font-size:11px;color:var(--muted);text-align:right">${o}%</span>
+      <div style="position:relative;height:6px;background:var(--surface2);border-radius:3px">
+        <div style="position:absolute;left:0;top:0;height:100%;width:${o}%;background:var(--border);border-radius:3px"></div>
+        <div style="position:absolute;left:0;top:0;height:100%;width:${n}%;background:${c.color};border-radius:3px;opacity:0.85"></div>
+      </div>
+      <span style="font-size:12px;font-weight:700;color:${c.color};text-align:right">${n}%</span>
+      <span style="font-size:11px;font-weight:700;color:${deltaColor};text-align:right">${deltaStr}</span>
+    </div>`;
+  };
+
+  const findingCard = f => {
+    const fid = f.id || '';
+    return `<div style="padding:10px 14px;background:var(--surface2);border-radius:6px;border:1px solid var(--border)">
+      <div style="font-size:10px;font-weight:700;color:var(--blue);margin-bottom:4px">${fid}</div>
+      <div style="font-size:12px;color:var(--muted);line-height:1.6">${f.text}</div>
+    </div>`;
+  };
+
+  el.innerHTML = `
+    <div class="section-title">What the 13-month analysis revealed — calibration story</div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+
+      <div class="card card-pad">
+        <div class="card-title">Weight recalibration — before → after</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:12px;line-height:1.6">
+          Original weights were intuition-based. New weights derived empirically from ${(summary.n_posts||0).toLocaleString()} posts × ${summary.n_months||0} months using signal CV + ANOVA F-statistic.
+          <span style="color:var(--blue);font-weight:600"> Engagement was massively under-weighted.</span>
+        </div>
+        <div style="font-size:10px;font-weight:700;color:var(--muted);display:grid;grid-template-columns:90px 40px 1fr 40px 36px;gap:8px;margin-bottom:4px;text-transform:uppercase;letter-spacing:.04em">
+          <span>Component</span><span style="text-align:right">Before</span><span></span><span style="text-align:right">After</span><span style="text-align:right">Δ</span>
+        </div>
+        ${comps.map(weightRow).join('')}
+        ${removed.length ? `<div style="margin-top:10px;padding:8px 12px;background:rgba(248,81,73,.06);border:1px solid rgba(248,81,73,.15);border-radius:5px;font-size:11px;color:var(--muted);line-height:1.55">
+          <span style="color:#f85149;font-weight:700">Removed:</span> ${removed.join(', ')} — ${removedReason}
+        </div>` : ''}
+      </div>
+
+      <div class="card card-pad">
+        <div class="card-title">Watch list — trend & acceleration alerts</div>
+        ${alertT.length ? `
+          <div style="margin-bottom:12px">
+            <div style="font-size:10px;font-weight:700;color:#f85149;text-transform:uppercase;letter-spacing:.05em;margin-bottom:7px">▲ Trend alert — statistically worsening (p &lt; 0.15)</div>
+            <div style="display:flex;flex-wrap:wrap;gap:6px">
+              ${alertT.map(s => `<a href="https://reddit.com/r/${s}" target="_blank" style="padding:4px 12px;border-radius:14px;background:rgba(248,81,73,.12);border:1px solid rgba(248,81,73,.3);color:#f85149;font-size:12px;font-weight:700;text-decoration:none">r/${s}</a>`).join('')}
+            </div>
+            <div style="font-size:10px;color:var(--muted);margin-top:5px">Linear regression slope in bot direction with p&nbsp;&lt;&nbsp;0.15 across 8 signals over 12 months.</div>
+          </div>` : ''}
+        ${alertA.length ? `
+          <div>
+            <div style="font-size:10px;font-weight:700;color:#d29922;text-transform:uppercase;letter-spacing:.05em;margin-bottom:7px">⚡ Acceleration — last 3 months above 12-month baseline</div>
+            <div style="display:flex;flex-wrap:wrap;gap:6px">
+              ${alertA.map(s => `<a href="https://reddit.com/r/${s}" target="_blank" style="padding:4px 12px;border-radius:14px;background:rgba(210,153,34,.10);border:1px solid rgba(210,153,34,.28);color:#d29922;font-size:12px;font-weight:700;text-decoration:none">r/${s}</a>`).join('')}
+            </div>
+            <div style="font-size:10px;color:var(--muted);margin-top:5px">MoM velocity in last 3 months exceeds the 12-month composite baseline by a statistically significant margin.</div>
+          </div>` : ''}
+        ${!alertT.length && !alertA.length ? '<div style="font-size:12px;color:var(--muted)">No alert subs detected.</div>' : ''}
+      </div>
+
+    </div>
+
+    <div class="card card-pad">
+      <div class="card-title">Key findings — ${kf.length} statistical observations from full dataset</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px">
+        ${kf.map(findingCard).join('')}
+      </div>
+    </div>
+  `;
+}
+
+// ── methodology section ───────────────────────────────────────────────────────
+function renderMethodologySection(isV2) {
+  const el = document.getElementById('methSection');
+  if (!el) return;
+  const wts = current.weights || {};
+  const pct = k => wts[k] != null ? Math.round(wts[k] * 100) + '%' : '?%';
+
+  if (isV2) {
+    el.innerHTML = `
+      <div class="section-title">Methodology — V2 calibrated scoring</div>
+      <div style="margin-bottom:14px;padding:10px 14px;background:rgba(88,166,255,.06);border:1px solid rgba(88,166,255,.18);border-radius:6px;font-size:12px;color:var(--muted);line-height:1.7">
+        Weights recalibrated June 2026 from 13 months × 25 subs (325 observations). UCR was identified as the single strongest discriminator (Pearson r = 0.735).
+        Engagement weight raised from 20% → 42%. Ring weight lowered from 25% → 12% after <code style="font-size:11px;background:var(--surface2);padding:1px 4px;border-radius:3px">overlap_rate</code> was proven organic (91.5% universally — Reddit first-mover effect, not bot signal).
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px">
+        <div class="meth-card" style="border-top:3px solid #d29922">
+          <h4>Engagement <span class="wt" style="background:rgba(210,153,34,.15);color:#d29922">${pct('engagement')}</span></h4>
+          <p>Strongest discriminator. UCR (upvote÷comment ratio) correlates r=0.735 with final score — bots upvote without commenting. Simulacra rate flags posts with score&gt;500 and comments&lt;5 (pure upvote manipulation).</p>
+          <div class="thr-row">
+            <span class="thr" style="background:rgba(248,81,73,.12);color:#f85149">UCR ≥ 25 → high risk</span>
+            <span class="thr" style="background:rgba(210,153,34,.12);color:#d29922">Upvote std &lt; 0.03 → uniform voting</span>
+          </div>
+        </div>
+        <div class="meth-card" style="border-top:3px solid #58a6ff">
+          <h4>Account <span class="wt">${pct('account')}</span></h4>
+          <p>New poster / commenter concentration (account age &lt;90 days). KPD threshold lowered to 200 (was 500) after analysis showed 500 flags &lt;5% of posts — too conservative.</p>
+          <div class="thr-row">
+            <span class="thr" style="background:rgba(248,81,73,.12);color:#f85149">KPD &gt; 1,000 = very suspicious</span>
+            <span class="thr" style="background:rgba(210,153,34,.12);color:#d29922">KPD &gt; 200 = suspicious (lowered)</span>
+          </div>
+        </div>
+        <div class="meth-card" style="border-top:3px solid #f85149">
+          <h4>Ring <span class="wt" style="background:rgba(248,81,73,.12);color:#f85149">${pct('ring')}</span></h4>
+          <p>Comment timing coordination. Formula: burst_score×0.6 + fast_ttfc×0.25 + recurrence×10 + self_amp×5. <strong style="color:#3fb950">overlap_rate removed</strong> — proven organic baseline ~91.5% everywhere.</p>
+          <div class="thr-row">
+            <span class="thr" style="background:rgba(248,81,73,.12);color:#f85149">burst_score &gt; 50 → tight coordination</span>
+            <span class="thr" style="background:rgba(210,153,34,.12);color:#d29922">&gt;40% comments within 5 min</span>
+          </div>
+        </div>
+        <div class="meth-card" style="border-top:3px solid #3fb950">
+          <h4>Distribution <span class="wt" style="background:rgba(63,185,80,.1);color:#3fb950">${pct('distribution')}</span></h4>
+          <p>Vote count variance. Organic communities have high CV (1.5–3.0); coordinated bots produce uniform counts. Score CV and comment CV scored 70/30 split.</p>
+          <div class="thr-row">
+            <span class="thr" style="background:rgba(248,81,73,.12);color:#f85149">CV &lt; 0.5 → unnaturally uniform</span>
+            <span class="thr" style="background:rgba(63,185,80,.12);color:#3fb950">CV ≥ 1.5 → organic spread</span>
+          </div>
+        </div>
+        <div class="meth-card" style="border-top:3px solid #bc8cff">
+          <h4>Temporal <span class="wt" style="background:rgba(188,140,255,.1);color:#bc8cff">${pct('temporal')}</span></h4>
+          <p>Posting hour concentration and entropy vs uniform 24h distribution. Lower weight than original — a weak discriminator when controlled for content type (sports, news events cause natural clustering).</p>
+          <div class="thr-row">
+            <span class="thr" style="background:rgba(248,81,73,.12);color:#f85149">≥60% posts in top-3 hours</span>
+            <span class="thr" style="background:rgba(210,153,34,.12);color:#d29922">Entropy &lt; 3.0 bits → compressed</span>
+          </div>
+        </div>
+      </div>`;
+  } else {
+    el.innerHTML = `
+      <div class="section-title">Methodology — how scores are calculated</div>
+      <div class="meth-grid">
+        <div class="meth-card">
+          <h4>User + Commenter <span class="wt">40%</span></h4>
+          <p>Checks <strong>posters and top 5 commenters</strong> per post for suspicious karma-per-day (kpd). Suspicious accounts contribute 1.2 pts/%; very suspicious add a 0.28 pts/% bonus. Poster and commenter signals blended 60/40.</p>
+          <div class="thr-row">
+            <span class="thr" style="background:rgba(248,81,73,.12);color:#f85149">kpd &gt; 2,000 = very suspicious</span>
+            <span class="thr" style="background:rgba(210,153,34,.12);color:#d29922">kpd &gt; 500 = suspicious</span>
+          </div>
+        </div>
+        <div class="meth-card">
+          <h4>Engagement <span class="wt">25%</span></h4>
+          <p>UCR = avg score ÷ avg comments. Bots upvote without discussing. UCR contributes up to 65 pts (ceiling UCR=30); upvote consensus above 85% adds up to 35 pts.</p>
+          <div class="thr-row">
+            <span class="thr" style="background:rgba(248,81,73,.12);color:#f85149">UCR ≥ 30 → max 65 pts</span>
+            <span class="thr" style="background:rgba(210,153,34,.12);color:#d29922">Upvote ratio &gt;85% → up to 35 pts</span>
+          </div>
+        </div>
+        <div class="meth-card">
+          <h4>Temporal Patterns <span class="wt">20%</span></h4>
+          <p>% of posts in top 3 UTC hours (max 60 pts) + posting entropy vs uniform 24h distribution (max 40 pts). Event-driven subs may show natural clustering — check context.</p>
+          <div class="thr-row">
+            <span class="thr" style="background:rgba(248,81,73,.12);color:#f85149">≥60% in top-3 hours → 60 pts</span>
+            <span class="thr" style="background:rgba(210,153,34,.12);color:#d29922">Entropy &lt; 3.0 bits → elevated</span>
+          </div>
+        </div>
+        <div class="meth-card">
+          <h4>Score Distribution <span class="wt">15%</span></h4>
+          <p>Organic communities have high vote variance (CV 1.5–3.0). Coordinated bots produce uniform vote counts (CV &lt; 0.8). Vote and comment CVs scored 70/30.</p>
+          <div class="thr-row">
+            <span class="thr" style="background:rgba(248,81,73,.12);color:#f85149">CV = 0 → max 100 pts</span>
+            <span class="thr" style="background:rgba(63,185,80,.12);color:#3fb950">CV ≥ 0.8 → 0 pts</span>
+          </div>
+        </div>
+      </div>`;
+  }
+}
+
 // ── archive ───────────────────────────────────────────────────────────────────
 function renderArchive() {
   document.getElementById('archBody').innerHTML = history.months.slice().reverse().map(m => {
@@ -869,6 +1048,16 @@ async function init() {
     if (!r.ok) throw new Error(`${dataDir()}/history.json not found`);
     history = await r.json();
     if (!history.months?.length) { showError('No data yet. Run <code>bash run_monthly.sh</code>.'); return; }
+
+    if (v2Mode) {
+      try {
+        const fr = await fetch(`data_v2/findings.json?v=${Date.now()}`);
+        if (fr.ok) findings = await fr.json();
+      } catch(e) { findings = null; }
+    } else {
+      findings = null;
+    }
+
     const latest = history.months[history.months.length - 1];
     renderTabs(latest.month);
     await switchMonth(latest.month);
