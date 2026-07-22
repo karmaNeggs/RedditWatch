@@ -377,6 +377,24 @@ def analyze_network(posts: pd.DataFrame, comms: pd.DataFrame) -> dict:
 # Score CV, comment depth distribution (shallow = bot-like)
 
 def analyze_distribution(posts: pd.DataFrame, comms: pd.DataFrame) -> dict:
+    """
+    score_cv (raw score variance across the sub's top-40) used to drive this
+    component, but collection sorts by top.json score and caps at 40/month —
+    every subreddit's top-N slice is variance-truncated by that ranking-then-cutting
+    process itself, bot activity aside, so a low score_cv doesn't distinguish
+    "this sub's top posts are uniform because of coordination" from "this is what
+    any top-40 slice looks like". Kept below for reference, not scored.
+
+    Replaced with decay_slope: fit log(score) ~ log(rank) across the sub-month's
+    top-N (a power-law/Zipfian decay is the organic shape — one or two breakout
+    posts, long tail). An unnaturally *flat* slope (several posts pinned near-equal
+    near the top) is a shape signature of coordinated amplification that survives
+    the top-N truncation, since it's about the curve's shape, not its raw variance.
+    Thresholds calibrated from the actual observed slope distribution across the
+    full 13-month/25-sub corpus (n=304 sub-months): p10=-0.93 (steep/organic) to
+    max=-0.22 (flattest observed) — same percentile-calibration approach as the
+    KPD threshold.
+    """
     result = {}
     for sub in posts['subreddit'].unique():
         p = posts[posts['subreddit'] == sub]
@@ -386,9 +404,24 @@ def analyze_distribution(posts: pd.DataFrame, comms: pd.DataFrame) -> dict:
         score_cv   = p['score'].std() / score_mean if score_mean > 0 else 0
         comm_mean  = p['num_comments'].mean()
         comm_cv    = p['num_comments'].std() / comm_mean if comm_mean > 0 else 0
-
-        score_uniformity = max(0, min((0.8 - score_cv) / 0.8 * 70, 70))
         comm_uniformity  = max(0, min((0.8 - comm_cv)  / 0.8 * 30, 30))
+
+        # -- Rank-decay shape (replaces score_cv-based scoring) --------------
+        scores_sorted = p.sort_values('score', ascending=False)['score'].values
+        scores_sorted = scores_sorted[scores_sorted > 0]
+        decay_slope, decay_r2 = None, None
+        decay_pts = 0.0
+        if len(scores_sorted) >= 8:
+            ranks = np.arange(1, len(scores_sorted) + 1)
+            log_r, log_s = np.log(ranks), np.log(scores_sorted)
+            slope, intercept = np.polyfit(log_r, log_s, 1)
+            resid  = log_s - (slope * log_r + intercept)
+            ss_res = float(np.sum(resid ** 2))
+            ss_tot = float(np.sum((log_s - log_s.mean()) ** 2))
+            decay_slope = float(slope)
+            decay_r2    = float(1 - ss_res / ss_tot) if ss_tot > 0 else 0.0
+            # p10=-0.93 (steep, organic) .. max=-0.22 (flattest observed = most suspicious)
+            decay_pts = max(0.0, min((decay_slope - (-0.93)) / ((-0.22) - (-0.93)) * 50, 50))
 
         # Comment depth: low avg depth = all bot-like direct replies
         if len(c) > 0:
@@ -397,13 +430,15 @@ def analyze_distribution(posts: pd.DataFrame, comms: pd.DataFrame) -> dict:
         else:
             avg_depth, depth_pts = 0.0, 0.0
 
-        dist_score = min(score_uniformity + comm_uniformity + depth_pts, 100)
+        dist_score = min(decay_pts + comm_uniformity + depth_pts, 100)
 
         result[sub] = {
             'distribution_score': round(float(dist_score), 1),
-            'score_cv':           round(float(score_cv), 3),
+            'decay_slope':        round(decay_slope, 3) if decay_slope is not None else None,
+            'decay_r2':           round(decay_r2, 3) if decay_r2 is not None else None,
             'comments_cv':        round(float(comm_cv), 3),
             'avg_comment_depth':  round(avg_depth, 2),
+            'score_cv':           round(float(score_cv), 3),  # reference only, not scored — see docstring
         }
     return result
 

@@ -1,5 +1,5 @@
 {
-  "generated": "2026-07-22T23:07:32.833937",
+  "generated": "2026-07-23T00:26:11.437880",
   "data_summary": {
     "n_posts": 9971,
     "n_comments": 31204,
@@ -22,40 +22,77 @@
     ]
   },
   "calibrated_weights": {
-    "engagement": 0.419,
-    "distribution": 0.08,
-    "account": 0.299,
-    "ring": 0.122,
-    "temporal": 0.08
+    "engagement": 0.417,
+    "distribution": 0.079,
+    "account": 0.302,
+    "ring": 0.123,
+    "temporal": 0.079
   },
   "calibration_method": "per-signal coefficient of variation, averaged per component (NOT validated against any bot/human ground truth)",
   "pca_weights": {
-    "engagement": 0.298,
-    "distribution": 0.253,
-    "account": 0.168,
-    "ring": 0.205,
-    "temporal": 0.076
+    "engagement": 0.306,
+    "distribution": 0.301,
+    "account": 0.141,
+    "ring": 0.177,
+    "temporal": 0.075
   },
   "pca_meta": {
-    "pc1_explained_variance_pct": 20.7,
-    "pc2_explained_variance_pct": 13.7,
+    "pc1_explained_variance_pct": 21.8,
+    "pc2_explained_variance_pct": 13.9,
     "pc1_loadings": {
-      "upvote_ratio_std": 0.43,
-      "score_cv": 0.416,
-      "ucr": 0.413,
-      "burst_score": 0.385,
+      "decay_slope": 0.46,
+      "upvote_ratio_std": 0.439,
+      "ucr": 0.419,
+      "burst_score": 0.365,
       "high_kpd_pct": 0.358,
-      "fast_ttfc_pct": 0.254,
-      "score_comm_corr": 0.249,
-      "new_comm_pct": 0.173,
-      "new_poster_pct": 0.137,
+      "score_comm_corr": 0.26,
+      "fast_ttfc_pct": 0.236,
+      "new_comm_pct": 0.12,
+      "new_poster_pct": 0.093,
       "top3_concentration": 0.09,
-      "interval_cv": 0.082,
-      "comm_cv": 0.063,
-      "recurrence_rate": -0.043,
-      "simulacra_rate": 0.005
+      "comm_cv": 0.053,
+      "interval_cv": 0.04,
+      "recurrence_rate": -0.017,
+      "simulacra_rate": 0.012
     },
-    "n_observations": 312
+    "n_observations": 304
+  },
+  "supervised_feature_check": {
+    "generated": "2026-07-23T00:17:54.908246",
+    "method": "LogisticRegression(class_weight=balanced) on standardized features, weak label = current suspended/deleted status",
+    "n_sampled": 500,
+    "n_gone": 21,
+    "gone_rate": 0.042,
+    "features": [
+      "kpd",
+      "link_ratio",
+      "account_age_days",
+      "unverified",
+      "n_posts",
+      "n_comments",
+      "n_subs",
+      "n_months",
+      "pct_first5",
+      "pct_top10",
+      "avg_comment_depth"
+    ],
+    "coefficients": {
+      "account_age_days": -1.027,
+      "n_months": 0.557,
+      "n_posts": -0.348,
+      "kpd": 0.308,
+      "pct_first5": 0.263,
+      "unverified": -0.148,
+      "pct_top10": -0.099,
+      "link_ratio": 0.05,
+      "n_subs": 0.024,
+      "n_comments": -0.017,
+      "avg_comment_depth": 0.0
+    },
+    "cv_roc_auc_mean": 0.569,
+    "cv_roc_auc_std": 0.157,
+    "cv_folds": 5,
+    "caveat": "weak/noisy label (ordinary account deletion is also captured, not just enforcement action); coefficients show direction/significance of each feature, not a validated bot-probability score"
   },
   "original_weights": {
     "account": 0.3,
@@ -72,7 +109,7 @@
       "simulacra_rate"
     ],
     "distribution": [
-      "score_cv",
+      "decay_slope",
       "comm_cv"
     ],
     "account": [
