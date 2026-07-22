@@ -140,6 +140,8 @@ python3 -m http.server 8080 --directory docs/
 
 ## Full-corpus statistical report
 
+Run this on a slower cadence than the monthly collection — quarterly is reasonable. It re-derives weights from the *entire* history, so running it every month would have it chasing single-month noise instead of a stable trend, and every run changes `reports/findings.json`, which `analyze_data_v2.py` reads for the live weights on its next run.
+
 ```bash
 python3 scripts/analysis.py                        # all months in data/v2/
 python3 scripts/analysis.py --months 2026-04 2026-05
