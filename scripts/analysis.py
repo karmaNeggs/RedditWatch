@@ -216,6 +216,20 @@ def compute_signals(posts, comms):
         score_cv     = pg['score'].std() / score_mean if score_mean > 0 else 0
         comm_mean    = pg['num_comments'].mean()
         comm_cv      = pg['num_comments'].std() / comm_mean if comm_mean > 0 else 0
+
+        # Rank-decay shape — replaces score_cv as the scored distribution signal.
+        # score_cv is truncated by the top.json-sorted/capped-at-40 collection itself
+        # (every sub's top-N slice has compressed variance regardless of bot activity);
+        # decay_slope (log score ~ log rank) captures curve *shape* instead, which
+        # survives that truncation. Flat slope (near 0) = posts pinned near-equal
+        # near the top = coordination signature; steep slope = organic one-or-two-
+        # breakout-posts-then-long-tail.
+        decay_slope = np.nan
+        s_sorted = pg.sort_values('score', ascending=False)['score'].values
+        s_sorted = s_sorted[s_sorted > 0]
+        if len(s_sorted) >= 8:
+            ranks = np.arange(1, len(s_sorted) + 1)
+            decay_slope = float(np.polyfit(np.log(ranks), np.log(s_sorted), 1)[0])
         ratio_std    = pg['upvote_ratio'].std()
         ucr_mean     = pg['ucr'].mean()
         corr_sc      = float(pg['score'].corr(pg['num_comments']))
@@ -273,7 +287,7 @@ def compute_signals(posts, comms):
         rows.append(dict(
             subreddit=sub, month=month, cluster=SUB_CLUSTER.get(sub, 'Other'),
             n_posts=len(pg), n_comments=len(cg),
-            ucr=ucr_mean, score_cv=score_cv, comm_cv=comm_cv,
+            ucr=ucr_mean, score_cv=score_cv, comm_cv=comm_cv, decay_slope=decay_slope,
             upvote_ratio_std=ratio_std, score_comm_corr=corr_sc, simulacra_rate=simulacra,
             new_poster_pct=new_poster_pct, new_comm_pct=new_comm_pct,
             high_kpd_pct=high_kpd_pct, link_ratio_mean=link_ratio_mean,
@@ -423,13 +437,13 @@ def section_3(sigs, pdf):
                    color=C['amber'])
 
     SIGNAL_COLS = [
-        'ucr', 'score_cv', 'upvote_ratio_std', 'score_comm_corr', 'simulacra_rate',
+        'ucr', 'decay_slope', 'comm_cv', 'upvote_ratio_std', 'score_comm_corr', 'simulacra_rate',
         'burst_score', 'fast_ttfc_pct', 'recurrence_rate', 'overlap_rate',
         'new_poster_pct', 'new_comm_pct', 'high_kpd_pct',
         'interval_cv', 'top3_concentration',
     ]
     LABELS = {
-        'ucr': 'UCR', 'score_cv': 'Score CV', 'upvote_ratio_std': 'Ratio σ',
+        'ucr': 'UCR', 'decay_slope': 'Decay Slope', 'comm_cv': 'Comments CV', 'upvote_ratio_std': 'Ratio σ',
         'score_comm_corr': 'Score↔Comm r', 'simulacra_rate': 'Simulacra%',
         'burst_score': 'Burst', 'fast_ttfc_pct': 'FastTTFC%', 'recurrence_rate': 'Recurrence',
         'overlap_rate': 'Overlap', 'new_poster_pct': 'NewPost%',
@@ -1187,7 +1201,7 @@ def section_6b(sigs, pdf):
 
 COMPONENT_SIGNALS = {
     'engagement':   ['ucr', 'score_comm_corr', 'upvote_ratio_std', 'simulacra_rate'],
-    'distribution': ['score_cv', 'comm_cv'],
+    'distribution': ['decay_slope', 'comm_cv'],  # score_cv retired — see compute_signals() docstring
     'account':      ['new_poster_pct', 'new_comm_pct', 'high_kpd_pct'],
     'ring':         ['burst_score', 'fast_ttfc_pct', 'recurrence_rate'],
     'temporal':     ['interval_cv', 'top3_concentration'],
@@ -1238,7 +1252,8 @@ def derive_weights(sigs):
 # Signals where a LOW raw value is the suspicious direction (uniform votes, robotic
 # regular intervals, upvotes-without-discussion). Flipped before PCA so that a higher
 # standardized value always means "more bot-like" across every signal.
-FLIP_SIGNALS = {'score_cv', 'comm_cv', 'upvote_ratio_std', 'score_comm_corr', 'interval_cv'}
+FLIP_SIGNALS = {'comm_cv', 'upvote_ratio_std', 'score_comm_corr', 'interval_cv'}
+# decay_slope is already high=suspicious (flatter/less-negative slope = more coordination-like) — no flip needed.
 
 
 def derive_weights_pca(sigs):
@@ -1476,6 +1491,12 @@ def main():
     print('  Computing PCA-based weights (alternative, for comparison)…')
     pca_weights, pca_meta = derive_weights_pca(sigs)
 
+    supervised_check = None
+    wlc_path = REPORT_DIR.parent / 'output' / 'v2' / 'weak_label_classifier.json'
+    if wlc_path.exists():
+        with open(wlc_path) as f:
+            supervised_check = json.load(f)
+
     findings = {
         'generated': datetime.now().isoformat(),
         'data_summary': {
@@ -1489,6 +1510,7 @@ def main():
         'calibration_method':  'per-signal coefficient of variation, averaged per component (NOT validated against any bot/human ground truth)',
         'pca_weights':         pca_weights,
         'pca_meta':            pca_meta,
+        'supervised_feature_check': supervised_check,
         'original_weights':    OLD_WEIGHTS,
         'component_signals':   COMPONENT_SIGNALS,
         'removed_signals':     ['overlap_rate'],
