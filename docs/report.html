@@ -219,11 +219,11 @@
 <div id="root"><div class="loading">Loading report…</div></div>
 
 <script>
-const SEV       = s => s >= 70 ? 'critical' : s >= 50 ? 'high' : s >= 30 ? 'moderate' : 'low';
-const SEV_LABEL = s => s >= 70 ? 'Critical'  : s >= 50 ? 'High'  : s >= 30 ? 'Moderate'  : 'Low';
-const COLOR     = s => s >= 70 ? '#dc2626'   : s >= 50 ? '#d97706' : s >= 30 ? '#ca8a04'  : '#16a34a';
-const BAR_COLOR = s => s >= 70 ? '#fca5a5'   : s >= 50 ? '#fcd34d' : s >= 30 ? '#fef08a'  : '#86efac';
-const COMP_C    = { user:'#3b82f6', engagement:'#ef4444', temporal:'#f59e0b', distribution:'#8b5cf6' };
+const SEV       = s => s >= 70 ? 'critical' : s >= 40 ? 'high' : s >= 20 ? 'moderate' : 'low';
+const SEV_LABEL = s => s >= 70 ? 'Critical'  : s >= 40 ? 'High'  : s >= 20 ? 'Moderate'  : 'Low';
+const COLOR     = s => s >= 70 ? '#dc2626'   : s >= 40 ? '#d97706' : s >= 20 ? '#ca8a04'  : '#16a34a';
+const BAR_COLOR = s => s >= 70 ? '#fca5a5'   : s >= 40 ? '#fcd34d' : s >= 20 ? '#fef08a'  : '#86efac';
+const COMP_C    = { account:'#3b82f6', ring:'#ef4444', engagement:'#d97706', temporal:'#8b5cf6', distribution:'#16a34a' };
 
 function fmtMonth(ym) {
   const [y,m] = ym.split('-');
@@ -235,17 +235,17 @@ function fmtDate(iso) {
 
 function buildSummary(subs) {
   const total = subs.length;
-  const high  = subs.filter(([,d]) => d.final_score >= 50);
-  const low   = subs.filter(([,d]) => d.final_score < 30);
+  const high  = subs.filter(([,d]) => d.final_score >= 40);
+  const low   = subs.filter(([,d]) => d.final_score < 20);
   const top   = subs[0];
   const clean = subs[subs.length - 1];
   const avg   = (subs.reduce((a,[,d]) => a + d.final_score, 0) / total).toFixed(1);
-  const comps = {user:top[1].user_score, engagement:top[1].engagement_score, temporal:top[1].temporal_score, distribution:top[1].distribution_score};
-  const compNames = {user:'suspicious account growth patterns', engagement:'low comment engagement relative to upvotes', temporal:'concentrated posting windows', distribution:'uniform vote distribution'};
+  const comps = {account:top[1].account_score, ring:top[1].ring_score, engagement:top[1].engagement_score, temporal:top[1].temporal_score, distribution:top[1].distribution_score};
+  const compNames = {account:'new/suspicious account concentration', ring:'coordinated comment-ring timing', engagement:'low comment engagement relative to upvotes', temporal:'concentrated posting windows', distribution:'unnaturally flat top-score curve'};
   const dominant = Object.entries(comps).sort((a,b)=>b[1]-a[1])[0][0];
 
   let s = `This month's scan covered <strong>${total} Indian subreddits</strong>, with an average bot activity score of <strong>${avg}/100</strong>. `;
-  s += `<strong>${high.length} communities</strong> scored High or above (≥50), indicating significant coordinated activity. `;
+  s += `<strong>${high.length} communities</strong> scored High or above (≥40), indicating significant coordinated activity. `;
   s += `<strong>r/${top[0]}</strong> ranked highest at <strong>${top[1].final_score.toFixed(1)}</strong>, driven primarily by ${compNames[dominant]}. `;
   if (high.length >= 3) {
     s += `Political and entertainment communities — including ${high.slice(0,3).map(([x])=>'r/'+x).join(', ')} — show the strongest signals, consistent with agenda-driven coordination. `;
@@ -261,22 +261,22 @@ function bar(val, color) {
 
 function compBars(d) {
   return `<div class="comp-row">
-    ${[['user','Users'],['engagement','Engagement'],['temporal','Temporal'],['distribution','Dist.']].map(([k,l]) =>
+    ${[['account','Accounts'],['ring','Ring'],['engagement','Engagement'],['temporal','Temporal'],['distribution','Dist.']].map(([k,l]) =>
       `<div class="comp-item">
-        <div class="comp-label">${l} ${d[k+'_score'].toFixed(0)}</div>
-        <div class="comp-bar"><div class="comp-bar-fill" style="width:${d[k+'_score']}%;background:${COMP_C[k]}"></div></div>
+        <div class="comp-label">${l} ${(d[k+'_score']??0).toFixed(0)}</div>
+        <div class="comp-bar"><div class="comp-bar-fill" style="width:${d[k+'_score']??0}%;background:${COMP_C[k]}"></div></div>
       </div>`
     ).join('')}
   </div>`;
 }
 
 async function render() {
-  const h = await fetch(`data/history.json?v=${Date.now()}`).then(r=>r.json());
+  const h = await fetch(`data_v2/history.json?v=${Date.now()}`).then(r=>r.json());
   const latest = h.months[h.months.length - 1];
-  const month  = await fetch(`data/${latest.month}.json?v=${Date.now()}`).then(r=>r.json());
+  const month  = await fetch(`data_v2/${latest.month}.json?v=${Date.now()}`).then(r=>r.json());
   const subs   = Object.entries(month.subreddits).sort((a,b)=>b[1].final_score-a[1].final_score);
 
-  const highCount = subs.filter(([,d])=>d.final_score>=50).length;
+  const highCount = subs.filter(([,d])=>d.final_score>=40).length;
 
   document.getElementById('root').innerHTML = `
   <div class="report">

@@ -130,7 +130,6 @@
         <div class="nav-tabs">
           <a href="index.html" class="nav-tab">Dashboard</a>
           <a href="insights.html" class="nav-tab active">Deep Insights</a>
-          <a href="report.html" class="nav-tab" target="_blank">Report</a>
         </div>
         <a href="https://github.com/karmaNeggs/RedditWatch" target="_blank">GitHub</a>
         <button class="theme-btn" id="themeToggle" title="Toggle light/dark mode">🌙</button>
@@ -154,7 +153,7 @@
 
 <footer>
   <div class="container">
-    Data collected via Reddit public JSON API · Scores 0–100 (higher = more bot activity) ·
+    Data collected via Reddit OAuth API · Scores 0–100 (higher = more bot activity) ·
     <a href="https://github.com/karmaNeggs/RedditWatch">Source &amp; methodology</a>
   </div>
 </footer>
@@ -181,17 +180,14 @@ document.addEventListener('DOMContentLoaded', initThemeToggle);
 
 let history = null, current = null;
 
-// ── helpers ───────────────────────────────────────────────────────────────────
-const SEV       = s => s >= 70 ? 'critical' : s >= 50 ? 'high' : s >= 30 ? 'moderate' : 'low';
-const SEV_LABEL = s => s >= 70 ? 'Critical' : s >= 50 ? 'High' : s >= 30 ? 'Moderate' : 'Low';
-const COLOR     = s => s >= 70 ? '#f85149' : s >= 50 ? '#d29922' : s >= 30 ? '#e3b341' : '#3fb950';
+// ── helpers (severity bands match dashboard: 20/40/70) ────────────────────────
+const SEV       = s => s >= 70 ? 'critical' : s >= 40 ? 'high' : s >= 20 ? 'moderate' : 'low';
+const SEV_LABEL = s => s >= 70 ? 'Critical' : s >= 40 ? 'High' : s >= 20 ? 'Moderate' : 'Low';
+const COLOR     = s => s >= 70 ? '#f85149' : s >= 40 ? '#d29922' : s >= 20 ? '#e3b341' : '#3fb950';
 
 function fmtMonth(ym) {
   const [y,m] = ym.split('-');
   return new Date(+y,+m-1).toLocaleDateString('en-IN',{year:'numeric',month:'short'});
-}
-function fmtDate(iso) {
-  return new Date(iso).toLocaleDateString('en-IN',{year:'numeric',month:'long',day:'numeric'});
 }
 
 function utcToIST(utcHour) {
@@ -215,28 +211,32 @@ const CATS = [
   { name:'Education',     subs:['JEENEETards','ISRO','UPSC','StartUpIndia'],                                          color:'#8b949e' },
 ];
 
-// ── archetype logic ───────────────────────────────────────────────────────────
+// ── archetypes (V2 signals) ───────────────────────────────────────────────────
 const ARCHETYPES = [
   {
-    id:'vampire', icon:'🧛', label:'Karma Vampire',
-    desc:'Accounts grow karma at superhuman speed — fast growth is the oldest bot tell.',
-    match: (sub, d) => d.details.avg_karma_per_day > 400 ||
-      (d.details.avg_karma_per_day > 180 && d.details.avg_account_age_days < 800),
+    id:'ringmaster', icon:'🎪', label:'Ring Master',
+    desc:'Tightly clustered early comments — burst timing or sub-5-minute first replies. The V2 signature of a comment ring.',
+    match: (sub, d) => (d.details.burst_score||0) > 50 || (d.details.fast_ttfc_pct||0) > 40,
   },
   {
     id:'ghost', icon:'👻', label:'Ghost Voter',
     desc:'Far more upvotes than comments — engagement without conversation.',
-    match: (sub, d) => d.details.ucr > 15,
+    match: (sub, d) => (d.details.ucr||0) > 15,
   },
   {
-    id:'consensus', icon:'🤝', label:'Consensus Machine',
-    desc:'97%+ upvote agreement across posts. Real communities argue. These don\'t.',
-    match: (sub, d) => d.details.avg_upvote_ratio > 0.975 && d.details.suspicious_pct > 5,
+    id:'nursery', icon:'🐣', label:'Fresh Account Farm',
+    desc:'Unusually high share of accounts younger than 90 days among posters or top commenters.',
+    match: (sub, d) => (d.details.new_poster_pct||0) > 30 || (d.details.new_commenter_pct||0) > 30,
+  },
+  {
+    id:'flatline', icon:'📏', label:'Flatline Scores',
+    desc:'Top posts pinned at near-equal scores (flat rank-decay slope) — organic virality has breakouts and long tails.',
+    match: (sub, d) => d.details.decay_slope != null && d.details.decay_slope > -0.4,
   },
   {
     id:'organic', icon:'🌱', label:'Genuinely Human',
-    desc:'Low score, zero suspicious accounts. A rare corner of real Reddit.',
-    match: (sub, d) => d.final_score < 22 && d.details.suspicious_pct === 0,
+    desc:'Low score, old accounts, normal engagement ratios. A rare corner of real Reddit.',
+    match: (sub, d) => d.final_score < 22 && (d.details.new_poster_pct||0) < 10,
   },
   {
     id:'mixed', icon:'📊', label:'Mixed Signals',
@@ -251,7 +251,6 @@ function getArchetype(sub, d) {
 
 // ── heat colour ───────────────────────────────────────────────────────────────
 function heatColor(t) {
-  // t: 0=clean, 1=suspicious
   t = Math.max(0, Math.min(1, t));
   if (t < 0.33) return { bg:`rgba(63,185,80,${0.12 + t*0.6})`,  text:'#3fb950' };
   if (t < 0.66) return { bg:`rgba(227,179,65,${0.12 + t*0.5})`, text:'#e3b341' };
@@ -268,8 +267,8 @@ function renderTabs(active) {
 
 async function switchMonth(month) {
   renderTabs(month);
-  const r = await fetch(`data/${month}.json?v=${Date.now()}`);
-  if (!r.ok) { showError(`Could not load data/${month}.json`); return; }
+  const r = await fetch(`data_v2/${month}.json?v=${Date.now()}`);
+  if (!r.ok) { showError(`Could not load data_v2/${month}.json`); return; }
   current = await r.json();
   renderAll();
 }
@@ -295,7 +294,7 @@ function renderAll() {
       <div class="arch-grid" id="archGrid"></div>
     </div>
     <div class="section">
-      <div class="section-title">Signal heatmap — all subs × all signals</div>
+      <div class="section-title">Signal heatmap — all subs × all V2 signals</div>
       <div class="card card-pad">
         <div class="heatmap-wrap" id="heatmapWrap"></div>
       </div>
@@ -316,18 +315,18 @@ function renderAll() {
 
 // ── 1. stat strip ─────────────────────────────────────────────────────────────
 function renderStatStrip(subs) {
-  const topUCR   = [...subs].sort((a,b) => b[1].details.ucr - a[1].details.ucr)[0];
-  const topKarma = [...subs].sort((a,b) => b[1].details.avg_karma_per_day - a[1].details.avg_karma_per_day)[0];
-  const oldest   = [...subs].sort((a,b) => b[1].details.avg_account_age_days - a[1].details.avg_account_age_days)[0];
-  const topSus   = [...subs].sort((a,b) => b[1].details.suspicious_pct - a[1].details.suspicious_pct)[0];
+  const det = ([,d]) => d.details || {};
+  const topUCR   = [...subs].sort((a,b) => (det(b).ucr||0) - (det(a).ucr||0))[0];
+  const topBurst = [...subs].sort((a,b) => (det(b).burst_score||0) - (det(a).burst_score||0))[0];
+  const topNew   = [...subs].sort((a,b) => (det(b).new_poster_pct||0) - (det(a).new_poster_pct||0))[0];
   const cleanest = subs[subs.length - 1];
 
   const chips = [
-    { label:'Most bot-like',        val: subs[0][1].final_score.toFixed(1),             sub:`r/${subs[0][0]}`,                color: COLOR(subs[0][1].final_score) },
-    { label:'Cleanest',             val: cleanest[1].final_score.toFixed(1),             sub:`r/${cleanest[0]}`,               color: COLOR(cleanest[1].final_score) },
-    { label:'Highest UCR',          val: topUCR[1].details.ucr+'×',                      sub:`r/${topUCR[0]} upvotes vs comments`, color:'#58a6ff' },
-    { label:'Fastest karma growth', val: topKarma[1].details.avg_karma_per_day+'/day',   sub:`r/${topKarma[0]}`,               color:'#bc8cff' },
-    { label:'Most suspicious accts',val: topSus[1].details.suspicious_pct+'%',           sub:`r/${topSus[0]}`,                 color:'#f85149' },
+    { label:'Most bot-like',       val: subs[0][1].final_score.toFixed(1),          sub:`r/${subs[0][0]}`,                     color: COLOR(subs[0][1].final_score) },
+    { label:'Cleanest',            val: cleanest[1].final_score.toFixed(1),          sub:`r/${cleanest[0]}`,                    color: COLOR(cleanest[1].final_score) },
+    { label:'Highest UCR',         val: (det(topUCR).ucr||0)+'×',                    sub:`r/${topUCR[0]} upvotes vs comments`,  color:'#58a6ff' },
+    { label:'Tightest comment ring', val: (det(topBurst).burst_score||0).toFixed(0), sub:`r/${topBurst[0]} burst score`,        color:'#f85149' },
+    { label:'Most new accounts',   val: (det(topNew).new_poster_pct||0)+'%',         sub:`r/${topNew[0]} posters < 90 days`,    color:'#bc8cff' },
   ];
 
   document.getElementById('statStrip').innerHTML = chips.map(c => `
@@ -341,81 +340,90 @@ function renderStatStrip(subs) {
 
 // ── 2. anomaly feed ───────────────────────────────────────────────────────────
 function renderFeed(subs) {
-  const byUCR    = [...subs].sort((a,b) => b[1].details.ucr - a[1].details.ucr);
-  const byKarma  = [...subs].sort((a,b) => b[1].details.avg_karma_per_day - a[1].details.avg_karma_per_day);
-  const byAge    = [...subs].sort((a,b) => b[1].details.avg_account_age_days - a[1].details.avg_account_age_days);
-  const byScore  = [...subs].sort((a,b) => b[1].details.avg_score - a[1].details.avg_score);
-  const byComments = [...subs].sort((a,b) => b[1].details.avg_comments - a[1].details.avg_comments);
+  const det = ([,d]) => d.details || {};
+  const cards = [];
 
-  const topK   = byKarma[0];
-  const sPerK  = Math.round(86400 / topK[1].details.avg_karma_per_day);
-  const topUCR = byUCR[0];
-  const oldest = byAge[0];
-  const oldYrs = (oldest[1].details.avg_account_age_days / 365.25).toFixed(1);
-  const lowestUCR = byUCR[byUCR.length - 1];
-  const topViral  = byScore[0];
+  const byUCR = [...subs].sort((a,b) => (det(b).ucr||0) - (det(a).ucr||0));
+  const topUCR = byUCR[0], lowUCR = byUCR[byUCR.length-1];
+  cards.push({
+    emoji:'👻', tag:'Ghost Votes',
+    title:`${det(topUCR).ucr}× more upvotes than comments`,
+    body:`<strong>r/${topUCR[0]}</strong> has the highest upvote:comment ratio this month. Someone is systematically voting without engaging — the single strongest bot discriminator in our 13-month analysis.`,
+  });
+
+  const byBurst = [...subs].filter(s => det(s).burst_score != null).sort((a,b) => det(b).burst_score - det(a).burst_score);
+  if (byBurst.length) {
+    const tb = byBurst[0];
+    cards.push({
+      emoji:'🎪', tag:'Comment Ring',
+      title:`Burst score ${det(tb).burst_score.toFixed(0)} — comments landing in tight clusters`,
+      body:`<strong>r/${tb[0]}</strong> shows the tightest early-comment timing. ${det(tb).fast_ttfc_pct != null ? `<strong>${det(tb).fast_ttfc_pct}%</strong> of posts get their first comment within 5 minutes.` : ''} Coordinated rings comment fast and together; organic threads trickle in.`,
+    });
+  }
+
+  const byFlat = [...subs].filter(s => det(s).decay_slope != null).sort((a,b) => det(b).decay_slope - det(a).decay_slope);
+  if (byFlat.length) {
+    const tf = byFlat[0];
+    cards.push({
+      emoji:'📏', tag:'Flat Score Curve',
+      title:`Rank-decay slope ${det(tf).decay_slope.toFixed(2)} — top posts suspiciously equal`,
+      body:`<strong>r/${tf[0]}</strong> has the flattest score decay this month. Organic virality makes a power-law (one breakout, long tail); several posts pinned near-equal at the top is a signature of coordinated amplification. Ecosystem median is ≈ −0.54.`,
+    });
+  }
+
+  const byNew = [...subs].sort((a,b) => (det(b).new_poster_pct||0) - (det(a).new_poster_pct||0));
+  const tn = byNew[0];
+  if ((det(tn).new_poster_pct||0) > 0) {
+    cards.push({
+      emoji:'🐣', tag:'Fresh Accounts',
+      title:`${det(tn).new_poster_pct}% of posters younger than 90 days`,
+      body:`<strong>r/${tn[0]}</strong> leads on fresh-account concentration${det(tn).new_commenter_pct != null ? ` (commenters: <strong>${det(tn).new_commenter_pct}%</strong>)` : ''}. Account cycling after bans shows up exactly like this — churn >60% month-over-month appeared in several subs across the year.`,
+    });
+  }
+
+  const bySim = [...subs].filter(s => det(s).simulacra_rate != null).sort((a,b) => det(b).simulacra_rate - det(a).simulacra_rate);
+  if (bySim.length && det(bySim[0]).simulacra_rate > 0) {
+    const ts = bySim[0];
+    cards.push({
+      emoji:'🎭', tag:'Simulacra',
+      title:`${det(ts).simulacra_rate}% of posts: 500+ score, under 5 comments`,
+      body:`<strong>r/${ts[0]}</strong> has the most posts with high scores and almost no discussion — pure upvote manipulation with nobody actually there. Elevated in cricket and political subs across the year.`,
+    });
+  }
 
   const politicsSubs = subs.filter(([s]) => ['india','unitedstatesofindia','indiaspeaks'].includes(s));
   const financeSubs  = subs.filter(([s]) => ['IndianStockMarket','IndiaInvestments','personalfinanceindia','IndianStreetBets'].includes(s));
-  const avgPol = (politicsSubs.reduce((a,[,d])=>a+d.final_score,0)/politicsSubs.length).toFixed(1);
-  const avgFin = (financeSubs.reduce((a,[,d])=>a+d.final_score,0)/financeSubs.length).toFixed(1);
-  const ratio  = (avgPol / avgFin).toFixed(1);
-
-  const nightSubs = subs.filter(([,d]) => { const h = istHour24(d.details.peak_hour_utc); return h >= 22 || h < 5; });
-  const ns = nightSubs.sort((a,b) => b[1].final_score - a[1].final_score)[0];
-  const nsIST = ns ? utcToIST(ns[1].details.peak_hour_utc) : null;
-
-  const mostComments = byComments[0];
-
-  const cards = [
-    {
-      emoji:'⚡', tag:'Karma Velocity',
-      title:`One karma every ${sPerK} seconds`,
-      body:`<strong>r/${topK[0]}</strong> accounts average <strong>${topK[1].details.avg_karma_per_day.toLocaleString()} karma/day</strong> — earning karma continuously, around the clock, ${sPerK} seconds apart. That includes weekends, holidays, and while you're asleep.`,
-    },
-    {
-      emoji:'👻', tag:'Ghost Votes',
-      title:`${topUCR[1].details.ucr}× more upvotes than comments`,
-      body:`<strong>r/${topUCR[0]}</strong> averages <strong>${topUCR[1].details.avg_score.toLocaleString()} upvotes</strong> but only ${topUCR[1].details.avg_comments} comments per post. Someone is systematically voting without engaging. The comment section tells the real story.`,
-    },
-    {
-      emoji:'🦕', tag:'Reddit Veterans',
-      title:`${oldYrs}-year-old accounts, zero suspicious flags`,
-      body:`<strong>r/${oldest[0]}</strong> has the oldest average accounts we track — <strong>${oldest[1].details.avg_account_age_days} days</strong> (${oldYrs} years). Zero suspicious accounts. These aren't bots. These are genuine enthusiasts who were here before most of the other subs on this list existed.`,
-    },
-    {
-      emoji:'💬', tag:'Real Discussion',
-      title:`UCR ${lowestUCR[1].details.ucr} — almost one vote per voice`,
-      body:`<strong>r/${lowestUCR[0]}</strong> has the lowest upvote-to-comment ratio of any sub we track. People don't just scroll and upvote — they actually reply. This is the rarest thing on Reddit: a community where people have opinions they're willing to type out.`,
-    },
-    {
-      emoji:'📈', tag:'Most Viral Posts',
-      title:`${topViral[1].details.avg_score.toLocaleString()} average upvotes per post`,
-      body:`<strong>r/${topViral[0]}</strong> posts average more upvotes than any other sub we track. With <strong>${topViral[1].details.suspicious_pct}% suspicious accounts</strong> and a UCR of ${topViral[1].details.ucr}, some of that virality may be assisted.`,
-    },
-    {
+  if (politicsSubs.length && financeSubs.length) {
+    const avgPol = (politicsSubs.reduce((a,[,d])=>a+d.final_score,0)/politicsSubs.length).toFixed(1);
+    const avgFin = (financeSubs.reduce((a,[,d])=>a+d.final_score,0)/financeSubs.length).toFixed(1);
+    const ratio  = (avgPol / avgFin).toFixed(1);
+    cards.push({
       emoji:'🗳️', tag:'Politics vs Finance',
-      title:`Political subs score ${ratio}× higher than finance subs`,
-      body:`Politics average: <strong>${avgPol}</strong>. Finance average: <strong>${avgFin}</strong>. Coordinating political opinion on Indian Reddit is apparently ${ratio}× more valuable than manipulating market sentiment. Follow the agenda, not the money.`,
-    },
-    ...(ns ? [{
+      title:`Political subs score ${ratio}× ${ratio >= 1 ? 'higher' : 'lower'} than finance subs`,
+      body:`Politics average: <strong>${avgPol}</strong>. Finance average: <strong>${avgFin}</strong>. Cross-sub commenter overlap spikes around security and election events — coordinated campaign activation, per the full-year analysis.`,
+    });
+  }
+
+  const nightSubs = subs.filter(s => det(s).peak_hour_utc != null && (() => { const h = istHour24(det(s).peak_hour_utc); return h >= 22 || h < 5; })());
+  if (nightSubs.length) {
+    const ns = nightSubs.sort((a,b) => b[1].final_score - a[1].final_score)[0];
+    const nsIST = utcToIST(det(ns).peak_hour_utc);
+    cards.push({
       emoji:'🌙', tag:'Night Activity',
       title:`r/${ns[0]} peaks at ${nsIST} IST`,
-      body:`${ns[0] === 'RelationshipIndia'
-        ? `<strong>r/RelationshipIndia</strong> is busiest at <strong>${nsIST}</strong>. Heartbreak, apparently, doesn't follow office hours. The sub's bot score is low — these are real people with real problems, posting at 1:30 in the morning.`
-        : ns[0] === 'UPSC'
-        ? `<strong>r/UPSC</strong> peaks at <strong>${nsIST}</strong>. UPSC aspirants, true to stereotype, grind deep into the night.`
-        : `<strong>r/${ns[0]}</strong> peaks at <strong>${nsIST}</strong>. Late-night activity with a score of ${ns[1].final_score.toFixed(1)} — unusual hours can indicate scheduled posting.`}`,
-    }] : []),
-    {
-      emoji:'🎭', tag:'Most Chaotic, Least Bot',
-      title:`Youngest accounts, one of the cleanest scores`,
-      body:(() => {
-        const youngest = [...subs].sort((a,b) => a[1].details.avg_account_age_days - b[1].details.avg_account_age_days)[0];
-        return `<strong>r/${youngest[0]}</strong> has the youngest average accounts — <strong>${youngest[1].details.avg_account_age_days} days</strong> — yet scores <strong>${youngest[1].final_score.toFixed(1)}</strong>. Teen chaos is apparently too unpredictable and incoherent for bots to replicate convincingly.`;
-      })(),
-    },
-  ];
+      body:`<strong>r/${ns[0]}</strong> is busiest late at night with a bot score of ${ns[1].final_score.toFixed(1)}. Unusual hours can indicate scheduled posting — or just insomniacs; check the temporal component before concluding.`,
+    });
+  }
+
+  const byRecur = [...subs].filter(s => det(s).recurrence_rate != null).sort((a,b) => det(b).recurrence_rate - det(a).recurrence_rate);
+  if (byRecur.length && det(byRecur[0]).recurrence_rate > 0) {
+    const tr = byRecur[0];
+    cards.push({
+      emoji:'🔁', tag:'Recurring Cast',
+      title:`Same commenters on ${(det(tr).recurrence_rate*100).toFixed(0)}% of posts`,
+      body:`<strong>r/${tr[0]}</strong> has the highest commenter recurrence — the same accounts appear in the top comments of 3+ posts. Small communities do this naturally; combined with a high ring score it reads differently.`,
+    });
+  }
 
   document.getElementById('feedGrid').innerHTML = cards.map(c => `
     <div class="feed-card">
@@ -469,18 +477,20 @@ function renderArchetypes(subs) {
   }).filter(Boolean).join('');
 }
 
-// ── 5. signal heatmap ─────────────────────────────────────────────────────────
+// ── 5. signal heatmap (V2 signals) ────────────────────────────────────────────
 function renderHeatmap(subs) {
   const cols = [
-    { label:'Bot Score',    key: ([,d]) => d.final_score,                   min:0,   max:100,  invert:false, fmt: v => v.toFixed(0) },
-    { label:'User',         key: ([,d]) => d.user_score,                    min:0,   max:100,  invert:false, fmt: v => v.toFixed(0) },
-    { label:'Engagement',   key: ([,d]) => d.engagement_score,              min:0,   max:100,  invert:false, fmt: v => v.toFixed(0) },
-    { label:'Temporal',     key: ([,d]) => d.temporal_score,                min:0,   max:100,  invert:false, fmt: v => v.toFixed(0) },
-    { label:'Karma/day',    key: ([,d]) => d.details.avg_karma_per_day,     min:0,   max:1300, invert:false, fmt: v => v > 999 ? (v/1000).toFixed(1)+'k' : v.toFixed(0) },
-    { label:'Sus %',        key: ([,d]) => d.details.suspicious_pct,        min:0,   max:30,   invert:false, fmt: v => v+'%' },
-    { label:'UCR',          key: ([,d]) => d.details.ucr,                   min:0,   max:23,   invert:false, fmt: v => v.toFixed(1) },
-    { label:'Upvote %',     key: ([,d]) => d.details.avg_upvote_ratio*100,  min:84,  max:98,   invert:false, fmt: v => v.toFixed(0)+'%' },
-    { label:'Acct Age',     key: ([,d]) => d.details.avg_account_age_days,  min:400, max:4100, invert:true,  fmt: v => v > 364 ? Math.round(v/365.25)+'yr' : v+'d' },
+    { label:'Bot Score', key: ([,d]) => d.final_score,                    min:0,    max:100, invert:false, fmt: v => v.toFixed(0) },
+    { label:'Account',   key: ([,d]) => d.account_score,                  min:0,    max:100, invert:false, fmt: v => v.toFixed(0) },
+    { label:'Ring',      key: ([,d]) => d.ring_score,                     min:0,    max:100, invert:false, fmt: v => v.toFixed(0) },
+    { label:'Eng',       key: ([,d]) => d.engagement_score,               min:0,    max:100, invert:false, fmt: v => v.toFixed(0) },
+    { label:'Temp',      key: ([,d]) => d.temporal_score,                 min:0,    max:100, invert:false, fmt: v => v.toFixed(0) },
+    { label:'Dist',      key: ([,d]) => d.distribution_score,             min:0,    max:100, invert:false, fmt: v => v.toFixed(0) },
+    { label:'UCR',       key: ([,d]) => d.details?.ucr ?? 0,              min:0,    max:25,  invert:false, fmt: v => v.toFixed(1) },
+    { label:'Burst',     key: ([,d]) => d.details?.burst_score ?? 0,      min:0,    max:80,  invert:false, fmt: v => v.toFixed(0) },
+    { label:'Fast 1st%', key: ([,d]) => d.details?.fast_ttfc_pct ?? 0,    min:0,    max:70,  invert:false, fmt: v => v.toFixed(0)+'%' },
+    { label:'New Acct%', key: ([,d]) => d.details?.new_poster_pct ?? 0,   min:0,    max:40,  invert:false, fmt: v => v.toFixed(0)+'%' },
+    { label:'Decay',     key: ([,d]) => d.details?.decay_slope ?? -0.9,   min:-1.1, max:-0.2, invert:false, fmt: v => v.toFixed(2) },
   ];
 
   const header = `<tr>
@@ -489,7 +499,7 @@ function renderHeatmap(subs) {
   </tr>`;
 
   const rows = subs.map(entry => {
-    const [sub, d] = entry;
+    const [sub] = entry;
     const cells = cols.map(col => {
       const val = col.key(entry);
       const t = col.invert
@@ -507,11 +517,9 @@ function renderHeatmap(subs) {
 
 // ── 6. peak hours ─────────────────────────────────────────────────────────────
 function renderPeakHours(subs) {
-  const sorted = [...subs].sort((a,b) => {
-    const ah = istHour24(a[1].details.peak_hour_utc);
-    const bh = istHour24(b[1].details.peak_hour_utc);
-    return ah - bh;
-  });
+  const withPeak = subs.filter(([,d]) => d.details?.peak_hour_utc != null);
+  const sorted = [...withPeak].sort((a,b) =>
+    istHour24(a[1].details.peak_hour_utc) - istHour24(b[1].details.peak_hour_utc));
 
   const nightFlag = h => (h >= 22 || h < 5) ? '<span style="color:#f85149;font-size:10px">● late night</span>' : '';
   const eveningFlag = h => (h >= 18 && h < 22) ? '<span style="color:#e3b341;font-size:10px">● evening</span>' : '';
@@ -546,8 +554,8 @@ function showError(msg) {
 
 async function init() {
   try {
-    const r = await fetch(`data/history.json?v=${Date.now()}`);
-    if (!r.ok) throw new Error('data/history.json not found');
+    const r = await fetch(`data_v2/history.json?v=${Date.now()}`);
+    if (!r.ok) throw new Error('data_v2/history.json not found');
     history = await r.json();
     if (!history.months?.length) { showError('No data yet.'); return; }
     const latest = history.months[history.months.length - 1];
