@@ -1,5 +1,5 @@
 {
-  "generated": "2026-07-23T00:26:11.437880",
+  "generated": "2026-07-23T01:21:33.486472",
   "data_summary": {
     "n_posts": 9971,
     "n_comments": 31204,
@@ -57,6 +57,45 @@
     },
     "n_observations": 304
   },
+  "calibrated_weights_6comp": {
+    "engagement": 0.395,
+    "distribution": 0.075,
+    "account": 0.27,
+    "ring": 0.11,
+    "temporal": 0.075,
+    "network": 0.075
+  },
+  "pca_weights_6comp": {
+    "engagement": 0.185,
+    "distribution": 0.246,
+    "account": 0.086,
+    "ring": 0.112,
+    "temporal": 0.075,
+    "network": 0.296
+  },
+  "pca_meta_6comp": {
+    "pc1_explained_variance_pct": 24.4,
+    "pc2_explained_variance_pct": 12.3,
+    "pc1_loadings": {
+      "decay_slope": 0.442,
+      "gini_score": -0.438,
+      "upvote_ratio_std": 0.364,
+      "ucr": 0.353,
+      "burst_score": 0.323,
+      "high_kpd_pct": 0.313,
+      "cross_sub_rate": 0.228,
+      "score_comm_corr": 0.217,
+      "fast_ttfc_pct": 0.182,
+      "top3_concentration": 0.084,
+      "comm_cv": 0.08,
+      "new_comm_pct": 0.071,
+      "new_poster_pct": 0.049,
+      "interval_cv": 0.021,
+      "recurrence_rate": -0.006,
+      "simulacra_rate": -0.002
+    },
+    "n_observations": 304
+  },
   "supervised_feature_check": {
     "generated": "2026-07-23T00:17:54.908246",
     "method": "LogisticRegression(class_weight=balanced) on standardized features, weak label = current suspended/deleted status",
@@ -99,7 +138,8 @@
     "ring": 0.25,
     "engagement": 0.2,
     "temporal": 0.15,
-    "distribution": 0.1
+    "distribution": 0.1,
+    "network": 0.0
   },
   "component_signals": {
     "engagement": [
@@ -125,12 +165,17 @@
     "temporal": [
       "interval_cv",
       "top3_concentration"
+    ],
+    "network": [
+      "cross_sub_rate",
+      "gini_score"
     ]
   },
   "removed_signals": [
-    "overlap_rate"
+    "overlap_rate",
+    "near_dupe_rate"
   ],
-  "removed_reason": "overlap_rate ~91.5% universally \u2014 organic Reddit first-mover effect, not a bot signal",
+  "removed_reason": "overlap_rate ~91.5% universally \u2014 organic Reddit first-mover effect, not a bot signal. near_dupe_rate median/p95 both 0 across the full corpus \u2014 essentially never fires.",
   "recommended_kpd_threshold": 200,
   "key_findings": [
     {
@@ -186,5 +231,46 @@
     "RelationshipIndia",
     "unitedstatesofindia",
     "IndiaInvestments"
-  ]
+  ],
+  "note": "live_weights (if present) is the referee-selected scheme from referee_weights.py \u2014 that, not calibrated_weights, is what analyze_data_v2.py actually uses when present.",
+  "live_weights": {
+    "engagement": 0.306,
+    "distribution": 0.301,
+    "account": 0.141,
+    "ring": 0.177,
+    "temporal": 0.075
+  },
+  "live_weights_selection": {
+    "method": "Spearman correlation of per-subreddit avg final_score (under each candidate weight scheme) against an activity-weighted account gone-rate from a random 2000-account sample (scale_weak_labels.py). Highest correlation wins.",
+    "winner": "pca_weights (PCA, 5-comp)",
+    "winner_spearman_r": 0.424,
+    "winner_p_value": 0.034,
+    "all_candidates": [
+      {
+        "name": "calibrated_weights (CV, 5-comp, current live default)",
+        "spearman_r": 0.387,
+        "p_value": 0.056,
+        "n_subs": 25
+      },
+      {
+        "name": "pca_weights (PCA, 5-comp)",
+        "spearman_r": 0.424,
+        "p_value": 0.034,
+        "n_subs": 25
+      },
+      {
+        "name": "calibrated_weights_6comp (CV, 6-comp w/ network)",
+        "spearman_r": 0.395,
+        "p_value": 0.051,
+        "n_subs": 25
+      },
+      {
+        "name": "pca_weights_6comp (PCA, 6-comp w/ network)",
+        "spearman_r": 0.423,
+        "p_value": 0.035,
+        "n_subs": 25
+      }
+    ],
+    "caveat": "n\u224825 subreddits, weak/noisy label, single point-in-time snapshot \u2014 this is real evidence, not proof. p-values here are exploratory, not confirmatory."
+  }
 }

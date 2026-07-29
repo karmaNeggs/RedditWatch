@@ -1,214 +1,239 @@
 {
   "version": 2,
-  "analysis_date": "2026-07-23T00:26:38.426118",
+  "analysis_date": "2026-07-29T11:46:50.633118",
   "month": "2026-02",
   "weights": {
-    "engagement": 0.417,
-    "distribution": 0.079,
-    "account": 0.302,
-    "ring": 0.123,
-    "temporal": 0.079
+    "engagement": 0.306,
+    "distribution": 0.301,
+    "account": 0.141,
+    "ring": 0.177,
+    "temporal": 0.075
   },
   "unified_scores": {
     "india": {
-      "final_score": 25.3,
+      "final_score": 37.5,
       "account_score": 19.1,
       "ring_score": 40.1,
       "engagement_score": 13.8,
       "temporal_score": 45.7,
-      "distribution_score": 66.8
+      "distribution_score": 66.8,
+      "network_score": 53.0
     },
     "BollyBlindsNGossip": {
-      "final_score": 29.5,
+      "final_score": 41.0,
       "account_score": 25.4,
       "ring_score": 60.3,
       "engagement_score": 18.2,
       "temporal_score": 20.9,
-      "distribution_score": 65.0
+      "distribution_score": 65.0,
+      "network_score": 61.3
     },
     "indiasocial": {
-      "final_score": 52.9,
+      "final_score": 55.3,
       "account_score": 13.9,
       "ring_score": 56.2,
       "engagement_score": 84.8,
       "temporal_score": 31.4,
-      "distribution_score": 50.2
+      "distribution_score": 50.2,
+      "network_score": 58.6
     },
     "developersIndia": {
-      "final_score": 31.7,
+      "final_score": 42.7,
       "account_score": 3.9,
       "ring_score": 40.1,
       "engagement_score": 42.6,
       "temporal_score": 34.1,
-      "distribution_score": 64.8
+      "distribution_score": 64.8,
+      "network_score": 53.5
     },
     "IndiaCricket": {
-      "final_score": 45.9,
+      "final_score": 49.2,
       "account_score": 39.0,
       "ring_score": 56.1,
       "engagement_score": 49.5,
       "temporal_score": 27.9,
-      "distribution_score": 54.9
+      "distribution_score": 54.9,
+      "network_score": 54.4
     },
     "bollywood": {
-      "final_score": 35.2,
+      "final_score": 44.2,
       "account_score": 21.1,
       "ring_score": 53.0,
       "engagement_score": 35.2,
       "temporal_score": 36.4,
-      "distribution_score": 60.8
+      "distribution_score": 60.8,
+      "network_score": 72.5
     },
     "IndianStockMarket": {
-      "final_score": 37.7,
+      "final_score": 45.9,
       "account_score": 4.1,
       "ring_score": 35.9,
       "engagement_score": 57.3,
       "temporal_score": 42.5,
-      "distribution_score": 60.7
+      "distribution_score": 60.7,
+      "network_score": 38.5
     },
     "indiaspeaks": {
-      "final_score": 42.3,
+      "final_score": 50.8,
       "account_score": 35.3,
       "ring_score": 46.3,
       "engagement_score": 42.7,
       "temporal_score": 29.1,
-      "distribution_score": 74.2
+      "distribution_score": 74.2,
+      "network_score": 47.7
     },
     "IndiaInvestments": {
-      "final_score": 8.8,
+      "final_score": 12.9,
       "account_score": 1.9,
       "ring_score": 15.0,
       "engagement_score": 6.0,
       "temporal_score": 28.8,
-      "distribution_score": 20.0
+      "distribution_score": 20.0,
+      "network_score": 94.4
     },
     "AskIndia": {
-      "final_score": 21.9,
+      "final_score": 32.8,
       "account_score": 9.0,
       "ring_score": 43.1,
       "engagement_score": 16.1,
       "temporal_score": 36.5,
-      "distribution_score": 54.0
+      "distribution_score": 54.0,
+      "network_score": 53.7
     },
     "ipl": {
-      "final_score": 41.9,
+      "final_score": 42.9,
       "account_score": 34.9,
       "ring_score": 21.6,
       "engagement_score": 50.5,
       "temporal_score": 45.7,
-      "distribution_score": 50.8
+      "distribution_score": 50.8,
+      "network_score": 69.5
     },
     "IndiaTech": {
-      "final_score": 33.2,
+      "final_score": 36.2,
       "account_score": 23.8,
       "ring_score": 37.8,
       "engagement_score": 37.7,
       "temporal_score": 30.5,
-      "distribution_score": 40.8
+      "distribution_score": 40.8,
+      "network_score": 81.5
     },
     "IndianGaming": {
-      "final_score": 36.8,
+      "final_score": 39.8,
       "account_score": 8.6,
       "ring_score": 29.6,
       "engagement_score": 60.7,
       "temporal_score": 23.0,
-      "distribution_score": 43.5
+      "distribution_score": 43.5,
+      "network_score": 40.5
     },
     "RelationshipIndia": {
-      "final_score": 12.5,
+      "final_score": 20.7,
       "account_score": 8.6,
       "ring_score": 25.4,
       "engagement_score": 2.5,
       "temporal_score": 33.3,
-      "distribution_score": 39.0
+      "distribution_score": 39.0,
+      "network_score": 37.4
     },
     "personalfinanceindia": {
-      "final_score": 12.7,
+      "final_score": 21.0,
       "account_score": 3.2,
       "ring_score": 40.0,
       "engagement_score": 3.8,
       "temporal_score": 34.2,
-      "distribution_score": 32.4
+      "distribution_score": 32.4,
+      "network_score": 58.0
     },
     "unitedstatesofindia": {
-      "final_score": 45.9,
+      "final_score": 56.2,
       "account_score": 18.8,
       "ring_score": 53.5,
       "engagement_score": 60.8,
       "temporal_score": 26.9,
-      "distribution_score": 77.8
+      "distribution_score": 77.8,
+      "network_score": 40.6
     },
     "IndianStreetBets": {
-      "final_score": 30.1,
+      "final_score": 33.2,
       "account_score": 20.1,
       "ring_score": 39.8,
       "engagement_score": 32.3,
       "temporal_score": 35.7,
-      "distribution_score": 35.9
+      "distribution_score": 35.9,
+      "network_score": 65.4
     },
     "JEENEETards": {
-      "final_score": 25.5,
+      "final_score": 38.2,
       "account_score": 6.6,
       "ring_score": 58.6,
       "engagement_score": 21.8,
       "temporal_score": 32.3,
-      "distribution_score": 59.3
+      "distribution_score": 59.3,
+      "network_score": 35.4
     },
     "ISRO": {
-      "final_score": 12.7,
+      "final_score": 19.7,
       "account_score": 7.0,
       "ring_score": 12.8,
       "engagement_score": 9.2,
       "temporal_score": 27.6,
-      "distribution_score": 38.4
+      "distribution_score": 38.4,
+      "network_score": 55.5
     },
     "UPSC": {
-      "final_score": 18.2,
+      "final_score": 24.0,
       "account_score": 13.4,
       "ring_score": 29.4,
       "engagement_score": 13.6,
       "temporal_score": 26.3,
-      "distribution_score": 35.8
+      "distribution_score": 35.8,
+      "network_score": 56.7
     },
     "StartUpIndia": {
-      "final_score": 15.4,
+      "final_score": 17.7,
       "account_score": 13.6,
       "ring_score": 25.2,
       "engagement_score": 10.1,
       "temporal_score": 30.0,
-      "distribution_score": 20.0
+      "distribution_score": 20.0,
+      "network_score": 89.7
     },
     "TwoXIndia": {
-      "final_score": 21.4,
+      "final_score": 32.9,
       "account_score": 4.5,
       "ring_score": 47.9,
       "engagement_score": 18.1,
       "temporal_score": 30.4,
-      "distribution_score": 52.9
+      "distribution_score": 52.9,
+      "network_score": 50.4
     },
     "teenindia": {
-      "final_score": 40.6,
+      "final_score": 46.5,
       "account_score": 13.0,
       "ring_score": 35.8,
       "engagement_score": 60.8,
       "temporal_score": 28.8,
-      "distribution_score": 58.2
+      "distribution_score": 58.2,
+      "network_score": 34.1
     },
     "AskIndianWomen": {
-      "final_score": 19.7,
+      "final_score": 29.4,
       "account_score": 6.4,
       "ring_score": 62.5,
       "engagement_score": 10.8,
       "temporal_score": 31.3,
-      "distribution_score": 39.2
+      "distribution_score": 39.2,
+      "network_score": 69.1
     },
     "IndianFood": {
-      "final_score": 10.6,
+      "final_score": 18.4,
       "account_score": 5.2,
       "ring_score": 31.1,
       "engagement_score": 1.5,
       "temporal_score": 25.8,
-      "distribution_score": 32.6
+      "distribution_score": 32.6,
+      "network_score": 51.9
     }
   },
   "account_analysis": {
@@ -1273,150 +1298,175 @@
   },
   "network_analysis": {
     "india": {
+      "network_score": 53.0,
       "near_dupe_rate": 0.0,
       "cross_sub_rate": 10.3,
       "gini_score": 15.0,
       "n_title_pairs": 406
     },
     "BollyBlindsNGossip": {
+      "network_score": 61.3,
       "near_dupe_rate": 0.0,
       "cross_sub_rate": 11.5,
       "gini_score": 18.7,
       "n_title_pairs": 561
     },
     "indiasocial": {
+      "network_score": 58.6,
       "near_dupe_rate": 0.0,
       "cross_sub_rate": 9.0,
       "gini_score": 26.2,
       "n_title_pairs": 780
     },
     "developersIndia": {
+      "network_score": 53.5,
       "near_dupe_rate": 0.0,
       "cross_sub_rate": 8.9,
       "gini_score": 21.2,
       "n_title_pairs": 561
     },
     "IndiaCricket": {
+      "network_score": 54.4,
       "near_dupe_rate": 0.0,
       "cross_sub_rate": 8.6,
       "gini_score": 23.3,
       "n_title_pairs": 561
     },
     "bollywood": {
+      "network_score": 72.5,
       "near_dupe_rate": 0.0,
       "cross_sub_rate": 14.7,
       "gini_score": 24.4,
       "n_title_pairs": 300
     },
     "IndianStockMarket": {
+      "network_score": 38.5,
       "near_dupe_rate": 0.0,
       "cross_sub_rate": 6.1,
       "gini_score": 16.3,
       "n_title_pairs": 153
     },
     "indiaspeaks": {
+      "network_score": 47.7,
       "near_dupe_rate": 0.0,
       "cross_sub_rate": 9.1,
       "gini_score": 14.1,
       "n_title_pairs": 276
     },
     "IndiaInvestments": {
+      "network_score": 94.4,
       "near_dupe_rate": 0.0,
       "cross_sub_rate": 11.6,
       "gini_score": 66.8,
       "n_title_pairs": 276
     },
     "AskIndia": {
+      "network_score": 53.7,
       "near_dupe_rate": 0.0,
       "cross_sub_rate": 9.0,
       "gini_score": 20.9,
       "n_title_pairs": 171
     },
     "ipl": {
+      "network_score": 69.5,
       "near_dupe_rate": 0.0,
       "cross_sub_rate": 10.9,
       "gini_score": 30.2,
       "n_title_pairs": 210
     },
     "IndiaTech": {
+      "network_score": 81.5,
       "near_dupe_rate": 0.0,
       "cross_sub_rate": 12.4,
       "gini_score": 37.0,
       "n_title_pairs": 780
     },
     "IndianGaming": {
+      "network_score": 40.5,
       "near_dupe_rate": 0.0,
       "cross_sub_rate": 2.9,
       "gini_score": 32.0,
       "n_title_pairs": 780
     },
     "RelationshipIndia": {
+      "network_score": 37.4,
       "near_dupe_rate": 0.4,
       "cross_sub_rate": 1.6,
       "gini_score": 33.8,
       "n_title_pairs": 253
     },
     "personalfinanceindia": {
+      "network_score": 58.0,
       "near_dupe_rate": 0.0,
       "cross_sub_rate": 5.1,
       "gini_score": 41.6,
       "n_title_pairs": 561
     },
     "unitedstatesofindia": {
+      "network_score": 40.6,
       "near_dupe_rate": 0.0,
       "cross_sub_rate": 7.7,
       "gini_score": 12.2,
       "n_title_pairs": 780
     },
     "IndianStreetBets": {
+      "network_score": 65.4,
       "near_dupe_rate": 0.4,
       "cross_sub_rate": 8.1,
       "gini_score": 37.5,
       "n_title_pairs": 780
     },
     "JEENEETards": {
+      "network_score": 35.4,
       "near_dupe_rate": 0.0,
       "cross_sub_rate": 3.8,
       "gini_score": 22.4,
       "n_title_pairs": 780
     },
     "ISRO": {
+      "network_score": 55.5,
       "near_dupe_rate": 0.1,
       "cross_sub_rate": 5.7,
       "gini_score": 36.6,
       "n_title_pairs": 780
     },
     "UPSC": {
+      "network_score": 56.7,
       "near_dupe_rate": 0.0,
       "cross_sub_rate": 3.5,
       "gini_score": 47.1,
       "n_title_pairs": 561
     },
     "StartUpIndia": {
+      "network_score": 89.7,
       "near_dupe_rate": 0.0,
       "cross_sub_rate": 10.4,
       "gini_score": 60.2,
       "n_title_pairs": 630
     },
     "TwoXIndia": {
+      "network_score": 50.4,
       "near_dupe_rate": 0.0,
       "cross_sub_rate": 6.8,
       "gini_score": 26.4,
       "n_title_pairs": 630
     },
     "teenindia": {
+      "network_score": 34.1,
       "near_dupe_rate": 0.0,
       "cross_sub_rate": 4.2,
       "gini_score": 19.4,
       "n_title_pairs": 406
     },
     "AskIndianWomen": {
+      "network_score": 69.1,
       "near_dupe_rate": 0.0,
       "cross_sub_rate": 7.4,
       "gini_score": 44.2,
       "n_title_pairs": 300
     },
     "IndianFood": {
+      "network_score": 51.9,
       "near_dupe_rate": 0.0,
       "cross_sub_rate": 3.1,
       "gini_score": 43.2,
