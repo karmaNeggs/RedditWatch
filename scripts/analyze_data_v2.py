@@ -29,17 +29,28 @@ KPD_VERY_SUSP    = 1000
 
 
 def _load_weights():
-    """Load calibrated weights from analysis findings, fall back to defaults."""
+    """
+    Load live weights from analysis findings, fall back to defaults.
+    Prefers `live_weights` — the referee-selected scheme (see referee_weights.py),
+    chosen by which weight set best correlates with the weak-label ground truth,
+    not just which was "calibrated" — falls back to the older CV-calibrated
+    weights if no referee decision has been recorded yet, then to hardcoded
+    defaults if findings.json itself is missing. The active weight dict's own
+    keys decide which components are actually summed into final_score (see
+    calculate_scores) — this is what lets a 6th component (network) switch on
+    purely via config, no code change.
+    """
     defaults = {'account': 0.30, 'ring': 0.122, 'engagement': 0.419,
                 'temporal': 0.08, 'distribution': 0.08}
     if FINDINGS.exists():
         try:
             with open(FINDINGS) as f:
                 d = json.load(f)
-            w = d.get('calibrated_weights', {})
-            if w and abs(sum(w.values()) - 1.0) < 0.01:
-                print(f"  Weights loaded from findings.json")
-                return w
+            for key in ('live_weights', 'calibrated_weights'):
+                w = d.get(key, {})
+                if w and abs(sum(w.values()) - 1.0) < 0.01:
+                    print(f"  Weights loaded from findings.json ({key})")
+                    return w
         except Exception:
             pass
     print("  Using default weights (findings.json not found)")
@@ -330,6 +341,16 @@ def _title_words(title) -> set:
     return set(str(title).lower().split())
 
 
+
+# Empirically calibrated from the full 13-month/25-sub corpus (n=325 sub-months),
+# same percentile-calibration convention as the KPD/decay_slope thresholds.
+# near_dupe_rate excluded from network_score: median 0, p95 0, max 2.4% across the
+# entire corpus — the Jaccard>0.6 near-dupe detector essentially never fires at this
+# sample size, so it would be dead weight in the composite. Kept for reference only.
+_NETWORK_CROSS_SUB_P95 = 13.1
+_NETWORK_GINI_P95      = 54.2
+
+
 def analyze_network(posts: pd.DataFrame, comms: pd.DataFrame) -> dict:
     result = {}
     for sub in posts['subreddit'].unique():
@@ -364,8 +385,14 @@ def analyze_network(posts: pd.DataFrame, comms: pd.DataFrame) -> dict:
         # -- Vote concentration: Gini of post scores within the sub-month --
         gini_score = _gini(p['score'].tolist()) * 100
 
+        # -- Composite (excludes near_dupe_rate — see module note above) ------
+        cross_pts = min(cross_sub_rate / _NETWORK_CROSS_SUB_P95 * 50, 50)
+        gini_pts  = min(gini_score / _NETWORK_GINI_P95 * 50, 50)
+        network_score = min(cross_pts + gini_pts, 100)
+
         result[sub] = {
-            'near_dupe_rate':  round(float(near_dupe_rate), 1),
+            'network_score':   round(float(network_score), 1),
+            'near_dupe_rate':  round(float(near_dupe_rate), 1),  # reference only, not scored
             'cross_sub_rate':  round(float(cross_sub_rate), 1),
             'gini_score':      round(float(gini_score), 1),
             'n_title_pairs':   int(total_pairs),
@@ -453,26 +480,32 @@ def severity(score: float) -> str:
     if score >= 20: return 'MODERATE'
     return 'LOW'
 
-def calculate_scores(acct, ring, eng, temp, dist) -> dict:
+COMPONENT_SCORE_KEY = {
+    'account':      'account_score',
+    'ring':         'ring_score',
+    'engagement':   'engagement_score',
+    'temporal':     'temporal_score',
+    'distribution': 'distribution_score',
+    'network':      'network_score',
+}
+
+def calculate_scores(acct, ring, eng, temp, dist, net) -> dict:
+    components = {'account': acct, 'ring': ring, 'engagement': eng,
+                  'temporal': temp, 'distribution': dist, 'network': net}
+    # Only components present in WEIGHTS are summed into final_score — this is what
+    # lets the network component switch on/off purely via findings.json, no code change.
+    active = [name for name in WEIGHTS if name in components]
+
     scores = {}
     for sub in acct:
-        if not all(sub in d for d in [ring, eng, temp, dist]):
+        if not all(sub in components[name] for name in active):
             continue
-        final = (
-            acct[sub]['account_score']      * WEIGHTS['account']      +
-            ring[sub]['ring_score']          * WEIGHTS['ring']         +
-            eng[sub]['engagement_score']     * WEIGHTS['engagement']   +
-            temp[sub]['temporal_score']      * WEIGHTS['temporal']     +
-            dist[sub]['distribution_score']  * WEIGHTS['distribution']
-        )
-        scores[sub] = {
-            'final_score':        round(float(final), 1),
-            'account_score':      acct[sub]['account_score'],
-            'ring_score':         ring[sub]['ring_score'],
-            'engagement_score':   eng[sub]['engagement_score'],
-            'temporal_score':     temp[sub]['temporal_score'],
-            'distribution_score': dist[sub]['distribution_score'],
-        }
+        final = sum(components[name][sub][COMPONENT_SCORE_KEY[name]] * WEIGHTS[name] for name in active)
+        row = {'final_score': round(float(final), 1)}
+        for name, key in COMPONENT_SCORE_KEY.items():
+            if sub in components[name]:
+                row[key] = components[name][sub][key]
+        scores[sub] = row
     return scores
 
 
@@ -508,7 +541,7 @@ def main():
     dist = analyze_distribution(posts, comms); print("  Vote distribution done")
     net  = analyze_network(posts, comms);      print("  Network/text signals done (observational, not yet weighted into final_score)")
 
-    scores = calculate_scores(acct, ring, eng, temp, dist)
+    scores = calculate_scores(acct, ring, eng, temp, dist, net)
 
     print("\n" + "=" * 70)
     print("BOT ACTIVITY RANKINGS (V2)")

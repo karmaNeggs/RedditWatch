@@ -1,0 +1,185 @@
+=== Reddit Bot Analysis (V2) — Thu Jul 23 02:00:35 CEST 2026 ===
+skip-collect: false
+[STEP 1] Collecting data…
+02:00:36  ============================================================
+02:00:36  Reddit Bot Analysis V2 — collection  month=2026-07
+  Auth: OAuth  (53 req/min, user-agent: BotWatch/1.0 by Awaarapam)
+02:00:36  Posts cap: 40/month  Comment sample: 10/month
+02:00:36  ============================================================
+02:00:36  Subreddits (file): 25
+02:00:54      r/india: 40 posts  10 comment-sampled  106 comment rows
+02:01:13      r/BollyBlindsNGossip: 40 posts  10 comment-sampled  112 comment rows
+02:01:32      r/indiasocial: 40 posts  10 comment-sampled  105 comment rows
+02:01:51      r/developersIndia: 40 posts  10 comment-sampled  109 comment rows
+02:02:10      r/IndiaCricket: 40 posts  10 comment-sampled  105 comment rows
+02:02:34      r/bollywood: 40 posts  10 comment-sampled  105 comment rows
+02:02:52      r/IndianStockMarket: 40 posts  10 comment-sampled  103 comment rows
+02:03:11      r/indiaspeaks: 40 posts  10 comment-sampled  101 comment rows
+02:03:26      r/IndiaInvestments: 8 posts  8 comment-sampled  45 comment rows
+02:03:44      r/AskIndia: 40 posts  10 comment-sampled  105 comment rows
+02:04:03      r/ipl: 35 posts  10 comment-sampled  99 comment rows
+02:04:21      r/IndiaTech: 40 posts  10 comment-sampled  102 comment rows
+02:04:41      r/IndianGaming: 39 posts  10 comment-sampled  110 comment rows
+02:04:59      r/RelationshipIndia: 40 posts  10 comment-sampled  108 comment rows
+02:05:17      r/personalfinanceindia: 40 posts  10 comment-sampled  103 comment rows
+02:05:35      r/unitedstatesofindia: 40 posts  10 comment-sampled  105 comment rows
+02:05:54      r/IndianStreetBets: 40 posts  10 comment-sampled  100 comment rows
+02:06:13      r/JEENEETards: 40 posts  10 comment-sampled  104 comment rows
+02:06:30      r/ISRO: 40 posts  10 comment-sampled  69 comment rows
+02:06:49      r/UPSC: 40 posts  10 comment-sampled  101 comment rows
+02:07:07      r/StartUpIndia: 40 posts  10 comment-sampled  101 comment rows
+02:07:25      r/TwoXIndia: 40 posts  10 comment-sampled  99 comment rows
+02:07:45      r/teenindia: 40 posts  10 comment-sampled  105 comment rows
+02:08:04      r/AskIndianWomen: 40 posts  10 comment-sampled  107 comment rows
+02:08:22      r/IndianFood: 40 posts  10 comment-sampled  105 comment rows
+02:08:24  Phase 1 done — 962 posts  2514 comment rows
+02:08:24  Accounts: 762 posters + 2307 commenters = 2988 unique  (2988 to fetch, 0 cached)
+02:10:16    profiles 100/2988 …
+02:12:09    profiles 200/2988 …
+04:15:44    profiles 300/2988 …
+07:02:27    profiles 400/2988 …
+11:01:52    profiles 500/2988 …
+11:03:44    profiles 600/2988 …
+11:05:36    profiles 700/2988 …
+11:07:29    profiles 800/2988 …
+11:09:21    profiles 900/2988 …
+11:11:14    profiles 1000/2988 …
+11:13:06    profiles 1100/2988 …
+11:14:58    profiles 1200/2988 …
+11:16:51    profiles 1300/2988 …
+11:18:43    profiles 1400/2988 …
+11:20:36    profiles 1500/2988 …
+11:22:28    profiles 1600/2988 …
+11:24:20    profiles 1700/2988 …
+11:26:13    profiles 1800/2988 …
+11:28:05    profiles 1900/2988 …
+11:29:57    profiles 2000/2988 …
+11:31:50    profiles 2100/2988 …
+11:33:42    profiles 2200/2988 …
+11:35:34    profiles 2300/2988 …
+11:37:27    profiles 2400/2988 …
+11:39:19    profiles 2500/2988 …
+11:41:12    profiles 2600/2988 …
+11:43:04    profiles 2700/2988 …
+11:44:56    profiles 2800/2988 …
+11:46:49    profiles 2900/2988 …
+11:48:28  Profiles fetched: 2940 total in cache
+11:48:28    2026-07: 962 posts (248 comment-sampled)  2514 comment rows  → posts_2026-07.csv
+11:48:28  Months written: ['2026-07']
+11:48:28  Checkpoint cleared — collection complete.
+11:48:28  ============================================================
+[STEP 2] Scoring…
+  Weights loaded from findings.json (calibrated_weights)
+
+======================================================================
+REDDIT BOT ANALYSIS V2 — SCORING ENGINE
+Timestamp: 2026-07-23 11:48:29
+======================================================================
+
+Data: 962 posts  2514 comment-rows  month=2026-07  subs=25
+
+Running components…
+  Account signals done
+  Comment ring detection done
+  Engagement structure done
+  Temporal patterns done
+  Vote distribution done
+  Network/text signals done (observational, not yet weighted into final_score)
+
+======================================================================
+BOT ACTIVITY RANKINGS (V2)
+======================================================================
+
+#1 r/IndiaCricket              Score:  56.7/100  [HIGH]
+     Acct: 54.7  Ring: 64.7  Eng: 59.0  Temp: 40.8  Dist: 56.0
+
+#2 r/indiasocial               Score:  42.2/100  [HIGH]
+     Acct: 27.4  Ring: 53.0  Eng: 51.4  Temp: 29.3  Dist: 45.9
+
+#3 r/indiaspeaks               Score:  42.2/100  [HIGH]
+     Acct: 30.0  Ring: 52.8  Eng: 47.3  Temp: 28.4  Dist: 59.2
+
+#4 r/teenindia                 Score:  41.1/100  [HIGH]
+     Acct: 29.4  Ring: 66.3  Eng: 42.1  Temp: 30.4  Dist: 51.8
+
+#5 r/unitedstatesofindia       Score:  40.9/100  [HIGH]
+     Acct: 29.6  Ring: 52.9  Eng: 41.2  Temp: 28.2  Dist: 76.1
+
+#6 r/BollyBlindsNGossip        Score:  40.1/100  [HIGH]
+     Acct: 35.0  Ring: 82.0  Eng: 31.7  Temp: 24.5  Dist: 53.7
+
+#7 r/JEENEETards               Score:  37.7/100  [MODERATE]
+     Acct: 32.3  Ring: 67.2  Eng: 30.7  Temp: 28.7  Dist: 58.2
+
+#8 r/ipl                       Score:  35.7/100  [MODERATE]
+     Acct: 48.3  Ring: 30.3  Eng: 30.3  Temp: 29.8  Dist: 30.1
+
+#9 r/IndiaInvestments          Score:  33.3/100  [MODERATE]
+     Acct: 18.6  Ring:  6.2  Eng: 53.3  Temp: 35.9  Dist: 23.1
+
+#10 r/india                     Score:  28.1/100  [MODERATE]
+     Acct: 19.3  Ring: 59.8  Eng: 21.2  Temp: 26.9  Dist: 50.6
+
+#11 r/IndiaTech                 Score:  24.5/100  [MODERATE]
+     Acct: 24.5  Ring: 47.9  Eng: 13.1  Temp: 28.3  Dist: 45.0
+
+#12 r/UPSC                      Score:  24.5/100  [MODERATE]
+     Acct:  9.8  Ring: 39.9  Eng: 27.5  Temp: 22.5  Dist: 43.3
+
+#13 r/bollywood                 Score:  22.7/100  [MODERATE]
+     Acct: 21.5  Ring: 49.1  Eng: 11.6  Temp: 24.8  Dist: 43.1
+
+#14 r/AskIndianWomen            Score:  22.4/100  [MODERATE]
+     Acct: 13.6  Ring: 72.7  Eng:  6.5  Temp: 25.7  Dist: 57.9
+
+#15 r/IndianGaming              Score:  20.7/100  [MODERATE]
+     Acct: 16.6  Ring: 64.9  Eng:  5.0  Temp: 29.0  Dist: 42.1
+
+#16 r/IndianStreetBets          Score:  20.4/100  [MODERATE]
+     Acct: 15.4  Ring: 46.2  Eng: 15.6  Temp: 24.5  Dist: 21.2
+
+#17 r/developersIndia           Score:  19.7/100  [LOW]
+     Acct:  9.3  Ring: 72.2  Eng:  5.6  Temp: 23.7  Dist: 47.9
+
+#18 r/IndianStockMarket         Score:  19.3/100  [LOW]
+     Acct: 11.3  Ring: 43.8  Eng: 11.8  Temp: 26.2  Dist: 44.6
+
+#19 r/AskIndia                  Score:  18.6/100  [LOW]
+     Acct: 10.2  Ring: 52.9  Eng:  6.3  Temp: 30.8  Dist: 50.6
+
+#20 r/TwoXIndia                 Score:  17.9/100  [LOW]
+     Acct:  9.5  Ring: 37.0  Eng:  9.3  Temp: 30.7  Dist: 52.5
+
+#21 r/ISRO                      Score:  17.1/100  [LOW]
+     Acct: 10.9  Ring: 19.1  Eng: 17.7  Temp: 31.0  Dist: 20.0
+
+#22 r/personalfinanceindia      Score:  16.9/100  [LOW]
+     Acct: 14.9  Ring: 43.3  Eng:  2.7  Temp: 27.6  Dist: 47.8
+
+#23 r/RelationshipIndia         Score:  16.5/100  [LOW]
+     Acct: 13.4  Ring: 38.4  Eng:  2.4  Temp: 32.3  Dist: 52.4
+
+#24 r/StartUpIndia              Score:  15.4/100  [LOW]
+     Acct: 16.6  Ring: 30.0  Eng:  6.2  Temp: 26.1  Dist: 25.5
+
+#25 r/IndianFood                Score:  12.1/100  [LOW]
+     Acct:  8.5  Ring: 43.0  Eng:  1.3  Temp: 26.9  Dist: 20.0
+
+Saved: /Users/anupamvashist/Documents/Project writeups/Tech- reddit-bot-analysis-repo/output/v2/analysis_2026-07_20260723_114830.json
+======================================================================
+
+[STEP 3] Generating site data…
+
+======================================================================
+GENERATE SITE DATA  (V2)
+Timestamp: 2026-07-23 11:48:30
+======================================================================
+  Wrote 2026-07.json
+  Wrote history.json
+  Copied findings.json
+
+Done. 1 month(s) written to docs/data_v2/
+======================================================================
+
+
+=== Done. Push: git add docs/data_v2/ data/v2/ output/v2/ reports/findings.json && git commit -m 'Monthly V2 report' && git push ===
