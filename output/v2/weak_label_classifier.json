@@ -1,9 +1,9 @@
 {
-  "generated": "2026-07-23T00:17:54.908246",
+  "generated": "2026-07-27T22:24:34.489216",
   "method": "LogisticRegression(class_weight=balanced) on standardized features, weak label = current suspended/deleted status",
-  "n_sampled": 500,
-  "n_gone": 21,
-  "gone_rate": 0.042,
+  "n_sampled": 2000,
+  "n_gone": 76,
+  "gone_rate": 0.038,
   "features": [
     "kpd",
     "link_ratio",
@@ -18,20 +18,19 @@
     "avg_comment_depth"
   ],
   "coefficients": {
-    "account_age_days": -1.027,
-    "n_months": 0.557,
-    "n_posts": -0.348,
-    "kpd": 0.308,
-    "pct_first5": 0.263,
-    "unverified": -0.148,
-    "pct_top10": -0.099,
-    "link_ratio": 0.05,
-    "n_subs": 0.024,
-    "n_comments": -0.017,
+    "account_age_days": -0.731,
+    "n_posts": 0.176,
+    "n_months": -0.169,
+    "n_subs": 0.168,
+    "n_comments": -0.129,
+    "pct_top10": 0.098,
+    "link_ratio": 0.027,
+    "kpd": -0.017,
+    "unverified": 0.017,
+    "pct_first5": -0.009,
     "avg_comment_depth": 0.0
   },
-  "cv_roc_auc_mean": 0.569,
-  "cv_roc_auc_std": 0.157,
-  "cv_folds": 5,
-  "caveat": "weak/noisy label (ordinary account deletion is also captured, not just enforcement action); coefficients show direction/significance of each feature, not a validated bot-probability score"
+  "cv_roc_auc_mean": 0.619,
+  "cv_roc_auc_std": 0.044,
+  "caveat": "weak/noisy label \u2014 ordinary account deletion/inactivity is also captured, not just enforcement action"
 }
