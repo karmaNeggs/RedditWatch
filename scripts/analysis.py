@@ -206,6 +206,24 @@ def compute_signals(posts, comms):
     # Pre-group comms for fast per-post lookup
     comms_grouped = {k: v for k, v in comms.groupby(['subreddit', 'collection_month'])}
 
+    # Per-(sub,month) account sets, and per-month "other subs" unions, for cross_sub_rate
+    # (mirrors analyze_network in analyze_data_v2.py).
+    sub_month_accounts = {}
+    for (sub, month), pg2 in posts.groupby(['subreddit', 'collection_month']):
+        cg2 = comms_grouped.get((sub, month), pd.DataFrame())
+        sub_month_accounts[(sub, month)] = set(pg2['author'].dropna()) | (
+            set(cg2['author'].dropna()) if len(cg2) else set())
+    other_accounts_by_month = {}
+    for (sub, month), acc in sub_month_accounts.items():
+        other_accounts_by_month.setdefault(month, {})[sub] = acc
+    def _other_accounts(sub, month):
+        siblings = other_accounts_by_month.get(month, {})
+        u = set()
+        for s2, acc in siblings.items():
+            if s2 != sub:
+                u |= acc
+        return u
+
     for (sub, month), pg in posts.groupby(['subreddit', 'collection_month']):
         cg = comms_grouped.get((sub, month), pd.DataFrame())
         top_c   = cg[cg['in_top10']]  if len(cg) else cg
@@ -284,11 +302,19 @@ def compute_signals(posts, comms):
             posts_w_rec = top_c[top_c['author'].isin(rec_authors)]['post_id'].nunique()
             recurrence_rate = posts_w_rec / len(pg) if len(pg) > 0 else 0.0
 
+        # Network signals (near_dupe_rate excluded — see analyze_data_v2.py note, essentially
+        # never fires in this corpus)
+        sub_accounts   = sub_month_accounts.get((sub, month), set())
+        other_accounts = _other_accounts(sub, month)
+        cross_sub_rate = (len(sub_accounts & other_accounts) / len(sub_accounts) * 100) if sub_accounts else 0.0
+        gini_score     = gini(pg['score'].tolist()) * 100
+
         rows.append(dict(
             subreddit=sub, month=month, cluster=SUB_CLUSTER.get(sub, 'Other'),
             n_posts=len(pg), n_comments=len(cg),
             ucr=ucr_mean, score_cv=score_cv, comm_cv=comm_cv, decay_slope=decay_slope,
             upvote_ratio_std=ratio_std, score_comm_corr=corr_sc, simulacra_rate=simulacra,
+            cross_sub_rate=cross_sub_rate, gini_score=gini_score,
             new_poster_pct=new_poster_pct, new_comm_pct=new_comm_pct,
             high_kpd_pct=high_kpd_pct, link_ratio_mean=link_ratio_mean,
             interval_cv=iv_cv, top3_concentration=top3_conc, entropy=entropy,
@@ -1199,15 +1225,24 @@ def section_6b(sigs, pdf):
 
 # ── §7 Findings & Weights ─────────────────────────────────────────────────────
 
-COMPONENT_SIGNALS = {
+# Full 6-component signal set. COMPONENT_SIGNALS_5 (below) is the subset that matches
+# what's actually live in analyze_data_v2.py today — network is computed and exposed
+# there but not yet summed into final_score (see calculate_scores/COMPONENT_SCORE_KEY).
+# Both variants get calibrated below; referee_weights.py decides which one the
+# production scorer should actually use, based on the weak-label ground truth, and
+# writes that decision to findings.json as `live_weights`.
+COMPONENT_SIGNALS_6 = {
     'engagement':   ['ucr', 'score_comm_corr', 'upvote_ratio_std', 'simulacra_rate'],
     'distribution': ['decay_slope', 'comm_cv'],  # score_cv retired — see compute_signals() docstring
     'account':      ['new_poster_pct', 'new_comm_pct', 'high_kpd_pct'],
     'ring':         ['burst_score', 'fast_ttfc_pct', 'recurrence_rate'],
     'temporal':     ['interval_cv', 'top3_concentration'],
+    'network':      ['cross_sub_rate', 'gini_score'],  # near_dupe_rate excluded — see compute_signals()
 }
+COMPONENT_SIGNALS_5 = {k: v for k, v in COMPONENT_SIGNALS_6.items() if k != 'network'}
+COMPONENT_SIGNALS = COMPONENT_SIGNALS_6  # back-compat default for any external references
 
-OLD_WEIGHTS = {'account': 0.30, 'ring': 0.25, 'engagement': 0.20, 'temporal': 0.15, 'distribution': 0.10}
+OLD_WEIGHTS = {'account': 0.30, 'ring': 0.25, 'engagement': 0.20, 'temporal': 0.15, 'distribution': 0.10, 'network': 0.0}
 
 KEY_FINDINGS = [
     ('F1', 'overlap_rate averages ~91.5% universally — organic first-mover advantage on Reddit, not a bot signal. Removed from ring component.'),
@@ -1223,7 +1258,8 @@ KEY_FINDINGS = [
 ]
 
 
-def derive_weights(sigs):
+def derive_weights(sigs, component_signals=None):
+    component_signals = component_signals or COMPONENT_SIGNALS_6
     signal_cv = {}
     for col in sigs.select_dtypes(include=[np.number]).columns:
         d = sigs[col].dropna()
@@ -1232,7 +1268,7 @@ def derive_weights(sigs):
             signal_cv[col] = float(d.std() / abs(m))
 
     comp_power = {}
-    for comp, sig_list in COMPONENT_SIGNALS.items():
+    for comp, sig_list in component_signals.items():
         avail = [s for s in sig_list if s in signal_cv]
         comp_power[comp] = float(np.mean([signal_cv[s] for s in avail])) if avail else 0.05
 
@@ -1256,7 +1292,7 @@ FLIP_SIGNALS = {'comm_cv', 'upvote_ratio_std', 'score_comm_corr', 'interval_cv'}
 # decay_slope is already high=suspicious (flatter/less-negative slope = more coordination-like) — no flip needed.
 
 
-def derive_weights_pca(sigs):
+def derive_weights_pca(sigs, component_signals=None):
     """
     Alternative to derive_weights(): instead of weighting each component by the raw
     coefficient-of-variation of its signals (which conflates "varies a lot" with
@@ -1264,13 +1300,12 @@ def derive_weights_pca(sigs):
     z-score every scored signal, sign-align so higher = more suspicious, run PCA, and
     weight each component by its constituent signals' squared loadings on PC1 — the
     dominant shared axis of variation across sub-months. Still not ground-truth
-    validated (no labeled bot/human sample exists), but it accounts for collinearity
-    between signals, which raw per-signal CV averaging does not.
-
-    Does NOT replace calibrated_weights (still what analyze_data_v2.py loads) —
-    written to findings.json as `pca_weights` for side-by-side review.
+    validated on its own (see referee_weights.py for the weak-label comparison),
+    but it accounts for collinearity between signals, which raw per-signal CV
+    averaging does not.
     """
-    all_signals = [s for lst in COMPONENT_SIGNALS.values() for s in lst]
+    component_signals = component_signals or COMPONENT_SIGNALS_6
+    all_signals = [s for lst in component_signals.values() for s in lst]
     avail = [s for s in all_signals if s in sigs.columns]
     X = sigs[avail].dropna()
     if len(X) < 10:
@@ -1291,7 +1326,7 @@ def derive_weights_pca(sigs):
         loadings_pc1 = {k: -v for k, v in loadings_pc1.items()}
 
     comp_power = {}
-    for comp, sig_list in COMPONENT_SIGNALS.items():
+    for comp, sig_list in component_signals.items():
         sub_avail = [s for s in sig_list if s in loadings_pc1]
         comp_power[comp] = float(np.mean([loadings_pc1[s] ** 2 for s in sub_avail])) if sub_avail else 0.0
 
@@ -1322,7 +1357,8 @@ def section_7(sigs, posts, comms, pdf, dangerous=None, accelerating=None):
     dangerous    = dangerous    or []
     accelerating = accelerating or []
 
-    calibrated, comp_power = derive_weights(sigs)
+    # 5-component — matches what's actually live in analyze_data_v2.py today.
+    calibrated, comp_power = derive_weights(sigs, COMPONENT_SIGNALS_5)
 
     fig, axes = plt.subplots(2, 2, figsize=(11, 8.5))
     fig.patch.set_facecolor(C['bg'])
@@ -1489,7 +1525,11 @@ def main():
     shutil.copy(pdf_path, latest_pdf)
 
     print('  Computing PCA-based weights (alternative, for comparison)…')
-    pca_weights, pca_meta = derive_weights_pca(sigs)
+    pca_weights, pca_meta = derive_weights_pca(sigs, COMPONENT_SIGNALS_5)
+
+    print('  Computing 6-component candidates (network included, for referee_weights.py)…')
+    calibrated_6comp, comp_power_6 = derive_weights(sigs, COMPONENT_SIGNALS_6)
+    pca_weights_6comp, pca_meta_6  = derive_weights_pca(sigs, COMPONENT_SIGNALS_6)
 
     supervised_check = None
     wlc_path = REPORT_DIR.parent / 'output' / 'v2' / 'weak_label_classifier.json'
@@ -1510,15 +1550,21 @@ def main():
         'calibration_method':  'per-signal coefficient of variation, averaged per component (NOT validated against any bot/human ground truth)',
         'pca_weights':         pca_weights,
         'pca_meta':            pca_meta,
+        'calibrated_weights_6comp': calibrated_6comp,
+        'pca_weights_6comp':        pca_weights_6comp,
+        'pca_meta_6comp':           pca_meta_6,
         'supervised_feature_check': supervised_check,
         'original_weights':    OLD_WEIGHTS,
-        'component_signals':   COMPONENT_SIGNALS,
-        'removed_signals':     ['overlap_rate'],
-        'removed_reason':      'overlap_rate ~91.5% universally — organic Reddit first-mover effect, not a bot signal',
+        'component_signals':   COMPONENT_SIGNALS_6,
+        'removed_signals':     ['overlap_rate', 'near_dupe_rate'],
+        'removed_reason':      'overlap_rate ~91.5% universally — organic Reddit first-mover effect, not a bot signal. '
+                                'near_dupe_rate median/p95 both 0 across the full corpus — essentially never fires.',
         'recommended_kpd_threshold': 200,
         'key_findings': [{'id': fid, 'text': text} for fid, text in KEY_FINDINGS],
         'alert_subs_trend':    dangerous,
         'alert_subs_accel':    accelerating,
+        'note': 'live_weights (if present) is the referee-selected scheme from referee_weights.py — '
+                'that, not calibrated_weights, is what analyze_data_v2.py actually uses when present.',
     }
     with open(json_path, 'w') as f:
         json.dump(findings, f, indent=2, default=str)
