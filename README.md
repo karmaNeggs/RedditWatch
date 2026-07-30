@@ -172,17 +172,13 @@ Copy of `reports/findings.json` — model coefficients, AUC, severity bands, and
 
 ## Dashboard (GitHub Pages)
 
-The `docs/` folder is served as a static site. **`report.html` and
-`methodology.html` are the current, accurate views** — built this session,
-read live data from `docs/data_v2/`, never show a stale hardcoded number.
-`index.html` and `insights.html` are an earlier dashboard built for the old
-weighted-component scoring system; they still load and render (same
-underlying JSON files), but their severity-band display and framing predate
-the current model and haven't been reconciled — treat them as legacy pending
-a consolidation pass, not as current documentation of how scoring works.
+The `docs/` folder is served as a static site — `index.html` is the root
+page GitHub Pages serves at https://karmaneggs.github.io/RedditWatch/. Both
+pages read live data from `docs/data_v2/` at load time; neither hardcodes a
+number that can go stale.
 
-- **`report.html`** — headline banner (biggest single move this month),
-  full ranked leaderboard (all 25 subs, severity-colored, per-row
+- **`index.html`** ("Report") — headline banner (biggest single move this
+  month), full ranked leaderboard (all 25 subs, severity-colored, per-row
   sparkline), a subreddit-drill-down trend view, toppers/movers, curated
   findings, validated composite trends, the legacy components as clearly-
   labeled descriptive context, and a glossary
@@ -190,11 +186,15 @@ a consolidation pass, not as current documentation of how scoring works.
   AUC, the early/late predictive backtest, severity-band derivation, and an
   explicit "what's validated vs. what's descriptive" explanation
 
+The earlier dashboard (`index.html`/`insights.html` built for the old
+weighted-component scoring system) has been removed — still in git history
+if needed, but no longer published.
+
 View locally:
 
 ```bash
 python3 -m http.server 8080 --directory docs/
-# open http://localhost:8080/report.html
+# open http://localhost:8080
 ```
 
 ---
