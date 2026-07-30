@@ -1,0 +1,23 @@
+{
+  "generated": "2026-07-30T19:28:57.003485",
+  "method": "Spearman correlation of subreddit pct_high_risk (averaged over a 4-month window) against current gone_rate, compared for an early window (2025-06..09) vs. a late window (2026-04..07) \u2014 tests whether an early reading predicts later attrition or the score only tracks concurrent decline.",
+  "early_window": [
+    "2025-06",
+    "2025-07",
+    "2025-08",
+    "2025-09"
+  ],
+  "late_window": [
+    "2026-04",
+    "2026-05",
+    "2026-06",
+    "2026-07"
+  ],
+  "n_subs": 25,
+  "early_window_spearman_r": 0.689,
+  "early_window_p_value": 0.0,
+  "late_window_spearman_r": 0.781,
+  "late_window_p_value": 0.0,
+  "verdict": "EARLY tracks the outcome about as well as LATE \u2014 real forward-looking signal: a reading from ~10-13 months before the gone-check still predicted who would show elevated attrition, not just concurrent decline.",
+  "caveat": "subreddit-level, window-level check, not an account-level point-in-time forecast \u2014 see module docstring. n=25 subs is small; directional evidence, not a precise estimate."
+}

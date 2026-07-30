@@ -1,370 +1,524 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Reddit Bot Watch — Monthly Report</title>
-  <style>
-    /* ── Screen styles ── */
-    :root {
-      --ink: #111827;
-      --muted: #6b7280;
-      --border: #e5e7eb;
-      --surface: #f9fafb;
-      --critical: #dc2626;
-      --high: #d97706;
-      --moderate: #ca8a04;
-      --low: #16a34a;
-      --blue: #2563eb;
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      background: #f3f4f6;
-      font-family: Georgia, 'Times New Roman', serif;
-      color: var(--ink);
-      font-size: 15px;
-      line-height: 1.7;
-    }
-    a { color: var(--blue); }
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RedditWatch — Report</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0d1117; --surface: #161b22; --surface2: #21262d; --border: #30363d;
+    --text: #e6edf3; --muted: #8b949e; --hdr-bg: rgba(13,17,23,0.94);
+    --grid: #21262d; --tick: #8b949e;
+    /* dataviz-skill validated slots, dark mode */
+    --series-blue: #3987e5; --series-orange: #d95926; --series-aqua: #199e70;
+    --series-yellow: #c98500; --series-magenta: #d55181; --series-green: #008300;
+    --status-critical: #d03b3b; --status-serious: #ec835a;
+    --status-warning: #fab219; --status-good: #0ca30c; --diverge-blue: #3987e5; --diverge-red: #e66767;
+  }
+  [data-theme="light"] {
+    --bg: #ffffff; --surface: #f6f8fa; --surface2: #eaeef2; --border: #d0d7de;
+    --text: #1f2328; --muted: #636c76; --hdr-bg: rgba(255,255,255,0.94);
+    --grid: #e8ecf0; --tick: #636c76;
+    --series-blue: #2a78d6; --series-orange: #eb6834; --series-aqua: #1baf7a;
+    --series-yellow: #eda100; --series-magenta: #e87ba4; --series-green: #008300;
+    --status-critical: #d03b3b; --status-serious: #ec835a;
+    --status-warning: #fab219; --status-good: #0ca30c; --diverge-blue: #2a78d6; --diverge-red: #e34948;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, sans-serif; font-size: 14px; line-height: 1.5; }
+  a { color: var(--series-blue); text-decoration: none; }
+  abbr[title] { text-decoration: underline dotted; text-underline-offset: 2px; cursor: help; }
+  header { position: sticky; top: 0; z-index: 10; background: var(--hdr-bg); backdrop-filter: blur(8px); border-bottom: 1px solid var(--border); }
+  .hdr-inner { max-width: 1100px; margin: 0 auto; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+  .brand { font-weight: 800; font-size: 15px; }
+  .nav-tab { color: var(--muted); font-size: 13px; font-weight: 600; padding: 6px 10px; border-radius: 6px; }
+  .nav-tab.active { color: var(--text); background: var(--surface2); }
+  .theme-btn { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 4px 10px; cursor: pointer; font-size: 15px; color: var(--text); }
+  main { max-width: 1100px; margin: 0 auto; padding: 24px 20px 60px; }
+  .month-select, .sub-select { padding: 4px 10px; border-radius: 8px; border: 1px solid var(--border); color: var(--text); background: var(--surface); font-size: 12px; }
+  .section { margin-top: 32px; }
+  .section-title { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); margin-bottom: 12px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 18px; }
 
-    /* Print button bar — hidden in print */
-    .print-bar {
-      background: #1e293b;
-      padding: 12px 24px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-    }
-    .print-bar span { color: #94a3b8; font-size: 13px; font-family: sans-serif; }
-    .print-btn {
-      background: #3b82f6; color: #fff; border: none; border-radius: 6px;
-      padding: 8px 20px; font-size: 13px; font-family: sans-serif;
-      font-weight: 600; cursor: pointer;
-    }
-    .print-btn:hover { background: #2563eb; }
-    .back-link { color: #94a3b8; font-size: 13px; font-family: sans-serif; text-decoration: none; }
-    .back-link:hover { color: #fff; }
+  /* intro / how-to-read */
+  .intro-box { background: var(--surface2); border-radius: 10px; padding: 12px 16px; margin-bottom: 18px; font-size: 12.5px; color: var(--muted); }
+  .intro-box summary { cursor: pointer; font-weight: 700; color: var(--text); font-size: 13px; list-style: none; }
+  .intro-box summary::-webkit-details-marker { display: none; }
+  .intro-box summary::before { content: '▸ '; }
+  .intro-box[open] summary::before { content: '▾ '; }
+  .intro-box[open] summary { margin-bottom: 8px; }
+  .intro-box p { margin-top: 6px; }
 
-    /* Report card */
-    .report {
-      max-width: 760px;
-      margin: 28px auto;
-      background: #fff;
-      border-radius: 4px;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
-    }
-    .rpt-head { border-radius: 4px 4px 0 0; }
-    .rpt-footer { border-radius: 0 0 4px 4px; }
-    .rank-table-wrap { overflow-x: auto; }
+  /* insight banner */
+  .insight-banner { display: flex; align-items: center; gap: 14px; padding: 16px 20px; border-radius: 12px; border: 1px solid; margin-bottom: 20px; }
+  .insight-banner.warn { background: color-mix(in srgb, var(--status-critical) 10%, var(--surface)); border-color: color-mix(in srgb, var(--status-critical) 45%, var(--border)); }
+  .insight-banner.good { background: color-mix(in srgb, var(--status-good) 10%, var(--surface)); border-color: color-mix(in srgb, var(--status-good) 45%, var(--border)); }
+  .insight-icon { font-size: 26px; line-height: 1; }
+  .insight-text { font-size: 15px; font-weight: 600; }
+  .insight-text b { font-variant-numeric: tabular-nums; }
 
-    /* Header band */
-    .rpt-head {
-      background: #0f172a;
-      color: #fff;
-      padding: 36px 48px 28px;
-    }
-    .rpt-label {
-      font-family: -apple-system, sans-serif;
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      color: #94a3b8;
-      margin-bottom: 10px;
-    }
-    .rpt-title {
-      font-size: 28px;
-      font-weight: 700;
-      font-family: -apple-system, sans-serif;
-      line-height: 1.2;
-      margin-bottom: 6px;
-    }
-    .rpt-subtitle {
-      font-size: 14px;
-      color: #94a3b8;
-      font-family: -apple-system, sans-serif;
-    }
-    .rpt-meta {
-      margin-top: 18px;
-      display: flex;
-      gap: 24px;
-      font-size: 12px;
-      font-family: -apple-system, sans-serif;
-      color: #64748b;
-    }
-    .rpt-meta strong { color: #cbd5e1; }
+  /* severity badges */
+  .severity-badge { display: inline-block; padding: 2px 9px; border-radius: 20px; font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.03em; }
+  .sev-critical { background: color-mix(in srgb, var(--status-critical) 18%, transparent); color: var(--status-critical); }
+  .sev-high     { background: color-mix(in srgb, var(--status-serious) 18%, transparent); color: var(--status-serious); }
+  .sev-moderate { background: color-mix(in srgb, var(--status-warning) 18%, transparent); color: var(--status-warning); }
+  .sev-low      { background: color-mix(in srgb, var(--status-good) 18%, transparent); color: var(--status-good); }
 
-    /* Body */
-    .rpt-body { padding: 36px 48px; }
+  .headline-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px,1fr)); gap: 12px; }
+  .stat-tile { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
+  .stat-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px; }
+  .stat-value { font-size: 24px; font-weight: 800; }
+  .stat-delta { font-size: 12px; font-weight: 600; margin-top: 2px; }
+  .delta-up   { color: var(--status-critical); }   /* score up = risk up = bad */
+  .delta-down { color: var(--status-good); }
+  .headline-sentence { margin-top: 14px; font-size: 14px; color: var(--muted); }
 
-    /* Section headings */
-    .rpt-section { margin-bottom: 32px; }
-    .rpt-section-title {
-      font-family: -apple-system, sans-serif;
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: var(--muted);
-      border-bottom: 1px solid var(--border);
-      padding-bottom: 6px;
-      margin-bottom: 14px;
-    }
+  .chart-wrap { position: relative; height: 220px; }
+  .trend-controls { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .trend-legend { display: flex; flex-wrap: wrap; gap: 10px; font-size: 11px; color: var(--muted); margin-top: 8px; }
+  .trend-legend span { display: inline-flex; align-items: center; gap: 4px; }
+  .trend-legend .sw { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
 
-    /* Summary text */
-    .summary-text {
-      font-size: 15px;
-      line-height: 1.75;
-      color: #374151;
-    }
-    .summary-text strong { color: var(--ink); }
+  /* leaderboard */
+  .leaderboard { width: 100%; border-collapse: collapse; }
+  .leaderboard th { text-align: left; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.03em; padding: 8px 10px; border-bottom: 1px solid var(--border); }
+  .leaderboard td { padding: 7px 10px; border-bottom: 1px solid var(--border); font-size: 13px; vertical-align: middle; }
+  .leaderboard tr:last-child td { border-bottom: none; }
+  .leaderboard tr:hover td { background: var(--surface2); }
+  .rank-num { color: var(--muted); font-variant-numeric: tabular-nums; width: 26px; }
+  .lb-score { font-weight: 700; font-variant-numeric: tabular-nums; }
+  .lb-delta { font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .lb-spark-wrap { width: 74px; height: 24px; }
 
-    /* Rankings table */
-    .rank-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    .rank-table th {
-      text-align: left;
-      font-family: -apple-system, sans-serif;
-      font-size: 10px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.07em;
-      color: var(--muted);
-      padding: 6px 10px;
-      border-bottom: 2px solid var(--border);
-    }
-    .rank-table td {
-      padding: 9px 10px;
-      border-bottom: 1px solid var(--border);
-      vertical-align: middle;
-    }
-    .rank-table tr:last-child td { border-bottom: none; }
-    .rank-num { color: var(--muted); font-family: -apple-system, sans-serif; font-size: 12px; }
-    .rank-sub { font-family: -apple-system, sans-serif; font-weight: 700; font-size: 13px; }
-    .rank-score { font-family: -apple-system, sans-serif; font-weight: 800; font-size: 14px; }
+  .movers-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px,1fr)); gap: 14px; }
+  .mover-list { list-style: none; }
+  .mover-row { display: flex; justify-content: space-between; align-items: baseline; padding: 8px 0; border-bottom: 1px solid var(--border); gap: 10px; }
+  .mover-row:last-child { border-bottom: none; }
+  .mover-sub { font-weight: 600; }
+  .mover-score { font-variant-numeric: tabular-nums; color: var(--muted); font-size: 12px; }
+  .mover-delta { font-weight: 700; font-variant-numeric: tabular-nums; font-size: 13px; }
+  .mover-note { display: block; font-size: 11px; color: var(--muted); margin-top: 2px; }
 
-    /* Score bar */
-    .bar-wrap { width: 120px; height: 5px; background: #e5e7eb; border-radius: 3px; display: inline-block; vertical-align: middle; }
-    .bar-fill  { height: 5px; border-radius: 3px; }
+  .findings-list { display: flex; flex-direction: column; gap: 10px; }
+  .finding-card { padding: 12px 14px; background: var(--surface2); border-radius: 8px; font-size: 13px; border-left: 3px solid var(--series-blue); }
 
-    /* Severity pill */
-    .pill { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 10px; font-family: -apple-system, sans-serif; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
-    .pill.critical { background: #fee2e2; color: #dc2626; }
-    .pill.high     { background: #fef3c7; color: #d97706; }
-    .pill.moderate { background: #fefce8; color: #ca8a04; }
-    .pill.low      { background: #dcfce7; color: #16a34a; }
+  .composite-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px,1fr)); gap: 14px; }
+  .composite-card .chart-wrap { height: 100px; }
+  .composite-title { font-size: 12px; font-weight: 700; margin-bottom: 4px; }
+  .composite-sub { font-size: 11px; color: var(--muted); margin-bottom: 8px; }
 
-    /* Component mini bars */
-    .comp-row { display: flex; gap: 12px; margin-top: 4px; }
-    .comp-item { flex: 1; }
-    .comp-label { font-size: 9px; font-family: -apple-system, sans-serif; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 3px; }
-    .comp-bar { height: 4px; border-radius: 2px; background: #e5e7eb; }
-    .comp-bar-fill { height: 4px; border-radius: 2px; }
+  .tier-note { font-size: 12px; color: var(--muted); margin-bottom: 14px; padding: 10px 12px; background: var(--surface2); border-radius: 8px; }
+  .detail-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .detail-table th, .detail-table td { text-align: right; padding: 6px 8px; border-bottom: 1px solid var(--border); font-variant-numeric: tabular-nums; }
+  .detail-table th:first-child, .detail-table td:first-child { text-align: left; font-variant-numeric: normal; }
+  .detail-table th { color: var(--muted); font-weight: 600; font-size: 11px; text-transform: uppercase; }
 
-    /* How it works */
-    .meth-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-    .meth-box { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 14px; }
-    .meth-box h4 { font-family: -apple-system, sans-serif; font-size: 12px; font-weight: 700; margin-bottom: 5px; display: flex; justify-content: space-between; }
-    .meth-wt { color: var(--blue); font-size: 11px; }
-    .meth-box p { font-size: 12px; color: var(--muted); font-family: -apple-system, sans-serif; line-height: 1.55; }
+  /* glossary */
+  .glossary-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px,1fr)); gap: 10px 22px; }
+  .gloss-term { font-weight: 700; font-size: 12.5px; margin-bottom: 2px; }
+  .gloss-def { font-size: 12px; color: var(--muted); }
 
-    /* Scale legend */
-    .scale-row { display: flex; gap: 0; border-radius: 4px; overflow: hidden; margin-bottom: 10px; }
-    .scale-seg { flex: 1; padding: 6px 10px; font-family: -apple-system, sans-serif; font-size: 11px; font-weight: 700; }
-    .scale-seg small { display: block; font-weight: 400; font-size: 10px; opacity: 0.8; }
-
-    /* Footer */
-    .rpt-footer {
-      background: var(--surface);
-      border-top: 1px solid var(--border);
-      padding: 16px 48px;
-      font-size: 11px;
-      color: var(--muted);
-      font-family: -apple-system, sans-serif;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    /* ── Print styles ── */
-    @media print {
-      html, body { width: 100%; overflow: hidden; background: #fff; }
-      .print-bar { display: none !important; }
-      .report { margin: 0; box-shadow: none; border-radius: 0; width: 100%; max-width: 100%; overflow: hidden; }
-      .rpt-head { background: #0f172a !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; padding: 20px 20px 16px; }
-      .rpt-meta { flex-wrap: wrap; gap: 12px; }
-      .rpt-body { padding: 20px; }
-      .rpt-footer { padding: 10px 20px; }
-      .pill, .scale-seg, .meth-box, .comp-bar, .bar-fill, .comp-bar-fill { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-      /* hide Scale bar and Component signals columns — too wide for A4 */
-      .rank-table th:nth-child(4), .rank-table td:nth-child(4),
-      .rank-table th:last-child,   .rank-table td:last-child { display: none; }
-      .rank-table { table-layout: fixed; width: 100%; }
-      .rank-table td, .rank-table th { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-      a { color: inherit; text-decoration: none; }
-      @page { margin: 1cm; size: A4 portrait; }
-    }
-
-    .loading { text-align: center; padding: 80px; color: var(--muted); font-family: sans-serif; }
-  </style>
+  footer { max-width: 1100px; margin: 40px auto 0; padding: 20px; color: var(--muted); font-size: 12px; border-top: 1px solid var(--border); }
+</style>
 </head>
 <body>
+<header>
+  <div class="hdr-inner">
+    <div class="brand">RedditWatch</div>
+    <nav style="display:flex;gap:6px">
+      <a class="nav-tab active" href="report.html">Report</a>
+      <a class="nav-tab" href="methodology.html">Methodology</a>
+    </nav>
+    <div style="display:flex;align-items:center;gap:10px">
+      <select id="monthSelect" class="month-select" onchange="loadMonth(this.value)"></select>
+      <button class="theme-btn" id="themeToggle">🌙</button>
+    </div>
+  </div>
+</header>
 
-<div class="print-bar">
-  <a class="back-link" href="index.html">← Back to dashboard</a>
-  <span>Save as PDF: click Print → choose "Save as PDF" as destination</span>
-  <button class="print-btn" onclick="window.print()">Print / Save as PDF</button>
-</div>
+<main id="main">
+  <details class="intro-box" style="margin-top:0">
+    <summary>How to read this report</summary>
+    <p><b>Score</b> (0-100) is the % of a subreddit's activity that month coming from accounts our model flags as high-risk — <em>not</em> a blended index of everything below. Higher = more risk. See the <a href="methodology.html">Methodology</a> page for how it's built and how well-validated it is.</p>
+    <p>Severity bands — <span class="severity-badge sev-low">Low</span> <span class="severity-badge sev-moderate">Moderate</span> <span class="severity-badge sev-high">High</span> <span class="severity-badge sev-critical">Critical</span> — are percentiles of the actual observed score distribution, not fixed cutoffs.</p>
+    <p>Unfamiliar term? Check the <a href="#glossary">glossary</a> at the bottom of this page.</p>
+  </details>
 
-<div id="root"><div class="loading">Loading report…</div></div>
+  <div id="insightBanner"></div>
+
+  <div class="section" style="margin-top:0">
+    <div class="headline-grid" id="headlineGrid"></div>
+    <div class="headline-sentence" id="headlineSentence"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">All subreddits, ranked</div>
+    <div class="card" style="overflow-x:auto">
+      <table class="leaderboard" id="leaderboardTable"></table>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="trend-controls">
+      <div class="section-title" style="margin-bottom:0">Trend</div>
+      <select id="subFilter" class="sub-select" onchange="renderTrend(this.value)"></select>
+    </div>
+    <div class="card">
+      <div class="chart-wrap"><canvas id="trendChart"></canvas></div>
+      <div class="trend-legend" id="trendLegend"></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Toppers &amp; movers</div>
+    <div class="movers-grid">
+      <div class="card"><h3 style="font-size:13px;margin-bottom:8px">Highest this month</h3><ul class="mover-list" id="toppersList"></ul></div>
+      <div class="card"><h3 style="font-size:13px;margin-bottom:8px">Biggest risers (score ↑, worse)</h3><ul class="mover-list" id="risersList"></ul></div>
+      <div class="card"><h3 style="font-size:13px;margin-bottom:8px">Biggest fallers (score ↓, better)</h3><ul class="mover-list" id="fallersList"></ul></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">This month's findings</div>
+    <div class="findings-list" id="findingsList"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Validated composite trends — built on the same risk model as the score</div>
+    <div class="tier-note">These use the same validated high-risk classification that drives the score above — just different aggregations of it (post-level concentration, repeat-pair networks, top-vs-baseline comparison), not separate unproven heuristics.</div>
+    <div class="composite-grid" id="compositeGrid"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Descriptive signals — not scored, not proven predictive</div>
+    <div class="tier-note">These six components (<abbr title="Account: karma-per-day and new-account signals among posters/commenters">Account</abbr> / <abbr title="Ring: comment-timing clustering that suggests coordinated amplification">Ring</abbr> / <abbr title="Engagement: balance of upvotes to discussion">Engagement</abbr> / <abbr title="Temporal: posting-hour concentration and interval regularity">Temporal</abbr> / <abbr title="Distribution: shape of the score/comment-count spread across posts">Distribution</abbr> / Network) used to <em>be</em> the score, blended with hand-picked weights, before that was replaced by the validated model above. They were never individually checked against real evidence. Kept here as honest supporting context — real, computable facts about posting patterns — not as judgments.</div>
+    <div class="card" style="overflow-x:auto">
+      <table class="detail-table" id="descriptiveTable"></table>
+    </div>
+  </div>
+
+  <div class="section" id="glossary">
+    <div class="section-title">Glossary</div>
+    <div class="card">
+      <div class="glossary-grid" id="glossaryGrid"></div>
+    </div>
+  </div>
+</main>
+
+<footer>
+  Scores from July 2026 onward are top-sample only (the posts a subreddit's audience actually sees), consistent with every month before it — full methodology on the <a href="methodology.html">Methodology</a> page.
+</footer>
 
 <script>
-const SEV       = s => s >= 70 ? 'critical' : s >= 40 ? 'high' : s >= 20 ? 'moderate' : 'low';
-const SEV_LABEL = s => s >= 70 ? 'Critical'  : s >= 40 ? 'High'  : s >= 20 ? 'Moderate'  : 'Low';
-const COLOR     = s => s >= 70 ? '#dc2626'   : s >= 40 ? '#d97706' : s >= 20 ? '#ca8a04'  : '#16a34a';
-const BAR_COLOR = s => s >= 70 ? '#fca5a5'   : s >= 40 ? '#fcd34d' : s >= 20 ? '#fef08a'  : '#86efac';
-const COMP_C    = { account:'#3b82f6', ring:'#ef4444', engagement:'#d97706', temporal:'#8b5cf6', distribution:'#16a34a' };
+const dataDir = 'data_v2';
+let history = null, monthCache = {}, trendChart = null, sparkCharts = [];
 
-function fmtMonth(ym) {
-  const [y,m] = ym.split('-');
-  return new Date(+y,+m-1).toLocaleDateString('en-IN',{year:'numeric',month:'long'});
+const GLOSSARY = [
+  ['Score (final_score)', 'The % of a subreddit-month\'s posting/commenting activity coming from accounts our model flags as high-risk. Higher = more risk. Drives all rankings on this page.'],
+  ['Severity band', 'Low / Moderate / High / Critical — percentile cutoffs of the actual observed score distribution, recalculated from real data, not fixed thresholds.'],
+  ['MoM', 'Month-over-month — the change in a value versus the previous month.'],
+  ['kpd', 'Karma per day — an account\'s total karma divided by its account age (log-transformed before scoring, to avoid a few extreme outliers dominating). One of the inputs to the risk model — see the Methodology page for the full list and current values.'],
+  ['AUC (ROC-AUC)', 'A 0.5-1.0 score measuring how well the model tells "high-risk" and "not" apart. 0.5 = coin flip, 1.0 = perfect. Current value is on the Methodology page — real but modest.'],
+  ['CV (coefficient of variation)', 'A measure of how spread out a set of values is, relative to their average. Used in a few of the legacy descriptive components below.'],
+  ['Account / Ring / Engagement / Temporal / Distribution', 'The six legacy scoring components — descriptive only, not part of the validated score. See the section below the trend charts for what each measures.'],
+  ['Fully-coordinated posts', 'A post where both the poster AND the majority of its top commenters are flagged high-risk.'],
+  ['Clean post, suspicious support', 'A post where the poster looks fine but its top commenters skew high-risk — support without an origin.'],
+  ['Repeat-pair rate', '% of posts where the same two commenters also appeared together on another post that month — a network-coordination signal.'],
+  ['Top vs. baseline risk ratio', 'How much more high-risk top (visible) posts are, compared to an unfiltered random sample from the same subreddit-month. >1 = top status correlates with risk.'],
+];
+
+function initTheme() {
+  const saved = localStorage.getItem('theme');
+  if (saved) document.documentElement.setAttribute('data-theme', saved);
+  const btn = document.getElementById('themeToggle');
+  const upd = () => btn.textContent = document.documentElement.getAttribute('data-theme') === 'light' ? '🌙' : '☀️';
+  upd();
+  btn.onclick = () => {
+    const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+    document.documentElement.setAttribute('data-theme', isLight ? 'dark' : 'light');
+    localStorage.setItem('theme', isLight ? 'dark' : 'light');
+    upd();
+    if (monthCache[currentMonth]) render(currentMonth); // repaint charts for theme colors
+  };
 }
-function fmtDate(iso) {
-  return new Date(iso).toLocaleDateString('en-IN',{year:'numeric',month:'long',day:'numeric'});
+
+function cssVar(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+
+const SEVERITY_META = {
+  critical: { cls: 'sev-critical', color: () => cssVar('--status-critical') },
+  high:     { cls: 'sev-high',     color: () => cssVar('--status-serious') },
+  moderate: { cls: 'sev-moderate', color: () => cssVar('--status-warning') },
+  low:      { cls: 'sev-low',      color: () => cssVar('--status-good') },
+};
+function sevMeta(sev) { return SEVERITY_META[sev] || SEVERITY_META.low; }
+
+let currentMonth = null;
+
+async function init() {
+  initTheme();
+  const res = await fetch(`${dataDir}/history.json?_=${Date.now()}`);
+  history = await res.json();
+  const sel = document.getElementById('monthSelect');
+  history.months.forEach(m => {
+    const opt = document.createElement('option');
+    opt.value = m.month; opt.textContent = m.month;
+    sel.appendChild(opt);
+  });
+  // Preload every month up front (14 small files) so the leaderboard sparklines
+  // and the subreddit drill-down don't refetch mid-interaction.
+  await Promise.all(history.months.map(async m => {
+    if (!monthCache[m.month]) {
+      const r = await fetch(`${dataDir}/${m.month}.json`);
+      monthCache[m.month] = await r.json();
+    }
+  }));
+  renderGlossary();
+  const latest = history.months[history.months.length - 1].month;
+  sel.value = latest;
+  await loadMonth(latest);
 }
 
-function buildSummary(subs) {
-  const total = subs.length;
-  const high  = subs.filter(([,d]) => d.final_score >= 40);
-  const low   = subs.filter(([,d]) => d.final_score < 20);
-  const top   = subs[0];
-  const clean = subs[subs.length - 1];
-  const avg   = (subs.reduce((a,[,d]) => a + d.final_score, 0) / total).toFixed(1);
-  const comps = {account:top[1].account_score, ring:top[1].ring_score, engagement:top[1].engagement_score, temporal:top[1].temporal_score, distribution:top[1].distribution_score};
-  const compNames = {account:'new/suspicious account concentration', ring:'coordinated comment-ring timing', engagement:'low comment engagement relative to upvotes', temporal:'concentrated posting windows', distribution:'unnaturally flat top-score curve'};
-  const dominant = Object.entries(comps).sort((a,b)=>b[1]-a[1])[0][0];
-
-  let s = `This month's scan covered <strong>${total} Indian subreddits</strong>, with an average bot activity score of <strong>${avg}/100</strong>. `;
-  s += `<strong>${high.length} communities</strong> scored High or above (≥40), indicating significant coordinated activity. `;
-  s += `<strong>r/${top[0]}</strong> ranked highest at <strong>${top[1].final_score.toFixed(1)}</strong>, driven primarily by ${compNames[dominant]}. `;
-  if (high.length >= 3) {
-    s += `Political and entertainment communities — including ${high.slice(0,3).map(([x])=>'r/'+x).join(', ')} — show the strongest signals, consistent with agenda-driven coordination. `;
+async function loadMonth(month) {
+  currentMonth = month;
+  if (!monthCache[month]) {
+    const res = await fetch(`${dataDir}/${month}.json?_=${Date.now()}`);
+    monthCache[month] = await res.json();
   }
-  s += `<strong>r/${clean[0]}</strong> was the cleanest community at <strong>${clean[1].final_score.toFixed(1)}</strong>`;
-  s += low.length > 1 ? `, with ${low.length} subreddits total in the low-risk zone, mostly hobby and niche interest spaces.` : `.`;
-  return s;
+  render(month);
 }
 
-function bar(val, color) {
-  return `<div class="bar-wrap"><div class="bar-fill" style="width:${val}%;background:${color}"></div></div>`;
+function fmtDelta(v, invert=false) {
+  if (v === null || v === undefined) return '';
+  const good = invert ? v > 0 : v < 0;
+  const cls = v === 0 ? '' : (good ? 'delta-down' : 'delta-up');
+  const sign = v > 0 ? '+' : '';
+  return `<span class="stat-delta ${cls}">${sign}${v.toFixed(1)} vs last month</span>`;
 }
 
-function compBars(d) {
-  return `<div class="comp-row">
-    ${[['account','Accounts'],['ring','Ring'],['engagement','Engagement'],['temporal','Temporal'],['distribution','Dist.']].map(([k,l]) =>
-      `<div class="comp-item">
-        <div class="comp-label">${l} ${(d[k+'_score']??0).toFixed(0)}</div>
-        <div class="comp-bar"><div class="comp-bar-fill" style="width:${d[k+'_score']??0}%;background:${COMP_C[k]}"></div></div>
-      </div>`
-    ).join('')}
-  </div>`;
+function render(month) {
+  const doc = monthCache[month];
+  const n = doc.narrative || {};
+  const h = n.headline || {};
+
+  renderInsightBanner(h, doc);
+
+  document.getElementById('headlineGrid').innerHTML = `
+    <div class="stat-tile"><div class="stat-label">Ecosystem avg score</div><div class="stat-value">${(h.avg_score ?? 0).toFixed(1)}</div>${fmtDelta(h.avg_score_delta)}</div>
+    <div class="stat-tile"><div class="stat-label">Moderate+ subs</div><div class="stat-value">${h.pct_moderate_plus ?? 0}%</div></div>
+    <div class="stat-tile"><div class="stat-label">High+ subs</div><div class="stat-value">${h.pct_high_plus ?? 0}%</div></div>
+    <div class="stat-tile"><div class="stat-label">Biggest riser</div><div class="stat-value" style="font-size:16px">${h.biggest_riser ? 'r/'+h.biggest_riser.subreddit : '—'}</div>${h.biggest_riser ? fmtDelta(h.biggest_riser.delta) : ''}</div>
+    <div class="stat-tile"><div class="stat-label">Biggest faller</div><div class="stat-value" style="font-size:16px">${h.biggest_faller ? 'r/'+h.biggest_faller.subreddit : '—'}</div>${h.biggest_faller ? fmtDelta(h.biggest_faller.delta) : ''}</div>
+  `;
+  document.getElementById('headlineSentence').textContent =
+    `${month}: ${doc.subreddits ? Object.keys(doc.subreddits).length : 0} subreddits tracked. Severity bands (calibrated from observed data): moderate ≥ ${doc.severity_bands.moderate}, high ≥ ${doc.severity_bands.high}, critical ≥ ${doc.severity_bands.critical}.`;
+
+  renderLeaderboard(month);
+  populateSubFilter(doc);
+  renderTrend('__all__');
+  renderMovers(n);
+  renderFindings(n.curated_findings || []);
+  renderComposites(month);
+  renderDescriptive(doc);
 }
 
-async function render() {
-  const h = await fetch(`data_v2/history.json?v=${Date.now()}`).then(r=>r.json());
-  const latest = h.months[h.months.length - 1];
-  const month  = await fetch(`data_v2/${latest.month}.json?v=${Date.now()}`).then(r=>r.json());
-  const subs   = Object.entries(month.subreddits).sort((a,b)=>b[1].final_score-a[1].final_score);
+function renderInsightBanner(h, doc) {
+  const el = document.getElementById('insightBanner');
+  const r = h.biggest_riser, f = h.biggest_faller;
+  const candidates = [];
+  if (r) candidates.push({ ...r, dir: 'riser' });
+  if (f) candidates.push({ ...f, dir: 'faller', delta: Math.abs(f.delta) * -1 });
+  if (!candidates.length) { el.innerHTML = ''; return; }
+  const pick = candidates.reduce((a, b) => Math.abs(b.delta) > Math.abs(a.delta) ? b : a);
+  const n = Object.keys(doc.subreddits || {}).length;
 
-  const highCount = subs.filter(([,d])=>d.final_score>=40).length;
-
-  document.getElementById('root').innerHTML = `
-  <div class="report">
-    <div class="rpt-head">
-      <div class="rpt-label">Reddit Bot Watch · Indian Subreddits</div>
-      <div class="rpt-title">Monthly Bot Activity Report</div>
-      <div class="rpt-subtitle">${fmtMonth(month.month)}</div>
-      <div class="rpt-meta">
-        <span><strong>Subreddits tracked</strong> ${subs.length}</span>
-        <span><strong>High/Critical</strong> ${highCount}</span>
-        <span><strong>Analysis date</strong> ${fmtDate(month.analysis_date)}</span>
-        <span><strong>Data</strong> Top 30 posts · Last 30 days</span>
-      </div>
-    </div>
-
-    <div class="rpt-body">
-
-      <div class="rpt-section">
-        <div class="rpt-section-title">Summary</div>
-        <p class="summary-text">${buildSummary(subs)}</p>
-      </div>
-
-      <div class="rpt-section">
-        <div class="rpt-section-title">Bot Activity Rankings</div>
-        <div class="scale-row">
-          <div class="scale-seg" style="background:#dcfce7;color:#15803d">0–30<small>Low</small></div>
-          <div class="scale-seg" style="background:#fefce8;color:#854d0e">30–50<small>Moderate</small></div>
-          <div class="scale-seg" style="background:#fef3c7;color:#92400e">50–70<small>High</small></div>
-          <div class="scale-seg" style="background:#fee2e2;color:#991b1b">70–100<small>Critical</small></div>
-        </div>
-        <div class="rank-table-wrap">
-        <table class="rank-table">
-          <thead><tr>
-            <th>#</th><th>Subreddit</th><th>Score</th><th style="width:130px">Scale</th>
-            <th>Severity</th><th>Component signals</th>
-          </tr></thead>
-          <tbody>
-            ${subs.map(([sub,d],i) => `<tr>
-              <td class="rank-num">${i+1}</td>
-              <td class="rank-sub">r/${sub}</td>
-              <td class="rank-score" style="color:${COLOR(d.final_score)}">${d.final_score.toFixed(1)}</td>
-              <td>${bar(d.final_score, BAR_COLOR(d.final_score))}</td>
-              <td><span class="pill ${SEV(d.final_score)}">${SEV_LABEL(d.final_score)}</span></td>
-              <td>${compBars(d)}</td>
-            </tr>`).join('')}
-          </tbody>
-        </table>
-        </div>
-      </div>
-
-      <div class="rpt-section">
-        <div class="rpt-section-title">How we measure this</div>
-        <p style="font-size:13px;color:var(--muted);margin-bottom:14px;font-family:sans-serif">
-          Each subreddit is scored 0–100 across four signals, then combined into a single bot activity score.
-          A higher score means stronger evidence of coordinated, non-organic activity.
-        </p>
-        <div class="meth-grid">
-          <div class="meth-box">
-            <h4>User Account Patterns <span class="meth-wt">35%</span></h4>
-            <p>Accounts earning &gt;200 karma/day or new accounts (&lt;90 days) with elevated karma are flagged. Bot networks maintain fast-growing accounts to appear legitimate.</p>
-          </div>
-          <div class="meth-box">
-            <h4>Engagement Patterns <span class="meth-wt">30%</span></h4>
-            <p>Bots upvote without commenting. High upvote-to-comment ratios and upvote consensus above 85% across many posts indicates coordinated, passive voting.</p>
-          </div>
-          <div class="meth-box">
-            <h4>Temporal Patterns <span class="meth-wt">20%</span></h4>
-            <p>Automated systems post in tight windows. We measure how concentrated posting is in the top 3 hours vs. spread across the full day (entropy).</p>
-          </div>
-          <div class="meth-box">
-            <h4>Score Distribution <span class="meth-wt">15%</span></h4>
-            <p>Organic communities have high variance — some posts go viral, most don't. Suspiciously uniform vote counts (low coefficient of variation) suggest bot-driven engagement.</p>
-          </div>
-        </div>
-      </div>
-
-    </div>
-
-    <div class="rpt-footer">
-      <span>Reddit Bot Watch · <a href="https://github.com/karmaNeggs/RedditWatch">github.com/karmaNeggs/RedditWatch</a></span>
-      <span>Data: Reddit public JSON API · Not affiliated with Reddit Inc.</span>
-    </div>
-  </div>`;
+  if (pick.dir === 'riser') {
+    el.innerHTML = `<div class="insight-banner warn"><div class="insight-icon">⚠️</div>
+      <div class="insight-text">r/${pick.subreddit} jumped <b>+${pick.delta.toFixed(1)} pts</b> this month (now ${pick.final_score.toFixed(1)}) — the single biggest move across all ${n} subreddits.</div></div>`;
+  } else {
+    el.innerHTML = `<div class="insight-banner good"><div class="insight-icon">✅</div>
+      <div class="insight-text">r/${pick.subreddit} dropped <b>${pick.delta.toFixed(1)} pts</b> this month (now ${pick.final_score.toFixed(1)}) — the single biggest move across all ${n} subreddits, and a step in the right direction.</div></div>`;
+  }
 }
 
-render().catch(e => {
-  document.getElementById('root').innerHTML = `<div class="loading">Error: ${e.message}<br><br>Serve with: python3 -m http.server 8080 --directory docs/</div>`;
-});
+function scoreSeriesFor(sub) {
+  return history.months.map(m => {
+    const d = monthCache[m.month];
+    const row = d && d.subreddits ? d.subreddits[sub] : null;
+    return row ? row.final_score : null;
+  });
+}
+
+function renderLeaderboard(month) {
+  const doc = monthCache[month];
+  const monthIdx = history.months.findIndex(m => m.month === month);
+  const prevMonth = monthIdx > 0 ? history.months[monthIdx - 1].month : null;
+  const prevDoc = prevMonth ? monthCache[prevMonth] : null;
+
+  const rows = Object.entries(doc.subreddits || {}).sort((a,b) => b[1].final_score - a[1].final_score);
+  sparkCharts.forEach(c => c.destroy());
+  sparkCharts = [];
+
+  const thead = `<tr><th>#</th><th>Subreddit</th><th>Severity</th><th>Score</th><th>MoM Δ</th><th>Trend</th></tr>`;
+  const trs = rows.map(([sub, d], i) => {
+    const meta = sevMeta(d.severity);
+    const prevScore = prevDoc && prevDoc.subreddits[sub] ? prevDoc.subreddits[sub].final_score : null;
+    const delta = prevScore !== null ? d.final_score - prevScore : null;
+    const deltaHtml = delta === null ? '<span style="color:var(--muted)">—</span>'
+      : `<span class="lb-delta ${delta === 0 ? '' : (delta > 0 ? 'delta-up' : 'delta-down')}">${delta > 0 ? '+' : ''}${delta.toFixed(1)}</span>`;
+    return `<tr>
+      <td class="rank-num">${i+1}</td>
+      <td><b>r/${sub}</b></td>
+      <td><span class="severity-badge ${meta.cls}">${d.severity}</span></td>
+      <td class="lb-score">${d.final_score.toFixed(1)}</td>
+      <td>${deltaHtml}</td>
+      <td><div class="lb-spark-wrap"><canvas id="spark-${sub}"></canvas></div></td>
+    </tr>`;
+  }).join('');
+  document.getElementById('leaderboardTable').innerHTML = thead + trs;
+
+  rows.forEach(([sub, d]) => {
+    const series = scoreSeriesFor(sub);
+    const meta = sevMeta(d.severity);
+    const canvas = document.getElementById(`spark-${sub}`);
+    if (!canvas) return;
+    sparkCharts.push(new Chart(canvas.getContext('2d'), {
+      type: 'line',
+      data: { labels: series.map((_,i)=>i), datasets: [{ data: series, borderColor: meta.color(), borderWidth: 1.5, pointRadius: 0, tension: 0.2, spanGaps: true }] },
+      options: { responsive: true, maintainAspectRatio: false, animation: false,
+        plugins: { legend: { display: false }, tooltip: { enabled: false } },
+        scales: { x: { display: false }, y: { display: false } } },
+    }));
+  });
+}
+
+function populateSubFilter(doc) {
+  const sel = document.getElementById('subFilter');
+  const prevVal = sel.value || '__all__';
+  const subs = Object.keys(doc.subreddits || {}).sort();
+  sel.innerHTML = `<option value="__all__">Ecosystem average</option>` + subs.map(s => `<option value="${s}">r/${s}</option>`).join('');
+  sel.value = subs.includes(prevVal) ? prevVal : '__all__';
+}
+
+function renderTrend(subFilter = '__all__') {
+  const months = history.months.map(m => m.month);
+  const grid = cssVar('--grid'); const tick = cssVar('--tick');
+  if (trendChart) trendChart.destroy();
+
+  let datasets, legendHtml = '';
+  if (subFilter === '__all__') {
+    const blue = cssVar('--series-blue');
+    const avgs = history.months.map(m => m.aggregate.avg_score);
+    datasets = [{ label: 'Ecosystem avg score', data: avgs, borderColor: blue, backgroundColor: blue + '22',
+      borderWidth: 2, pointRadius: 3, pointHoverRadius: 5, pointBackgroundColor: blue, tension: 0.15, fill: true }];
+  } else {
+    const seriesSpecs = [
+      { key: 'final_score', label: 'Score (final)', color: cssVar('--series-blue'), width: 3 },
+      { key: 'account_score', label: 'Account', color: cssVar('--series-orange'), width: 1.5 },
+      { key: 'ring_score', label: 'Ring', color: cssVar('--series-aqua'), width: 1.5 },
+      { key: 'engagement_score', label: 'Engagement', color: cssVar('--series-yellow'), width: 1.5 },
+      { key: 'temporal_score', label: 'Temporal', color: cssVar('--series-magenta'), width: 1.5 },
+      { key: 'distribution_score', label: 'Distribution', color: cssVar('--series-green'), width: 1.5 },
+    ];
+    datasets = seriesSpecs.map(s => ({
+      label: s.label,
+      data: months.map(m => { const d = monthCache[m]; const row = d && d.subreddits ? d.subreddits[subFilter] : null; return row ? row[s.key] : null; }),
+      borderColor: s.color, borderWidth: s.width, pointRadius: s.key === 'final_score' ? 2 : 0,
+      tension: 0.15, fill: false, spanGaps: true,
+    }));
+    legendHtml = seriesSpecs.map(s => `<span><span class="sw" style="background:${s.color}"></span>${s.label}</span>`).join('');
+  }
+
+  trendChart = new Chart(document.getElementById('trendChart').getContext('2d'), {
+    type: 'line',
+    data: { labels: months, datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false } },
+      scales: {
+        x: { grid: { color: grid }, ticks: { color: tick, font: { size: 11 } } },
+        y: { grid: { color: grid }, ticks: { color: tick, font: { size: 11 } }, beginAtZero: true },
+      },
+    },
+  });
+  document.getElementById('trendLegend').innerHTML = legendHtml;
+}
+
+function moverRow(m, isRiser) {
+  const cls = isRiser ? 'delta-up' : 'delta-down';
+  const sign = m.delta > 0 ? '+' : '';
+  const note = m.secondary_signal_label
+    ? `<span class="mover-note">also: ${m.secondary_signal_label} ${m.secondary_signal_delta > 0 ? '+' : ''}${m.secondary_signal_delta.toFixed(1)}</span>` : '';
+  return `<li class="mover-row"><div><div class="mover-sub">r/${m.subreddit}</div>${note}</div>
+    <div style="text-align:right"><div class="mover-delta ${cls}">${sign}${m.delta.toFixed(1)}</div><div class="mover-score">now ${m.final_score.toFixed(1)}</div></div></li>`;
+}
+
+function renderMovers(n) {
+  document.getElementById('toppersList').innerHTML = (n.toppers || [])
+    .map(t => `<li class="mover-row"><div class="mover-sub">r/${t.subreddit}</div><div class="mover-score" style="font-size:16px;font-weight:700;color:var(--text)">${t.final_score.toFixed(1)}</div></li>`).join('') || '<li class="mover-row">No data</li>';
+  document.getElementById('risersList').innerHTML = (n.risers || []).map(m => moverRow(m, true)).join('') || '<li class="mover-row">No risers this month</li>';
+  document.getElementById('fallersList').innerHTML = (n.fallers || []).map(m => moverRow(m, false)).join('') || '<li class="mover-row">No fallers this month</li>';
+}
+
+function renderFindings(findings) {
+  document.getElementById('findingsList').innerHTML = findings.length
+    ? findings.map(f => `<div class="finding-card">${f}</div>`).join('')
+    : '<div class="finding-card">No standout findings this month.</div>';
+}
+
+function renderComposites(currentMonthKey) {
+  const specs = [
+    { key: 'pct_posts_fully_coordinated', label: 'Fully-coordinated posts', sub: 'poster + majority of top commenters both high-risk' },
+    { key: 'pct_posts_commenter_only_risk', label: 'Clean post, suspicious support', sub: 'low-risk poster, high-risk commenter majority' },
+    { key: 'repeat_pair_rate', label: 'Repeat-pair coordination', sub: '% of posts with a commenter pair seen together elsewhere' },
+    { key: 'top_vs_baseline_risk_ratio', label: 'Top vs. baseline risk ratio', sub: 'top-sample poster risk ÷ random-sample baseline (July 2026+ only)' },
+  ];
+  const months = history.months.map(m => m.month);
+  const blue = cssVar('--series-blue');
+
+  const container = document.getElementById('compositeGrid');
+  container.innerHTML = specs.map(s => `
+    <div class="card composite-card">
+      <div class="composite-title">${s.label}</div>
+      <div class="composite-sub">${s.sub}</div>
+      <div class="chart-wrap"><canvas id="comp-${s.key}"></canvas></div>
+    </div>`).join('');
+
+  specs.forEach(s => {
+    const vals = months.map(m => {
+      const subs = Object.values((monthCache[m] || {}).subreddits || {});
+      const present = subs.map(d => d[s.key]).filter(v => v !== null && v !== undefined);
+      return present.length ? present.reduce((a,b)=>a+b,0) / present.length : null;
+    });
+    new Chart(document.getElementById(`comp-${s.key}`).getContext('2d'), {
+      type: 'line',
+      data: { labels: months, datasets: [{ data: vals, borderColor: blue, borderWidth: 1.5, pointRadius: 0, tension: 0.15, spanGaps: true }] },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: { enabled: true } },
+        scales: { x: { display: false }, y: { display: false, beginAtZero: true } },
+      },
+    });
+  });
+}
+
+function renderDescriptive(doc) {
+  const subs = Object.entries(doc.subreddits || {}).sort((a,b) => b[1].final_score - a[1].final_score).slice(0, 10);
+  const cols = [
+    ['account_score','Account'], ['ring_score','Ring'], ['engagement_score','Engagement'],
+    ['temporal_score','Temporal'], ['distribution_score','Distribution'],
+  ];
+  const thead = `<tr><th>Subreddit</th><th>Score</th>${cols.map(c=>`<th>${c[1]}</th>`).join('')}</tr>`;
+  const rows = subs.map(([sub, d]) => `<tr><td>r/${sub}</td><td>${d.final_score.toFixed(1)}</td>${cols.map(c => `<td>${(d[c[0]] ?? 0).toFixed(1)}</td>`).join('')}</tr>`).join('');
+  document.getElementById('descriptiveTable').innerHTML = thead + rows;
+}
+
+function renderGlossary() {
+  document.getElementById('glossaryGrid').innerHTML = GLOSSARY
+    .map(([term, def]) => `<div><div class="gloss-term">${term}</div><div class="gloss-def">${def}</div></div>`).join('');
+}
+
+init();
 </script>
 </body>
 </html>

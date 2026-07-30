@@ -1,6 +1,6 @@
 # Reddit Bot Watch — Indian Subreddits
 
-A bot-activity monitoring system for 25 Indian subreddits. Scores each community 0–100 across five signal dimensions and publishes results as a static GitHub Pages dashboard.
+A bot-activity monitoring system for 25 Indian subreddits. Scores each community 0–100 by the share of its monthly activity coming from accounts a validated logistic-regression model flags as high-risk, and publishes results as a static GitHub Pages dashboard.
 
 **Live dashboard:** https://karmaneggs.github.io/RedditWatch/
 
@@ -18,13 +18,20 @@ bash run_monthly.sh --v2 --month 2026-07    # specific month
 bash run_monthly.sh --v2 --year             # full rolling-year backfill (long-running)
 ```
 
-Three steps run automatically:
+Four steps run automatically:
 
 | Step | Script | Output |
 |------|--------|--------|
 | 1 | `collect_data_v2.py` | `data/v2/posts_YYYY-MM.csv` + `data/v2/commenters_YYYY-MM.csv` |
-| 2 | `analyze_data_v2.py` | `output/v2/analysis_YYYY-MM_<timestamp>.json` + `analysis_latest.json` |
-| 3 | `generate_site.py --v2` | `docs/data_v2/YYYY-MM.json` + `history.json` + `findings.json` |
+| 2 | `score_accounts.py` | `output/v2/account_risk_scores.csv` — refreshes the account-risk model against whatever's in the corpus *now*, including any new accounts this month's collection just brought in |
+| 3 | `analyze_data_v2.py` | `output/v2/analysis_YYYY-MM_<timestamp>.json` + `analysis_latest.json` |
+| 4 | `generate_site.py --v2` | `docs/data_v2/YYYY-MM.json` + `history.json` + `findings.json` |
+
+Step 2 is required every run, not optional — `analyze_data_v2.py`'s scoring does
+an inner join against `account_risk_scores.csv`; if it's stale relative to the
+current corpus, new accounts silently vanish from that month's score instead
+of being counted. It reuses the already-fit coefficients (no live API calls,
+seconds to run) — it isn't a refit, just a rescale of the current population.
 
 Then push to publish:
 
@@ -46,25 +53,63 @@ There is currently **no automated schedule** — every run above is manual/on-de
 
 ## Scoring system
 
-Final score = weighted average of five components (0–100 each). Weights are **calibrated from the data itself**, not hand-picked — see [Weight calibration](#weight-calibration) below.
+`final_score` = the % of a (subreddit, month)'s posting/commenting activity
+coming from accounts in **that month's own top risk-decile**, per a
+validated model — not a blend of hand-weighted heuristic components (that
+approach was tried, tested against real evidence, and replaced; see below).
 
-| Component | Current weight | What it measures |
-|-----------|-----------------|-------------------|
-| Engagement | 41.9% | UCR (upvote:comment ratio), score↔comment correlation, upvote-ratio uniformity |
-| Account | 29.9% | Karma-per-day anomalies in posters + top-10 commenters, new-account %, unverified email |
-| Ring | 12.2% | Early-comment timing burst, sub-5-min first-comment rate, commenter recurrence across posts |
-| Distribution | 8% | Coefficient of variation of scores/comment counts, comment depth |
-| Temporal | 8% | Posting-hour concentration, entropy vs. uniform 24h distribution, interval regularity |
+**The model**: ~10 account-level features (account age, log-transformed
+karma/day, log-transformed link-karma ratio, comment velocity, ring-timing
+signals, etc.) → one `LogisticRegression` → a 0–100 risk score per account.
+Fit against the one real label this project has — whether a random sample of
+accounts is currently suspended/gone from Reddit, a weak but real proxy for
+"bad account." Current cross-val AUC ≈ 0.66 (0.5 = coin flip) — a real,
+modest signal, not a confident classifier; treat every score as directional,
+not a verdict. Exact current coefficients, AUC, and a genuine forward-looking
+backtest (does an early reading predict later attrition, not just describe
+concurrent decline?) are on the live **Methodology** page — that page reads
+`reports/findings.json` directly, so it never goes stale the way a hardcoded
+number in this README would.
 
-Severity bands: **0–20 Low · 20–40 Moderate · 40–70 High · 70+ Critical**
+**"High risk"** is computed fresh each month — the top decile of *that
+month's own active accounts*, not a fixed all-time population cutoff. An
+earlier version used a fixed global threshold and it produced a near-
+monotonic 13-month score climb driven almost entirely by the active
+population trending younger over time, not by any real change in relative
+risk (confirmed: the climb hit all 25 subreddits in lockstep regardless of
+topic, and the underlying population's median account age genuinely fell
+over the same window). Month-relative thresholding fixed that.
 
-### Weight calibration
+**Severity bands** (Low/Moderate/High/Critical) are percentiles of the
+actual observed score distribution across every (subreddit, month) scored so
+far — recalibrated by `score_accounts.py` on every run, not fixed cutoffs.
+Current values are on the **Report** page's "how to read this" box.
 
-Weights come from `scripts/analysis.py`, which reads the full historical corpus (`data/v2/*.csv`), computes each raw signal's coefficient of variation across sub-months, averages within each component, and writes the result to `reports/findings.json`. `analyze_data_v2.py` loads those weights at runtime (falls back to defaults if the file is missing).
+Six legacy heuristic components (account/ring/engagement/temporal/
+distribution/network — what `final_score` used to be, hand-weighted) are
+still computed and published, but purely as descriptive context, not inputs
+— they were never individually validated against real evidence. See the
+Report page's "Descriptive signals" section for the honest distinction.
 
-**Known limitation:** this calibration is unsupervised — there is no labeled bot/human ground truth anywhere in the pipeline, so "weight" currently reflects how much a signal *varies* across subreddits, not a validated measure of how well it *identifies bots*. Treat the weights as a reasonable prior, not a proven ranking. See project notes for planned validation work (labeled sample, PCA over raw signals, post/account-level anomaly detection).
+`overlap_rate` and `avg_comment_depth` were measured and dropped after
+testing showed them either organic (not a bot signal) or genuinely inert
+(zero effect on the fitted model) — see `scripts/anomaly_detection.py`'s
+`FEATURE_COLS` comment for the full history of what's been tried and why
+each change was made or rejected.
 
-`overlap_rate` was measured and removed from the ring component after it came back ~91.5% everywhere — that turned out to be an organic Reddit first-mover effect, not a bot signal (kept in the data as `overlap_rate` for reference, just not scored).
+### Refitting the model
+
+`scripts/scale_weak_labels.py` does the actual fit (live Reddit API calls to
+check account status — checkpointed/resumable, since a large sample takes
+hours; re-run the same command to continue). Run this far less often than
+monthly — it's a real time investment, not a routine step:
+
+```bash
+python3 scripts/scale_weak_labels.py --n 8000              # first call starts, re-run to resume/continue
+python3 scripts/scale_weak_labels.py --refit-only           # refit on already-collected labels + current FEATURE_COLS, no API calls — use this when testing feature changes
+python3 scripts/backtest_predictive.py                      # refresh the early/late predictive-validity check
+python3 scripts/score_accounts.py                           # apply the refit coefficients to the current population
+```
 
 ---
 
@@ -101,12 +146,19 @@ Edit `subreddits.txt` — one subreddit name per line, lines starting with `#` a
 
 ### Per-month data (`data/v2/`)
 
-- `posts_YYYY-MM.csv` — up to 40 top posts per subreddit per month, with author account signals (karma, age, verified email)
+- `posts_YYYY-MM.csv` — up to 40 top posts per subreddit per month (plus a
+  ~20-post random supplement from `/new.json` for months collected after the
+  survivorship-bias fix, tagged `sample_type` — calibration-only, never part
+  of the reported score), with author account signals (karma, age, verified
+  email)
 - `commenters_YYYY-MM.csv` — comment rows for the top-10-scoring posts per (sub, month), tagged `in_top10` / `in_first5` for ring detection
 
 ### Monthly analysis JSON (`docs/data_v2/YYYY-MM.json`)
 
-Per-subreddit breakdown across all five components plus the unified `final_score`, written by `generate_site.py` from `output/v2/analysis_latest.json`.
+Per-subreddit `final_score` (the validated account-risk rollup) plus the six
+legacy components as diagnostic detail, plus a `narrative` block (headline,
+toppers/movers, curated findings) — written by `generate_site.py` from
+`output/v2/analysis_latest.json`.
 
 ### History (`docs/data_v2/history.json`)
 
@@ -114,47 +166,70 @@ Tracks all months with per-subreddit severity labels and aggregate stats. Used b
 
 ### Findings (`docs/data_v2/findings.json`)
 
-Copy of `reports/findings.json` — the calibrated weights, key findings, and trend/acceleration alerts, published for the dashboard's findings panel.
+Copy of `reports/findings.json` — model coefficients, AUC, severity bands, and the predictive backtest, published for the Methodology page.
 
 ---
 
 ## Dashboard (GitHub Pages)
 
-The `docs/` folder is served as a static site (V2 only — see archive note above). The dashboard includes:
+The `docs/` folder is served as a static site. **`report.html` and
+`methodology.html` are the current, accurate views** — built this session,
+read live data from `docs/data_v2/`, never show a stale hardcoded number.
+`index.html` and `insights.html` are an earlier dashboard built for the old
+weighted-component scoring system; they still load and render (same
+underlying JSON files), but their severity-band display and framing predate
+the current model and haven't been reconciled — treat them as legacy pending
+a consolidation pass, not as current documentation of how scoring works.
 
-- **Highlights panel** — avg score, tier counts, month-on-month gainers/losers
-- **Component breakdown** — per-subreddit stacked bar view across all five components
-- **Trend chart** — avg score + % Moderate+ and % High+ over time
-- **Score distributions** — histograms for final score (severity bands) and each component
-- **Findings panel** — calibrated-weight rationale and key findings from the full-corpus analysis
-- **Subreddit detail cards** — per-sub metrics with anomaly highlighting
+- **`report.html`** — headline banner (biggest single move this month),
+  full ranked leaderboard (all 25 subs, severity-colored, per-row
+  sparkline), a subreddit-drill-down trend view, toppers/movers, curated
+  findings, validated composite trends, the legacy components as clearly-
+  labeled descriptive context, and a glossary
+- **`methodology.html`** — the model's actual coefficients (chart), current
+  AUC, the early/late predictive backtest, severity-band derivation, and an
+  explicit "what's validated vs. what's descriptive" explanation
 
 View locally:
 
 ```bash
 python3 -m http.server 8080 --directory docs/
-# open http://localhost:8080
+# open http://localhost:8080/report.html
 ```
 
 ---
 
 ## Full-corpus statistical report
 
-Run this on a slower cadence than the monthly collection — quarterly is reasonable. It re-derives weights from the *entire* history, so running it every month would have it chasing single-month noise instead of a stable trend, and every run changes `reports/findings.json`, which `analyze_data_v2.py` reads for the live weights on its next run.
+Run this on a slower cadence than the monthly collection — quarterly is
+reasonable, since it re-derives its own diagnostics from the *entire*
+history and would otherwise chase single-month noise.
 
 ```bash
 python3 scripts/analysis.py                        # all months in data/v2/
 python3 scripts/analysis.py --months 2026-04 2026-05
 ```
 
-Produces `reports/analysis_<timestamp>.pdf` (+ `analysis_latest.pdf`) covering data quality, signal distributions/correlations, text intelligence (near-dupes, cross-sub keyword spread), cross-sub network analysis (account overlap, churn, Gini concentration), an event calendar overlay, and the weight calibration that feeds `reports/findings.json`.
+Produces `reports/analysis_<timestamp>.pdf` (+ `analysis_latest.pdf`)
+covering data quality, signal distributions/correlations, text intelligence
+(near-dupes, cross-sub keyword spread), cross-sub network analysis (account
+overlap, churn, Gini concentration), and an event calendar overlay. **Note:**
+this script still writes `calibrated_weights`/`pca_weights` keys into
+`reports/findings.json` from an earlier scoring approach — `analyze_data_v2.py`
+no longer reads them for anything; the model's real coefficients live in
+`account_model` (written by `score_accounts.py`/`scale_weak_labels.py`,
+[see Scoring system](#scoring-system)). Harmless to run, just a vestigial
+output worth knowing isn't load-bearing anymore.
 
 ---
 
 ## Notes
 
 - Year-mode collection (`--year`) fetches up to 1,000 posts/subreddit and every commenter profile it encounters — expect several hours for a full 25-sub backfill; it checkpoints and resumes on interruption
-- With `--skip-collect`, analysis + site generation takes ~3 seconds
+- With `--skip-collect`, `run_monthly.sh` (collect skipped + rescore + site) takes well under a minute
+- `scale_weak_labels.py` (the model refit) is checkpointed the same way — a
+  large `--n` can take hours of live API calls; re-running the identical
+  command resumes from where it left off rather than restarting
 - All credentials are gitignored via `.env`
 
 ---

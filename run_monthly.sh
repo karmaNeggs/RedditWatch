@@ -53,11 +53,26 @@ else
   python3 -u scripts/collect_data_v2.py "${EXTRA_ARGS[@]}" 2>&1 | tee -a "$LOG_FILE"
 fi
 
-echo "[STEP 2] Scoring…" | tee -a "$LOG_FILE"
+echo "[STEP 2] Refreshing account-risk model against the current corpus…" | tee -a "$LOG_FILE"
+# Required before scoring, every run — not optional. final_score's rollup does
+# an inner join against output/v2/account_risk_scores.csv; if this file is
+# stale relative to whatever new accounts this month's collection brought in,
+# those accounts silently vanish from the rollup instead of being scored.
+# Reuses the already-fit, already-validated coefficients (no live API calls,
+# no refit) — just rescales the current population against them, seconds to run.
+python3 -u scripts/score_accounts.py 2>&1 | tee -a "$LOG_FILE"
+
+echo "[STEP 3] Scoring…" | tee -a "$LOG_FILE"
 python3 -u scripts/analyze_data_v2.py ${MONTH_ARG:+--month "$MONTH_ARG"} 2>&1 | tee -a "$LOG_FILE"
 
-echo "[STEP 3] Generating site data…" | tee -a "$LOG_FILE"
-python3 -u scripts/generate_site.py --v2 ${MONTH_ARG:+--month "$MONTH_ARG"} 2>&1 | tee -a "$LOG_FILE"
+echo "[STEP 4] Generating site data…" | tee -a "$LOG_FILE"
+# Deliberately NOT passing --month here: generate_site.py --month filters
+# history.json to *only* that month, overwriting the full multi-month
+# history instead of adding to it — confirmed by testing, not assumed. Every
+# run rebuilds the complete site from whatever's in output/v2/ (cheap — no
+# API calls, just re-reading already-computed analysis JSON), so the trend
+# chart/leaderboard sparklines/drill-down never lose history.
+python3 -u scripts/generate_site.py --v2 2>&1 | tee -a "$LOG_FILE"
 
 echo "" | tee -a "$LOG_FILE"
 echo "=== Done. Push: git add docs/data_v2/ data/v2/ output/v2/ reports/findings.json && git commit -m 'Monthly V2 report' && git push ===" | tee -a "$LOG_FILE"

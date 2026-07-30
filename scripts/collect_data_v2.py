@@ -49,13 +49,14 @@ EXCLUDED        = {'[deleted]', '[removed]', 'AutoModerator', 'None', 'nan'}
 POSTS_CAP_PER_MONTH    = 40   # max posts kept per (sub, month) for analysis
 COMMENT_SAMPLE         = 10   # top-N posts per (sub, month) that get deep comment fetch
 THIN_MONTH_WARN        = 15   # warn if a (sub, month) has fewer than this many posts
+RANDOM_SAMPLE_PER_MONTH = 20  # supplementary non-top posts via /new.json — see fetch_posts_random
 
 POST_COLS = [
     'subreddit', 'post_id', 'collection_month', 'collected_utc', 'created_utc',
     'title', 'score', 'upvote_ratio', 'num_comments', 'total_awards',
     'author', 'author_account_age_days', 'author_link_karma',
     'author_comment_karma', 'author_verified_email',
-    'is_top10_for_month',
+    'is_top10_for_month', 'sample_type',
 ]
 COMM_COLS = [
     'subreddit', 'post_id', 'collection_month',
@@ -150,6 +151,7 @@ def _parse_post(item: dict, subreddit: str, collected_utc: int) -> dict | None:
         'num_comments':  p['num_comments'],
         'total_awards':  p.get('total_awards_received', 0),
         'author':        author,
+        'sample_type':   'top',  # overridden to 'random' by fetch_posts_random
     }
 
 
@@ -226,7 +228,44 @@ def cap_and_mark(posts: list) -> list:
     posts = sorted(posts, key=lambda x: -x['score'])[:POSTS_CAP_PER_MONTH]
     for i, p in enumerate(posts):
         p['is_top10_for_month'] = (i < COMMENT_SAMPLE)
+        p['sample_type'] = 'top'
     return posts
+
+
+def fetch_posts_random(subreddit: str, start: int, end: int, exclude_ids: set) -> list:
+    """
+    Supplementary non-top sample via /new.json, filtered to the target
+    month's UTC bounds — every other collection path here sorts by score
+    (top.json), so every distribution-shape diagnostic (decay_slope, score_cv,
+    engagement ratios) is computed exclusively on an already-selected top
+    slice; this is the fix.
+
+    Important limitation, not a bug to fix later: Reddit's /new.json only
+    reaches back through recently-posted content — how far depends on each
+    subreddit's posting volume (days for high-traffic subs, longer for quiet
+    ones) — there is no public API for arbitrary historical date-range
+    search. This means the supplement is only ever meaningful for the
+    *current* (or a very recent) month. Calling it against a month that's
+    already fully in the past will silently return few or zero posts — this
+    cannot retroactively de-bias the 14 months of historical data already
+    collected, only monthly collection runs from here forward.
+    """
+    collected_utc = int(time.time())
+    data = _get_json(f"https://www.reddit.com/r/{subreddit}/new.json?limit=100")
+    if not data or 'data' not in data:
+        return []
+
+    raw = []
+    for item in data['data']['children']:
+        post = _parse_post(item, subreddit, collected_utc)
+        if post and post['post_id'] not in exclude_ids and start <= post['created_utc'] <= end:
+            post['sample_type'] = 'random'
+            raw.append(post)
+
+    raw.sort(key=lambda x: -x['created_utc'])  # most recent first, not score-sorted
+    for p in raw[:RANDOM_SAMPLE_PER_MONTH]:
+        p['is_top10_for_month'] = False  # no comment sampling for the random supplement
+    return raw[:RANDOM_SAMPLE_PER_MONTH]
 
 
 def fetch_comments(subreddit: str, post_id: str, n_top: int = 10, n_first: int = 5) -> list:
@@ -350,6 +389,12 @@ def collect_sub_month(sub: str, month: str, log) -> tuple[list, list]:
         return [], []
 
     posts = cap_and_mark(posts)
+
+    start, end = month_bounds(month)
+    random_posts = fetch_posts_random(sub, start, end, exclude_ids={p['post_id'] for p in posts})
+    if random_posts:
+        log.info(f'    r/{sub}: +{len(random_posts)} supplementary non-top posts (survivorship-bias fix)')
+    posts = posts + random_posts
 
     comments      = []
     comment_posts = [p for p in posts if p['is_top10_for_month']]

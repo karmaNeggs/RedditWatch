@@ -22,38 +22,39 @@ ROOT        = Path(__file__).parent.parent
 DATA_DIR    = ROOT / 'data' / 'v2'
 OUTPUT_DIR  = ROOT / 'output' / 'v2'
 FINDINGS    = ROOT / 'reports' / 'findings.json'
+RISK_SCORES = OUTPUT_DIR / 'account_risk_scores.csv'
 
 NEW_ACCOUNT_DAYS = 90   # accounts younger than this are "new"
 KPD_SUSPICIOUS   = 200  # lowered from 500 — analysis shows 500 was too conservative
 KPD_VERY_SUSP    = 1000
 
+# final_score used to be a weighted blend of 6 hand-tuned heuristic components
+# (see git history — analyze_accounts/analyze_comment_ring/analyze_engagement/
+# analyze_temporal/analyze_distribution/analyze_network below). None of those
+# per-component weights were ever individually checked against real evidence —
+# only bundled candidate schemes were (referee_weights.py, retired). final_score
+# is now driven entirely by score_accounts.py's validated account-risk model
+# (see analyze_account_risk / RISK_SCORES below); the six analyzers still run
+# and their output is still published per-sub, but purely as diagnostic detail
+# explaining *why* a sub's score moved — not as inputs to the score itself.
 
-def _load_weights():
-    """
-    Load live weights from analysis findings, fall back to defaults.
-    Prefers `live_weights` — the referee-selected scheme (see referee_weights.py),
-    chosen by which weight set best correlates with the weak-label ground truth,
-    not just which was "calibrated" — falls back to the older CV-calibrated
-    weights if no referee decision has been recorded yet, then to hardcoded
-    defaults if findings.json itself is missing. The active weight dict's own
-    keys decide which components are actually summed into final_score (see
-    calculate_scores) — this is what lets a 6th component (network) switch on
-    purely via config, no code change.
-    """
-    defaults = {'account': 0.30, 'ring': 0.122, 'engagement': 0.419,
-                'temporal': 0.08, 'distribution': 0.08}
+
+def _load_severity_bands():
+    """Percentile-based bands from score_accounts.py, derived from the actual
+    observed pct_high_risk distribution — falls back to the legacy fixed
+    20/40/70 thresholds (meaningless on this 0-100 scale, but a safe default)
+    if score_accounts.py hasn't been run yet."""
+    defaults = {'moderate': 20.0, 'high': 40.0, 'critical': 70.0}
     if FINDINGS.exists():
         try:
             with open(FINDINGS) as f:
                 d = json.load(f)
-            for key in ('live_weights', 'calibrated_weights'):
-                w = d.get(key, {})
-                if w and abs(sum(w.values()) - 1.0) < 0.01:
-                    print(f"  Weights loaded from findings.json ({key})")
-                    return w
+            bands = d.get('severity_bands', {})
+            if all(k in bands for k in ('moderate', 'high', 'critical')):
+                return bands
         except Exception:
             pass
-    print("  Using default weights (findings.json not found)")
+    print("  Using default severity bands (run score_accounts.py to calibrate real ones)")
     return defaults
 
 
@@ -72,6 +73,13 @@ def load_data(month: str | None) -> tuple[pd.DataFrame, pd.DataFrame]:
 
     posts = pd.read_csv(posts_f)
     comms = pd.read_csv(comms_f)
+
+    # sample_type only exists in months collected after the Phase 3 survivorship-
+    # bias fix (collect_data_v2.py's fetch_posts_random) — months collected
+    # before that are entirely 'top' posts, so backfill the column rather than
+    # branch on its presence everywhere downstream.
+    if 'sample_type' not in posts.columns:
+        posts['sample_type'] = 'top'
 
     # Derived columns
     posts['kpd']         = (posts['author_link_karma'] + posts['author_comment_karma']) / posts['author_account_age_days'].clip(lower=1)
@@ -470,14 +478,197 @@ def analyze_distribution(posts: pd.DataFrame, comms: pd.DataFrame) -> dict:
     return result
 
 
+# ── Account-risk rollup (drives final_score) ───────────────────────────────────
+# Production score from score_accounts.py's validated model, rolled up to this
+# month's (subreddit, month) activity. See module docstring at top of file for
+# why this replaced the 6-component weighted blend.
+#
+# Runs on posts_top ONLY (see main()) — deliberately, not the fuller pool
+# Phase 3 collects. The random supplement's job is calibration/diagnostic
+# input (see analyze_baseline_comparison below), not part of what gets
+# reported: top posts are what the subreddit's audience actually sees, so
+# that's the population final_score should describe. Scoring the full pool
+# would also make every month before/after the Phase 3 collection change
+# incomparable — mixing "more accounts counted" into a trend line alongside
+# real month-to-month change.
+#
+# risk_month (account, risk_score, high_risk) is computed ONCE in main() via
+# anomaly_detection.month_relative_high_risk and threaded into every function
+# below that needs it — "high risk" is month-relative (top decile of THIS
+# month's active accounts), not a fixed global population threshold. See
+# that function's docstring for why: a global threshold quietly tracks
+# population composition drift (the active population trending younger over
+# 2025-06→2026-07) rather than actual relative risk.
+
+def analyze_account_risk(posts: pd.DataFrame, comms: pd.DataFrame, risk_month: pd.DataFrame) -> dict:
+    if risk_month is None:
+        print(f"  WARNING: {RISK_SCORES} not found — run score_accounts.py first. "
+              f"final_score will be 0 for all subs this run.")
+        return {sub: {'final_score': 0.0, 'pct_high_risk_activity': None, 'n_activity_rows': 0}
+                for sub in posts['subreddit'].unique()}
+
+    from anomaly_detection import rollup_to_subreddit
+    rollup = rollup_to_subreddit(posts, comms, risk_month, score_col='high_risk')
+    rollup = rollup.set_index('subreddit')
+
+    result = {}
+    for sub in posts['subreddit'].unique():
+        if sub in rollup.index:
+            row = rollup.loc[sub]
+            pct = float(row['avg_score']) * 100
+            result[sub] = {
+                'final_score':             round(pct, 1),
+                'pct_high_risk_activity':  round(pct, 1),
+                'n_activity_rows':         int(row['n_activity_rows']),
+            }
+        else:
+            result[sub] = {'final_score': 0.0, 'pct_high_risk_activity': None, 'n_activity_rows': 0}
+    return result
+
+
+# ── Baseline comparison (diagnostic, calibration-only — not scored) ───────────
+# Uses the Phase 3 random supplement (posts_random) purely to answer "does
+# reaching top status correlate with high-risk posters, relative to an
+# unfiltered baseline?" — NOT to expand what final_score counts. Only
+# meaningful for months with a random supplement (Phase 3 onward); returns
+# None for earlier months rather than a misleading 0.
+
+def analyze_baseline_comparison(posts: pd.DataFrame, risk_month: pd.DataFrame) -> dict:
+    if risk_month is None:
+        return {}
+    p = posts.merge(risk_month[['account', 'high_risk']], left_on='author', right_on='account', how='left')
+
+    result = {}
+    for sub in posts['subreddit'].unique():
+        sub_p = p[p['subreddit'] == sub]
+        top_p    = sub_p[sub_p['sample_type'] == 'top']
+        random_p = sub_p[sub_p['sample_type'] == 'random']
+
+        if len(top_p) == 0 or len(random_p) < 5:  # too few random posts for a stable baseline
+            result[sub] = {'top_poster_high_risk_pct': None, 'baseline_poster_high_risk_pct': None,
+                            'top_vs_baseline_risk_ratio': None, 'n_random_sampled': int(len(random_p))}
+            continue
+
+        top_rate    = float(top_p['high_risk'].mean() * 100)
+        random_rate = float(random_p['high_risk'].mean() * 100)
+        ratio = round(top_rate / random_rate, 2) if random_rate > 0 else None
+
+        result[sub] = {
+            'top_poster_high_risk_pct':      round(top_rate, 1),
+            'baseline_poster_high_risk_pct': round(random_rate, 1),
+            'top_vs_baseline_risk_ratio':    ratio,
+            'n_random_sampled':              int(len(random_p)),
+        }
+    return result
+
+
+# ── Post-level coordination (diagnostic — activity BY vs. SUPPORTED BY bots) ──
+# Ports V1's astroturf_density (archive/v1/scripts/analyze_data.py — dropped
+# in the V2 rebuild) onto our validated high_risk flag instead of V1's old
+# unvalidated kpd>500 heuristic. Answers a different question than
+# final_score: not "how much activity comes from high-risk accounts" but
+# "how many POSTS have a high-risk footprint, and where". commenter_only_risk
+# is the "organic-looking post, suspicious support" case specifically —
+# activity SUPPORTED BY bot-like accounts, not BY them.
+#
+# Denominator is posts that actually got comment-sampled (COMMENT_SAMPLE=10/
+# month in collect_data_v2.py), not all 40 posts — V1 could use "all posts"
+# as the denominator because it fetched commenters for every post; V2 only
+# comment-samples the top 10, so using all 40 here would silently deflate
+# every percentage by counting un-sampled posts as automatic "no".
+
+def analyze_post_coordination(posts: pd.DataFrame, comms: pd.DataFrame, risk_month: pd.DataFrame) -> dict:
+    if risk_month is None:
+        return {}
+    high_risk_set = set(risk_month[risk_month['high_risk'] == 1]['account'])
+
+    result = {}
+    for sub in posts['subreddit'].unique():
+        sub_posts = posts[posts['subreddit'] == sub].set_index('post_id')
+        sub_comms = comms[(comms['subreddit'] == sub) & comms['in_top10']]
+        sampled_pids = sub_comms['post_id'].unique()
+
+        n = len(sampled_pids)
+        if n == 0:
+            continue
+
+        fully_coord = poster_only = commenter_only = any_bad_commenter = 0
+        for pid in sampled_pids:
+            if pid not in sub_posts.index:
+                continue
+            poster_bad = sub_posts.loc[pid, 'author'] in high_risk_set
+
+            commenters = set(sub_comms[sub_comms['post_id'] == pid]['author'])
+            bad_commenters = commenters & high_risk_set
+            commenter_majority_bad = bool(commenters) and len(bad_commenters) / len(commenters) >= 0.5
+
+            if bad_commenters:
+                any_bad_commenter += 1
+            if poster_bad and commenter_majority_bad:
+                fully_coord += 1
+            elif poster_bad:
+                poster_only += 1
+            elif commenter_majority_bad:
+                commenter_only += 1
+
+        result[sub] = {
+            'pct_posts_fully_coordinated':       round(fully_coord / n * 100, 1),
+            'pct_posts_poster_only_risk':         round(poster_only / n * 100, 1),
+            'pct_posts_commenter_only_risk':      round(commenter_only / n * 100, 1),  # "supported by bots"
+            'pct_posts_any_high_risk_commenter':  round(any_bad_commenter / n * 100, 1),
+            'n_posts_sampled_for_coordination':   n,
+        }
+    return result
+
+
+# ── Co-occurrence network (diagnostic) ────────────────────────────────────────
+# Do the SAME pairs of top-10 commenters keep showing up together across
+# DIFFERENT posts in a sub-month? Coordinated-behavior literature treats
+# repeated co-occurrence on shared targets as a stronger network signal than
+# simple activity overlap (our existing cross_sub_rate/recurrence_rate),
+# since real rings act together repeatedly, not just independently-prolific
+# accounts that happen to both be active a lot.
+
+def analyze_cooccurrence(posts: pd.DataFrame, comms: pd.DataFrame) -> dict:
+    from itertools import combinations
+    from collections import Counter
+
+    result = {}
+    for sub in comms['subreddit'].unique():
+        sub_comms = comms[(comms['subreddit'] == sub) & comms['in_top10']]
+        post_groups = sub_comms.groupby('post_id')['author'].apply(set)
+        n_posts = len(post_groups)
+        if n_posts < 2:
+            result[sub] = {'repeat_pair_rate': 0.0, 'n_repeat_pairs': 0, 'max_pair_cooccurrence': 0}
+            continue
+
+        pair_counts = Counter()
+        for authors in post_groups:
+            for pair in combinations(sorted(authors), 2):
+                pair_counts[pair] += 1
+
+        repeat_pairs = {pair for pair, c in pair_counts.items() if c >= 2}
+        posts_with_repeat_pair = sum(
+            1 for authors in post_groups
+            if any(pair in repeat_pairs for pair in combinations(sorted(authors), 2))
+        )
+
+        result[sub] = {
+            'repeat_pair_rate':      round(posts_with_repeat_pair / n_posts * 100, 1),
+            'n_repeat_pairs':        len(repeat_pairs),
+            'max_pair_cooccurrence': max(pair_counts.values()) if pair_counts else 0,
+        }
+    return result
+
+
 # ── Unified scoring ───────────────────────────────────────────────────────────
 
-WEIGHTS = _load_weights()
+SEVERITY_BANDS = _load_severity_bands()
 
 def severity(score: float) -> str:
-    if score >= 70: return 'CRITICAL'
-    if score >= 40: return 'HIGH'
-    if score >= 20: return 'MODERATE'
+    if score >= SEVERITY_BANDS['critical']: return 'CRITICAL'
+    if score >= SEVERITY_BANDS['high']:     return 'HIGH'
+    if score >= SEVERITY_BANDS['moderate']: return 'MODERATE'
     return 'LOW'
 
 COMPONENT_SCORE_KEY = {
@@ -489,22 +680,32 @@ COMPONENT_SCORE_KEY = {
     'network':      'network_score',
 }
 
-def calculate_scores(acct, ring, eng, temp, dist, net) -> dict:
+def calculate_scores(risk, acct, ring, eng, temp, dist, net, coord, cooc, baseline) -> dict:
+    """final_score comes entirely from `risk` (score_accounts.py's validated
+    account-risk rollup, top-sample only). acct/ring/eng/temp/dist/net/coord/
+    cooc/baseline are all diagnostic detail attached to each row, not weighted
+    into it, so the site/narrative layer can explain *why* a sub's score moved
+    without those components silently double-counting into the number itself."""
     components = {'account': acct, 'ring': ring, 'engagement': eng,
                   'temporal': temp, 'distribution': dist, 'network': net}
-    # Only components present in WEIGHTS are summed into final_score — this is what
-    # lets the network component switch on/off purely via findings.json, no code change.
-    active = [name for name in WEIGHTS if name in components]
 
     scores = {}
-    for sub in acct:
-        if not all(sub in components[name] for name in active):
-            continue
-        final = sum(components[name][sub][COMPONENT_SCORE_KEY[name]] * WEIGHTS[name] for name in active)
-        row = {'final_score': round(float(final), 1)}
+    for sub, r in risk.items():
+        row = {
+            'final_score':            r['final_score'],
+            'pct_high_risk_activity': r['pct_high_risk_activity'],
+            'n_activity_rows':        r['n_activity_rows'],
+        }
         for name, key in COMPONENT_SCORE_KEY.items():
             if sub in components[name]:
                 row[key] = components[name][sub][key]
+        if sub in coord:
+            row['pct_posts_fully_coordinated']  = coord[sub]['pct_posts_fully_coordinated']
+            row['pct_posts_commenter_only_risk'] = coord[sub]['pct_posts_commenter_only_risk']
+        if sub in cooc:
+            row['repeat_pair_rate'] = cooc[sub]['repeat_pair_rate']
+        if sub in baseline:
+            row['top_vs_baseline_risk_ratio'] = baseline[sub]['top_vs_baseline_risk_ratio']
         scores[sub] = row
     return scores
 
@@ -530,18 +731,47 @@ def main():
 
     posts, comms = load_data(month)
     detected_month = month or posts['collection_month'].iloc[0]
-    print(f"\nData: {len(posts)} posts  {len(comms)} comment-rows  "
+    n_random = int((posts['sample_type'] == 'random').sum())
+    print(f"\nData: {len(posts)} posts ({n_random} supplementary non-top)  {len(comms)} comment-rows  "
           f"month={detected_month}  subs={posts['subreddit'].nunique()}")
 
-    print("\nRunning components…")
-    acct = analyze_accounts(posts, comms);    print("  Account signals done")
-    ring = analyze_comment_ring(posts, comms); print("  Comment ring detection done")
-    eng  = analyze_engagement(posts);          print("  Engagement structure done")
-    temp = analyze_temporal(posts);            print("  Temporal patterns done")
-    dist = analyze_distribution(posts, comms); print("  Vote distribution done")
-    net  = analyze_network(posts, comms);      print("  Network/text signals done (observational, not yet weighted into final_score)")
+    # final_score and the six diagnostic components all run on posts_top only —
+    # top posts are what the subreddit's audience actually sees, and it's what
+    # every month before Phase 3 already was, so this keeps the whole trend
+    # line comparable. The six components additionally have magic-number
+    # thresholds (decay_slope percentiles, KPD cutoffs, Gini percentile)
+    # calibrated on this exact distribution — mixing in random posts there
+    # would silently invalidate those thresholds regardless. The random
+    # supplement (posts_random) is calibration-only input to
+    # analyze_baseline_comparison — never part of what's reported.
+    posts_top    = posts[posts['sample_type'] == 'top']
+    posts_random = posts[posts['sample_type'] == 'random']
 
-    scores = calculate_scores(acct, ring, eng, temp, dist, net)
+    # "High risk" computed once, relative to THIS month's active accounts —
+    # not a fixed global population threshold. See month_relative_high_risk's
+    # docstring (anomaly_detection.py) for why. Threaded into every function
+    # below that needs it so they all use the exact same yardstick.
+    risk_month = None
+    if RISK_SCORES.exists():
+        from anomaly_detection import month_relative_high_risk
+        risk_scores = pd.read_csv(RISK_SCORES)[['account', 'risk_score']]
+        risk_month, risk_threshold = month_relative_high_risk(posts_top, comms, risk_scores)
+        print(f"  Month-relative high-risk threshold: {risk_threshold:.1f} "
+              f"(top 10% of this month's active accounts)")
+
+    print("\nRunning components…")
+    risk     = analyze_account_risk(posts_top, comms, risk_month);   print("  Account-risk rollup done (drives final_score; top-sample only)")
+    baseline = analyze_baseline_comparison(posts, risk_month);        print("  Baseline comparison done (diagnostic only, calibration use of random supplement)")
+    acct  = analyze_accounts(posts_top, comms);      print("  Account signals done (diagnostic only, top-sample only)")
+    ring  = analyze_comment_ring(posts_top, comms);  print("  Comment ring detection done (diagnostic only, top-sample only)")
+    eng   = analyze_engagement(posts_top);           print("  Engagement structure done (diagnostic only, top-sample only)")
+    temp  = analyze_temporal(posts_top);             print("  Temporal patterns done (diagnostic only, top-sample only)")
+    dist  = analyze_distribution(posts_top, comms);  print("  Vote distribution done (diagnostic only, top-sample only)")
+    net   = analyze_network(posts_top, comms);       print("  Network/text signals done (diagnostic only, top-sample only)")
+    coord = analyze_post_coordination(posts, comms, risk_month); print("  Post-level coordination done (diagnostic only)")
+    cooc  = analyze_cooccurrence(posts, comms);      print("  Co-occurrence network done (diagnostic only)")
+
+    scores = calculate_scores(risk, acct, ring, eng, temp, dist, net, coord, cooc, baseline)
 
     print("\n" + "=" * 70)
     print("BOT ACTIVITY RANKINGS (V2)")
@@ -550,23 +780,31 @@ def main():
         sorted(scores.items(), key=lambda x: x[1]['final_score'], reverse=True), 1
     ):
         sev = severity(sc['final_score'])
-        print(f"\n#{rank} r/{sub:<25} Score: {sc['final_score']:5.1f}/100  [{sev}]")
-        print(f"     Acct:{sc['account_score']:5.1f}  Ring:{sc['ring_score']:5.1f}  "
-              f"Eng:{sc['engagement_score']:5.1f}  Temp:{sc['temporal_score']:5.1f}  "
-              f"Dist:{sc['distribution_score']:5.1f}")
+        print(f"\n#{rank} r/{sub:<25} Score: {sc['final_score']:5.1f}/100  [{sev}]  "
+              f"({sc['n_activity_rows']} activity rows)")
+        print(f"     [diagnostic] Acct:{sc.get('account_score', 0):5.1f}  Ring:{sc.get('ring_score', 0):5.1f}  "
+              f"Eng:{sc.get('engagement_score', 0):5.1f}  Temp:{sc.get('temporal_score', 0):5.1f}  "
+              f"Dist:{sc.get('distribution_score', 0):5.1f}")
+        print(f"     [diagnostic] FullyCoord:{sc.get('pct_posts_fully_coordinated', 0):5.1f}%  "
+              f"CommenterOnlyRisk:{sc.get('pct_posts_commenter_only_risk', 0):5.1f}%  "
+              f"RepeatPairRate:{sc.get('repeat_pair_rate', 0):5.1f}%")
 
     output = {
         'version':          2,
         'analysis_date':    datetime.now().isoformat(),
         'month':            detected_month,
-        'weights':          WEIGHTS,
+        'severity_bands':   SEVERITY_BANDS,
         'unified_scores':   scores,
+        'account_risk_analysis': risk,
         'account_analysis': acct,
         'ring_analysis':    ring,
         'engagement_analysis': eng,
         'temporal_analysis':   temp,
         'distribution_analysis': dist,
         'network_analysis':    net,
+        'coordination_analysis':  coord,
+        'cooccurrence_analysis':  cooc,
+        'baseline_comparison':    baseline,
     }
 
     ts        = datetime.now().strftime("%Y%m%d_%H%M%S")

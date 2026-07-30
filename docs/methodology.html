@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RedditWatch — Methodology</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0d1117; --surface: #161b22; --surface2: #21262d; --border: #30363d;
+    --text: #e6edf3; --muted: #8b949e; --hdr-bg: rgba(13,17,23,0.94);
+    --grid: #21262d; --tick: #8b949e;
+    --series-blue: #3987e5; --status-critical: #d03b3b; --status-serious: #ec835a;
+    --status-warning: #fab219; --status-good: #0ca30c; --diverge-blue: #3987e5; --diverge-red: #e66767;
+  }
+  [data-theme="light"] {
+    --bg: #ffffff; --surface: #f6f8fa; --surface2: #eaeef2; --border: #d0d7de;
+    --text: #1f2328; --muted: #636c76; --hdr-bg: rgba(255,255,255,0.94);
+    --grid: #e8ecf0; --tick: #636c76;
+    --series-blue: #2a78d6; --status-critical: #d03b3b; --status-serious: #ec835a;
+    --status-warning: #fab219; --status-good: #0ca30c; --diverge-blue: #2a78d6; --diverge-red: #e34948;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, sans-serif; font-size: 14px; line-height: 1.6; }
+  a { color: var(--series-blue); text-decoration: none; }
+  header { position: sticky; top: 0; z-index: 10; background: var(--hdr-bg); backdrop-filter: blur(8px); border-bottom: 1px solid var(--border); }
+  .hdr-inner { max-width: 1100px; margin: 0 auto; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+  .brand { font-weight: 800; font-size: 15px; }
+  .nav-tab { color: var(--muted); font-size: 13px; font-weight: 600; padding: 6px 10px; border-radius: 6px; }
+  .nav-tab.active { color: var(--text); background: var(--surface2); }
+  .theme-btn { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 4px 10px; cursor: pointer; font-size: 15px; color: var(--text); }
+  main { max-width: 900px; margin: 0 auto; padding: 24px 20px 60px; }
+  .section { margin-top: 36px; }
+  .section-title { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); margin-bottom: 12px; }
+  h2 { font-size: 18px; margin-bottom: 8px; }
+  p { color: var(--muted); margin-bottom: 10px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 18px; }
+  .chart-wrap { position: relative; }
+  abbr[title] { text-decoration: underline dotted; text-underline-offset: 2px; cursor: help; }
+
+  .intro-box { background: var(--surface2); border-radius: 10px; padding: 12px 16px; margin-bottom: 18px; font-size: 12.5px; color: var(--muted); }
+  .intro-box summary { cursor: pointer; font-weight: 700; color: var(--text); font-size: 13px; list-style: none; }
+  .intro-box summary::-webkit-details-marker { display: none; }
+  .intro-box summary::before { content: '▸ '; }
+  .intro-box[open] summary::before { content: '▾ '; }
+  .intro-box[open] summary { margin-bottom: 8px; }
+  .intro-box p { margin-top: 6px; margin-bottom: 0; }
+
+  .stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px,1fr)); gap: 12px; margin-bottom: 16px; }
+  .stat-tile { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
+  .stat-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px; }
+  .stat-value { font-size: 22px; font-weight: 800; }
+  .stat-note { font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+  .tier-card { padding: 14px 16px; border-radius: 10px; margin-bottom: 10px; border-left: 3px solid; }
+  .tier-a { background: var(--surface2); border-left-color: var(--status-good); }
+  .tier-b { background: var(--surface2); border-left-color: var(--status-warning); }
+  .tier-c { background: var(--surface2); border-left-color: var(--muted); }
+  .tier-name { font-weight: 700; font-size: 13px; margin-bottom: 4px; }
+  .tier-body { font-size: 12px; color: var(--muted); }
+
+  .legend-row { display: flex; gap: 18px; font-size: 12px; color: var(--muted); margin-top: 8px; }
+  .legend-swatch { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: middle; }
+
+  footer { max-width: 900px; margin: 40px auto 0; padding: 20px; color: var(--muted); font-size: 12px; border-top: 1px solid var(--border); }
+</style>
+</head>
+<body>
+<header>
+  <div class="hdr-inner">
+    <div class="brand">RedditWatch</div>
+    <nav style="display:flex;gap:6px">
+      <a class="nav-tab" href="report.html">Report</a>
+      <a class="nav-tab active" href="methodology.html">Methodology</a>
+    </nav>
+    <button class="theme-btn" id="themeToggle">🌙</button>
+  </div>
+</header>
+
+<main>
+  <details class="intro-box" style="margin-top:0">
+    <summary>How to read this page</summary>
+    <p>This page is the "show your work" behind the <a href="report.html">Report</a> page's score. If a term here is unfamiliar (<abbr title="Karma per day — total karma ÷ account age">kpd</abbr>, <abbr title="Area under the ROC curve — 0.5 = coin flip, 1.0 = perfect classifier">AUC</abbr>, <abbr title="Coefficient of variation — spread of values relative to their average">CV</abbr>, etc.), check the full <a href="report.html#glossary">glossary</a> on the Report page.</p>
+  </details>
+
+  <div class="section" style="margin-top:0">
+    <h2>How the score is built</h2>
+    <p id="pipelineSummary">Loading…</p>
+    <div class="stat-row" id="modelStats"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">The variables — standardized coefficients</div>
+    <p>Fit against the one real label this project has: whether a random sample of accounts is currently suspended or gone from Reddit (a weak, noisy proxy for "bad account" — ordinary deletion is also captured, not just enforcement). Positive = predicts "gone" more; negative = predicts it less.</p>
+    <div class="card"><div class="chart-wrap" style="height:340px"><canvas id="coefChart"></canvas></div>
+      <div class="legend-row">
+        <span><span class="legend-swatch" style="background:var(--diverge-red)"></span>Increases predicted risk</span>
+        <span><span class="legend-swatch" style="background:var(--diverge-blue)"></span>Decreases predicted risk</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Does it actually predict anything, or just describe?</div>
+    <p>Every other validation in this project was a single snapshot: score and outcome measured at the same time, which can't tell "predicts future risk" apart from "describes accounts already in decline." This backtest compares a score computed from an <strong>early</strong> window (10-13 months before the outcome was measured) against a <strong>late</strong> window (right before) — real predictive content shows up as the early window tracking the outcome almost as well as the late one.</p>
+    <div class="card"><div class="chart-wrap" style="height:180px"><canvas id="backtestChart"></canvas></div></div>
+    <p id="backtestVerdict" style="margin-top:10px;font-size:13px"></p>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Severity bands</div>
+    <p>Not fixed thresholds — percentiles of the actual observed score distribution across every (subreddit, month) this pipeline has scored.</p>
+    <div class="stat-row" id="bandStats"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">What's validated vs. what's descriptive</div>
+    <div class="tier-card tier-a">
+      <div class="tier-name">Tier A — drives the score, or built directly on it</div>
+      <div class="tier-body">final_score (the account-risk rollup) plus the coordination, co-occurrence, and top-vs-baseline composites on the Report page. These all use the same validated high-risk classification above — different aggregations of one validated signal, not separate unproven heuristics.</div>
+    </div>
+    <div class="tier-card tier-b">
+      <div class="tier-name">Tier B — descriptive only, never validated</div>
+      <div class="tier-body">The six legacy components (account/ring/engagement/temporal/distribution/network) shown on the Report page. These used to <em>be</em> the score, hand-weighted, before this model replaced them — they were never individually checked against real evidence. They're real, computable facts about posting patterns, timing, and karma distribution — useful context, not proof of anything. Model improvement elsewhere doesn't make these more valid; they're exactly as validated as they always were.</div>
+    </div>
+    <div class="tier-card tier-c">
+      <div class="tier-name">Data collection — top-sample only, by design</div>
+      <div class="tier-body">Every month, only the top ~40 posts per subreddit are scored — the posts a subreddit's audience actually sees, which is the population worth tracking. A supplementary random sample (July 2026 onward) exists purely as calibration input, never as part of the reported score: it showed that posts reaching "top" status have a somewhat higher concentration of high-risk posters (~35%) than an unfiltered baseline (~30%, p=0.044) — and that top commenters (18% high-risk) run much cleaner than posters, since getting voted into the top 10 requires real humans, while posting requires nothing.</div>
+    </div>
+  </div>
+</main>
+
+<footer>
+  Full scoring code: <code>scripts/score_accounts.py</code>, <code>scripts/analyze_data_v2.py</code>. Weak-label fit: <code>scripts/scale_weak_labels.py</code>. Backtest: <code>scripts/backtest_predictive.py</code>.
+</footer>
+
+<script>
+function initTheme() {
+  const saved = localStorage.getItem('theme');
+  if (saved) document.documentElement.setAttribute('data-theme', saved);
+  const btn = document.getElementById('themeToggle');
+  const upd = () => btn.textContent = document.documentElement.getAttribute('data-theme') === 'light' ? '🌙' : '☀️';
+  upd();
+  btn.onclick = () => {
+    const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+    document.documentElement.setAttribute('data-theme', isLight ? 'dark' : 'light');
+    localStorage.setItem('theme', isLight ? 'dark' : 'light');
+    upd();
+  };
+}
+function cssVar(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+
+const FEATURE_LABELS = {
+  account_age_days: 'Account age (days)', n_comments: 'Comments in-corpus', n_posts: 'Posts in-corpus',
+  n_subs: 'Subreddits active in', comments_per_day: 'Comments/day (in-corpus rate)',
+  pct_first5: '% comments in first-5', pct_top10: '% comments in top-10', unverified: 'Unverified email',
+  link_ratio_log: 'Link-karma ratio (log)', kpd_log: 'Karma/day, lifetime (log)',
+};
+
+async function init() {
+  initTheme();
+  const findings = await (await fetch(`data_v2/findings.json?_=${Date.now()}`)).json();
+  const model = findings.account_model || {};
+  const backtest = findings.predictive_backtest || {};
+  const bands = findings.severity_bands || {};
+
+  const coefs = Object.entries(model.coefficients || {}).sort((a,b) => Math.abs(b[1]) - Math.abs(a[1]));
+  const nFeatures = coefs.length;
+
+  document.getElementById('pipelineSummary').textContent =
+    `${nFeatures} account-level features → one logistic regression → one number per account (risk tier) → rolled up to one number per subreddit-month. That's the entire scoring pipeline. Everything else on this site is diagnostic detail, not an input.`;
+
+  document.getElementById('modelStats').innerHTML = `
+    <div class="stat-tile"><div class="stat-label">Input variables</div><div class="stat-value">${nFeatures}</div></div>
+    <div class="stat-tile"><div class="stat-label">Weak-label sample</div><div class="stat-value">${model.source_n_sampled ?? '—'}</div><div class="stat-note">accounts checked live</div></div>
+    <div class="stat-tile"><div class="stat-label">CV ROC-AUC</div><div class="stat-value">${(model.source_cv_roc_auc_mean ?? 0).toFixed(3)}</div><div class="stat-note">0.5 = coin flip, 1.0 = perfect</div></div>
+    <div class="stat-tile"><div class="stat-label">Accounts scored</div><div class="stat-value">${(model.n_accounts_scored ?? 0).toLocaleString()}</div></div>
+  `;
+  const labels = coefs.map(([k]) => FEATURE_LABELS[k] || k);
+  const values = coefs.map(([,v]) => v);
+  const redraw = coefs.map(([,v]) => v >= 0 ? cssVar('--diverge-red') : cssVar('--diverge-blue'));
+  new Chart(document.getElementById('coefChart').getContext('2d'), {
+    type: 'bar',
+    data: { labels, datasets: [{ data: values, backgroundColor: redraw, borderRadius: 3, barThickness: 16 }] },
+    options: {
+      indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => `coef: ${c.raw.toFixed(3)}` } } },
+      scales: {
+        x: { grid: { color: cssVar('--grid') }, ticks: { color: cssVar('--tick') }, title: { display: true, text: 'standardized coefficient', color: cssVar('--tick') } },
+        y: { grid: { display: false }, ticks: { color: cssVar('--text'), font: { size: 11 } } },
+      },
+    },
+  });
+
+  new Chart(document.getElementById('backtestChart').getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels: ['Early window (2025-06..09)', 'Late window (2026-04..07)'],
+      datasets: [{ data: [backtest.early_window_spearman_r ?? 0, backtest.late_window_spearman_r ?? 0],
+        backgroundColor: [cssVar('--series-blue'), cssVar('--status-good')], borderRadius: 4, barThickness: 40 }],
+    },
+    options: {
+      indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => `Spearman r = ${c.raw.toFixed(3)}` } } },
+      scales: {
+        x: { min: 0, max: 1, grid: { color: cssVar('--grid') }, ticks: { color: cssVar('--tick') }, title: { display: true, text: 'correlation with current gone-rate', color: cssVar('--tick') } },
+        y: { grid: { display: false }, ticks: { color: cssVar('--text') } },
+      },
+    },
+  });
+  document.getElementById('backtestVerdict').textContent = backtest.verdict || '';
+
+  document.getElementById('bandStats').innerHTML = `
+    <div class="stat-tile"><div class="stat-label">Moderate</div><div class="stat-value">≥ ${bands.moderate ?? '—'}</div></div>
+    <div class="stat-tile"><div class="stat-label">High</div><div class="stat-value">≥ ${bands.high ?? '—'}</div></div>
+    <div class="stat-tile"><div class="stat-label">Critical</div><div class="stat-value">≥ ${bands.critical ?? '—'}</div></div>
+    <div class="stat-tile"><div class="stat-label">Based on</div><div class="stat-value">${bands.n_sub_months ?? '—'}</div><div class="stat-note">sub-months observed</div></div>
+  `;
+}
+init();
+</script>
+</body>
+</html>
