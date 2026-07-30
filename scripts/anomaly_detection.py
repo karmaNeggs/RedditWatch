@@ -32,11 +32,58 @@ ROOT       = Path(__file__).parent.parent
 DATA_DIR   = ROOT / 'data' / 'v2'
 OUTPUT_DIR = ROOT / 'output' / 'v2'
 
+OLD_ACCOUNT_DAYS = 180  # threshold for the old-account activity interaction tested below
+
 FEATURE_COLS = [
-    'kpd', 'link_ratio', 'account_age_days', 'unverified',
-    'n_posts', 'n_comments', 'n_subs', 'n_months',
-    'pct_first5', 'pct_top10', 'avg_comment_depth',
+    'kpd_log', 'link_ratio_log', 'account_age_days', 'unverified',
+    'n_posts', 'n_comments', 'n_subs',
+    'pct_first5', 'pct_top10',
+    'comments_per_day',
 ]
+# Input-sanitization pass (see project notes): a distributional check found
+# kpd and link_ratio severely right-skewed (skew 27 and 41 — max value
+# 1,000-1,500x the median), so a handful of outliers dominated their
+# standardized coefficients under plain StandardScaler. log1p-transformed
+# here (kpd_log, link_ratio_log) — this alone let both contribute real
+# weight (+0.03 -> +0.18 and +0.08 respectively) instead of being squashed.
+# A VIF check found n_months severely collinear (VIF=15.4, over the "strong
+# multicollinearity" line of 10) with n_subs/n_comments — three overlapping
+# "activity breadth" measures competing for the same variance, which likely
+# explains n_months' persistently counter-intuitive negative sign across
+# every earlier test. Dropped. msgs_per_day (n_posts+n_comments combined)
+# replaced with comments_per_day alone — comments dominate accounts' activity
+# in this corpus (n_posts is 75% zero, since being a top-40 POST author is
+# far rarer than commenting), and SHAP importance showed msgs_per_day's
+# coefficient overstated its real per-observation contribution (rank #3 by
+# |coefficient| vs. #7 by mean|SHAP|) relative to comments_per_day alone.
+#
+# Net effect: best CV-AUC of any variant tested (0.6632 vs. 0.6582 before).
+# Backtest correlation is a genuine trade, not a clean win (early_r
+# 0.695->0.660, late_r 0.734->0.774, both still highly significant) — adopted
+# anyway on independent statistical-hygiene grounds (real skew, real VIF>10
+# collinearity, real SHAP/coefficient divergence all fixed), not because the
+# noisy n=25 backtest moved in one clean direction. First deviation this
+# project has made from requiring an unambiguous backtest win before shipping
+# a feature change — a deliberate, discussed exception, not a relaxed bar
+# going forward.
+#
+# avg_comment_depth dropped earlier: tested and confirmed genuinely inert
+# (coefficient was already 0.000) — removing it produced IDENTICAL AUC and
+# backtest correlations to three decimal places. unverified was tested
+# alongside it (mixed, tiny effect in both directions, within CV noise) and
+# kept — no demonstrated improvement from dropping it. old_x_msgs_per_day
+# (age>=180d AND top-quartile activity-for-old-accounts interaction) was
+# tested and dropped: a real-looking bivariate ~2x gone-rate lift didn't
+# survive the full multivariate fit (near-zero net contribution, AUC flat-to-
+# worse) — classic confounding with the other already-included activity/
+# tenure features. Batch-mate-count and cross-sub-timing (network-style
+# candidates) showed the same pattern: real bivariate signal, redundant once
+# fit alongside existing features. pct_controversial (Reddit's own
+# controversiality flag, backfilled corpus-wide) had the largest stable
+# coefficient of any tested candidate (~-1.0) and passed full-population-
+# coverage testing, but never moved the backtest number at all — flagged as
+# a real account-level signal our current n=25 validation instrument likely
+# lacks the resolution to confirm at the aggregate level, not shipped.
 
 
 def load_corpus():
@@ -108,6 +155,17 @@ def build_account_features(posts: pd.DataFrame, comms: pd.DataFrame) -> pd.DataF
     df['link_ratio'] = df['link_karma'].fillna(0) / (df['comment_karma'].fillna(0).clip(lower=0) + 1)
     df['unverified'] = (df['verified'] == False).astype(int)  # noqa: E712 — True/False/NaN, not truthy check
 
+    # kpd/link_ratio are severely right-skewed (see FEATURE_COLS comment) —
+    # log1p-transformed versions are what actually go into the model.
+    # comments_per_day: n_posts/n_comments are only what showed up in *our*
+    # top-40 sample, not the account's true Reddit-wide activity — a narrower
+    # proxy, not a real site-wide rate. Comments only, not posts+comments
+    # (msgs_per_day) — see FEATURE_COLS comment for why.
+    df['kpd_log']         = np.log1p(df['kpd'].clip(lower=0))
+    df['link_ratio_log']  = np.log1p(df['link_ratio'].clip(lower=0))
+    df['comments_per_day'] = df['n_comments'] / df['account_age_days'].clip(lower=1)
+    df['msgs_per_day']     = (df['n_posts'] + df['n_comments']) / df['account_age_days'].clip(lower=1)  # kept for diagnostics/reference, not in FEATURE_COLS
+
     df = df.dropna(subset=['account_age_days'])
     df.index.name = 'account'
     return df.reset_index()
@@ -148,6 +206,67 @@ def per_subreddit_rollup(df_scored: pd.DataFrame, posts: pd.DataFrame, comms: pd
     rollup['pct_flagged'] = (rollup['pct_flagged'] * 100).round(1)
     rollup['avg_anomaly_score'] = rollup['avg_anomaly_score'].round(1)
     return rollup.sort_values('avg_anomaly_score', ascending=False)
+
+
+def rollup_to_subreddit(posts: pd.DataFrame, comms: pd.DataFrame, account_scores: pd.DataFrame,
+                          score_col: str = 'score') -> pd.DataFrame:
+    """
+    Generic version of per_subreddit_rollup's activity-weighting for any
+    per-account score column (not just IsolationForest's anomaly_score) —
+    used by score_accounts.py to roll the production risk score up to
+    (subreddit, month) using that period's own posts/comms activity rows.
+    """
+    p = posts.rename(columns={'author': 'account'})[['account', 'subreddit']]
+    c = comms.rename(columns={'author': 'account'})[['account', 'subreddit']]
+    activity = pd.concat([p, c], ignore_index=True)
+
+    merged = activity.merge(account_scores[['account', score_col]], on='account', how='inner')
+    rollup = merged.groupby('subreddit').agg(
+        avg_score=(score_col, 'mean'),
+        n_activity_rows=('account', 'count'),
+    ).reset_index()
+    rollup['avg_score'] = rollup['avg_score'].round(2)
+    return rollup
+
+
+def month_active_accounts(posts_top: pd.DataFrame, comms: pd.DataFrame) -> pd.Series:
+    """Accounts active this month: top-sample posters + top-10 commenters."""
+    posters    = posts_top['author']
+    commenters = comms[comms['in_top10']]['author']
+    return pd.concat([posters, commenters], ignore_index=True)
+
+
+def month_relative_high_risk(posts_top: pd.DataFrame, comms: pd.DataFrame,
+                               risk_score_df: pd.DataFrame, percentile: int = 90) -> tuple[pd.DataFrame, float]:
+    """
+    "High risk" relative to THIS MONTH's active accounts, not a fixed global
+    population threshold. risk_score itself is a fixed lifetime value per
+    account (age/kpd/etc. captured once, at first-seen — see
+    build_account_features), so a *global* top-decile threshold quietly
+    tracks the composition of who's active each month rather than any
+    account's risk changing: if the whole active population trends younger
+    over time, a fixed global cutoff flags a growing share of every single
+    month even with zero change in relative behavior. Recomputing the top
+    decile fresh each month, among that month's own active accounts, removes
+    that drift and answers "is this subreddit's activity disproportionately
+    risky compared to its contemporaries right now" instead of "...compared
+    to the full multi-year history." Tested (see project notes): removes an
+    almost-perfectly monotonic 13-month score climb (4.6→23.0 avg) down to a
+    flat ~10 baseline, while barely moving predictive validity (early/late
+    backtest correlation 0.668/0.794 → 0.659/0.759).
+
+    Falls back to the population-wide percentile if a month has too few
+    active accounts (<10) for a stable month-specific cutoff.
+    """
+    active = month_active_accounts(posts_top, comms).unique()
+    active_scores = risk_score_df[risk_score_df['account'].isin(active)]
+    if len(active_scores) < 10:
+        threshold = float(risk_score_df['risk_score'].quantile(percentile / 100))
+    else:
+        threshold = float(active_scores['risk_score'].quantile(percentile / 100))
+    out = risk_score_df.copy()
+    out['high_risk'] = (out['risk_score'] >= threshold).astype(int)
+    return out, threshold
 
 
 def parse_args():

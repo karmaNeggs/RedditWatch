@@ -4,6 +4,13 @@ Generate static site data from analysis outputs.
 V1: reads output/analysis_*.json        → docs/data/
 V2: reads output/v2/analysis_*.json     → docs/data_v2/
 
+V2 also generates a narrative layer (headline/toppers/movers/curated findings)
+on top of the per-sub numbers — see build_narrative(). This replaced the old
+approach of just re-projecting every computed field and letting a static,
+ever-growing F1-F10 findings list sit on the homepage: the dashboard's job is
+"here's this month, here's the trend, here's who moved and why, here's what's
+actually worth knowing" — not a raw data dump.
+
 Usage:
   python3 scripts/generate_site.py           # V1
   python3 scripts/generate_site.py --v2      # V2
@@ -73,10 +80,31 @@ OUTPUT_DIR    = ROOT / 'output'        # default; overridden in main()
 DOCS_DATA_DIR = ROOT / 'docs' / 'data' # default; overridden in main()
 
 
-def get_severity(score):
-    if score >= 70: return 'critical'
-    if score >= 40: return 'high'
-    if score >= 20: return 'moderate'
+def load_severity_bands() -> dict:
+    """Same bands score_accounts.py calibrated and analyze_data_v2.py scores
+    against — read from findings.json so this file never has its own
+    hardcoded copy to drift out of sync (it did, silently, until this
+    rewrite: this function used to hardcode 20/40/70, the pre-Phase-1
+    fixed thresholds, which no longer mean anything on the 0-100
+    pct-high-risk-activity scale)."""
+    findings_path = ROOT / 'reports' / 'findings.json'
+    defaults = {'moderate': 20.0, 'high': 40.0, 'critical': 70.0}
+    if findings_path.exists():
+        try:
+            with open(findings_path) as f:
+                bands = json.load(f).get('severity_bands', {})
+            if all(k in bands for k in ('moderate', 'high', 'critical')):
+                return bands
+        except Exception:
+            pass
+    return defaults
+
+
+def get_severity(score, bands=None):
+    bands = bands or load_severity_bands()
+    if score >= bands['critical']: return 'critical'
+    if score >= bands['high']:     return 'high'
+    if score >= bands['moderate']: return 'moderate'
     return 'low'
 
 
@@ -174,15 +202,21 @@ def build_month_doc(month, dt, raw):
     }
 
 
-def build_month_doc_v2(month, dt, raw):
-    """Build month doc from a V2 analysis JSON (5-component schema)."""
-    scores   = raw.get('unified_scores', {})
-    acct_a   = raw.get('account_analysis', {})
-    ring_a   = raw.get('ring_analysis', {})
-    eng_a    = raw.get('engagement_analysis', {})
-    temp_a   = raw.get('temporal_analysis', {})
-    dist_a   = raw.get('distribution_analysis', {})
-    net_a    = raw.get('network_analysis', {})
+def build_month_doc_v2(month, dt, raw, bands):
+    """Build month doc from a V2 analysis JSON. final_score is the validated
+    account-risk rollup (score_accounts.py) — everything else here is
+    diagnostic detail, kept per-sub so the narrative layer (build_narrative)
+    can explain *why* a score moved, not just that it did."""
+    scores  = raw.get('unified_scores', {})
+    acct_a  = raw.get('account_analysis', {})
+    ring_a  = raw.get('ring_analysis', {})
+    eng_a   = raw.get('engagement_analysis', {})
+    temp_a  = raw.get('temporal_analysis', {})
+    dist_a  = raw.get('distribution_analysis', {})
+    net_a   = raw.get('network_analysis', {})
+    coord_a = raw.get('coordination_analysis', {})
+    cooc_a  = raw.get('cooccurrence_analysis', {})
+    base_a  = raw.get('baseline_comparison', {})
 
     subreddits = {}
     for sub, sc in scores.items():
@@ -192,14 +226,27 @@ def build_month_doc_v2(month, dt, raw):
         te = temp_a.get(sub, {})
         di = dist_a.get(sub, {})
         ne = net_a.get(sub, {})
+        co = coord_a.get(sub, {})
+        cc = cooc_a.get(sub, {})
+        ba = base_a.get(sub, {})
 
         subreddits[sub] = {
-            'final_score':        round(sc.get('final_score', 0), 1),
+            'final_score':             round(sc.get('final_score', 0), 1),
+            'severity':                get_severity(sc.get('final_score', 0), bands),
+            'pct_high_risk_activity':  sc.get('pct_high_risk_activity'),
+            'n_activity_rows':         sc.get('n_activity_rows'),
+            # diagnostic component scores — not weighted into final_score, kept
+            # for the "why did this move" narrative and the Explore/detail view
             'account_score':      round(sc.get('account_score', 0), 1),
-            'ring_score':         round(sc.get('ring_score', 0), 1),
-            'engagement_score':   round(sc.get('engagement_score', 0), 1),
-            'temporal_score':     round(sc.get('temporal_score', 0), 1),
-            'distribution_score': round(sc.get('distribution_score', 0), 1),
+            'ring_score':          round(sc.get('ring_score', 0), 1),
+            'engagement_score':    round(sc.get('engagement_score', 0), 1),
+            'temporal_score':      round(sc.get('temporal_score', 0), 1),
+            'distribution_score':  round(sc.get('distribution_score', 0), 1),
+            'pct_posts_fully_coordinated':      co.get('pct_posts_fully_coordinated'),
+            'pct_posts_commenter_only_risk':    co.get('pct_posts_commenter_only_risk'),
+            'pct_posts_any_high_risk_commenter': co.get('pct_posts_any_high_risk_commenter'),
+            'repeat_pair_rate':                 cc.get('repeat_pair_rate'),
+            'top_vs_baseline_risk_ratio':        ba.get('top_vs_baseline_risk_ratio'),
             'details': {
                 'new_poster_pct':      ac.get('new_poster_pct'),
                 'new_commenter_pct':   ac.get('new_commenter_pct'),
@@ -227,6 +274,8 @@ def build_month_doc_v2(month, dt, raw):
                 'near_dupe_rate':      ne.get('near_dupe_rate'),
                 'cross_sub_rate':      ne.get('cross_sub_rate'),
                 'gini_score':          ne.get('gini_score'),
+                'n_repeat_pairs':      cc.get('n_repeat_pairs'),
+                'max_pair_cooccurrence': cc.get('max_pair_cooccurrence'),
             },
         }
 
@@ -234,8 +283,157 @@ def build_month_doc_v2(month, dt, raw):
         'version':       2,
         'month':         month,
         'analysis_date': dt.isoformat(),
-        'weights':       raw.get('weights', {}),
+        'severity_bands': bands,
         'subreddits':    subreddits,
+    }
+
+
+# ── Narrative generation ────────────────────────────────────────────────────
+# Turns the per-sub numbers into "here's this month, here's who moved and
+# why, here's what's actually worth knowing" — regenerated fresh every run,
+# not accumulated like the old static F1-F10 findings list.
+
+DRIVER_FIELDS = {
+    'account_score':                    'account-risk signals',
+    'ring_score':                       'comment-ring timing',
+    'engagement_score':                 'engagement structure (votes vs. discussion)',
+    'temporal_score':                   'posting-time patterns',
+    'distribution_score':               'score/comment distribution shape',
+    'pct_posts_fully_coordinated':      'fully-coordinated posts',
+    'pct_posts_commenter_only_risk':    'suspicious-commenter support on clean-looking posts',
+    'repeat_pair_rate':                 'repeat-commenter-pair coordination',
+}
+
+
+def _biggest_secondary_shift(sub, this_doc, prev_doc):
+    """Which diagnostic signal moved the most for this sub between two
+    months? NOT a causal claim — final_score is the account-risk rollup
+    alone (see score_accounts.py); none of DRIVER_FIELDS are summed into it
+    post-Phase-1, so a diagnostic can move opposite to final_score with no
+    contradiction. This reports "what else shifted", not "what caused it" —
+    keep the wording in any caller honest about that distinction. Returns
+    (field_label, delta) or None if no prior month."""
+    if prev_doc is None:
+        return None
+    this_row = this_doc['subreddits'].get(sub, {})
+    prev_row = prev_doc['subreddits'].get(sub, {})
+    if not this_row or not prev_row:
+        return None
+
+    best = None
+    for field, label in DRIVER_FIELDS.items():
+        a, b = this_row.get(field), prev_row.get(field)
+        if a is None or b is None:
+            continue
+        delta = round(a - b, 1)
+        if best is None or abs(delta) > abs(best[1]):
+            best = (label, delta)
+    return best
+
+
+def build_narrative(month, this_doc, prev_doc, months_back_doc):
+    """
+    months_back_doc: the doc from ~3 months prior, for a longer-baseline
+    trend line ("rising over the last quarter" vs. "up from last month" can
+    tell different stories on noisy monthly data).
+    """
+    subs = this_doc['subreddits']
+    all_scores = [d['final_score'] for d in subs.values()]
+    if not all_scores:
+        return {'headline': {}, 'toppers': [], 'risers': [], 'fallers': [], 'curated_findings': []}
+
+    avg_score = round(sum(all_scores) / len(all_scores), 1)
+    pct_mod   = round(sum(1 for s in all_scores if s >= this_doc['severity_bands']['moderate']) / len(all_scores) * 100)
+    pct_high  = round(sum(1 for s in all_scores if s >= this_doc['severity_bands']['high']) / len(all_scores) * 100)
+
+    prev_avg = None
+    deltas = {}
+    if prev_doc:
+        prev_scores = {s: d['final_score'] for s, d in prev_doc['subreddits'].items()}
+        prev_all = list(prev_scores.values())
+        if prev_all:
+            prev_avg = round(sum(prev_all) / len(prev_all), 1)
+        for sub, d in subs.items():
+            if sub in prev_scores:
+                deltas[sub] = round(d['final_score'] - prev_scores[sub], 1)
+
+    toppers = sorted(subs.items(), key=lambda kv: -kv[1]['final_score'])[:5]
+    toppers = [{'subreddit': s, 'final_score': d['final_score']} for s, d in toppers]
+
+    risers  = sorted(deltas.items(), key=lambda kv: -kv[1])[:5]
+    fallers = sorted(deltas.items(), key=lambda kv: kv[1])[:5]
+
+    def _mover_entry(sub, delta):
+        shift = _biggest_secondary_shift(sub, this_doc, prev_doc)
+        entry = {'subreddit': sub, 'final_score': subs[sub]['final_score'], 'delta': delta}
+        if shift:
+            entry['secondary_signal_label'], entry['secondary_signal_delta'] = shift
+        return entry
+
+    risers_out  = [_mover_entry(s, d) for s, d in risers  if d > 0]
+    fallers_out = [_mover_entry(s, d) for s, d in fallers if d < 0]
+
+    biggest_riser  = risers_out[0]  if risers_out  else None
+    biggest_faller = fallers_out[0] if fallers_out else None
+
+    headline = {
+        'avg_score': avg_score,
+        'avg_score_delta': round(avg_score - prev_avg, 1) if prev_avg is not None else None,
+        'pct_moderate_plus': pct_mod,
+        'pct_high_plus': pct_high,
+        'sub_count': len(all_scores),
+        'biggest_riser': biggest_riser,
+        'biggest_faller': biggest_faller,
+    }
+
+    curated = []
+
+    if biggest_riser:
+        line = f"r/{biggest_riser['subreddit']} rose the most this month ({biggest_riser['delta']:+.1f} pts, now {biggest_riser['final_score']:.1f})"
+        if 'secondary_signal_label' in biggest_riser:
+            line += (f" — also notable: {biggest_riser['secondary_signal_label']} shifted "
+                      f"{biggest_riser['secondary_signal_delta']:+.1f} pts this month.")
+        else:
+            line += "."
+        curated.append(line)
+
+    if biggest_faller:
+        line = f"r/{biggest_faller['subreddit']} fell the most this month ({biggest_faller['delta']:+.1f} pts, now {biggest_faller['final_score']:.1f})"
+        if 'secondary_signal_label' in biggest_faller:
+            line += (f" — also notable: {biggest_faller['secondary_signal_label']} shifted "
+                      f"{biggest_faller['secondary_signal_delta']:+.1f} pts this month.")
+        else:
+            line += "."
+        curated.append(line)
+
+    commenter_only = [(s, d.get('pct_posts_commenter_only_risk') or 0) for s, d in subs.items()]
+    commenter_only.sort(key=lambda kv: -kv[1])
+    if commenter_only and commenter_only[0][1] > 0:
+        sub, pct = commenter_only[0]
+        curated.append(f"r/{sub} shows the clearest 'clean post, suspicious support' pattern this month "
+                        f"({pct:.0f}% of sampled posts had a low-risk poster but majority-high-risk top commenters).")
+
+    repeat_pairs = [(s, d.get('repeat_pair_rate') or 0) for s, d in subs.items()]
+    repeat_pairs.sort(key=lambda kv: -kv[1])
+    if repeat_pairs and repeat_pairs[0][1] > 0:
+        sub, pct = repeat_pairs[0]
+        curated.append(f"r/{sub} has the strongest repeat-commenter-pair signal this month "
+                        f"({pct:.0f}% of sampled posts had a commenter pair that also appeared together elsewhere).")
+
+    if months_back_doc:
+        mb_scores = [d['final_score'] for d in months_back_doc['subreddits'].values()]
+        if mb_scores:
+            mb_avg = round(sum(mb_scores) / len(mb_scores), 1)
+            direction = 'risen' if avg_score > mb_avg + 1 else 'fallen' if avg_score < mb_avg - 1 else 'held steady'
+            curated.append(f"Ecosystem average has {direction} over the last quarter "
+                            f"({mb_avg:.1f} → {avg_score:.1f}).")
+
+    return {
+        'headline': headline,
+        'toppers': toppers,
+        'risers': risers_out,
+        'fallers': fallers_out,
+        'curated_findings': curated[:5],
     }
 
 
@@ -263,15 +461,25 @@ def main():
         if month not in by_month or dt > by_month[month][0]:
             by_month[month] = (dt, raw)
 
+    bands = load_severity_bands() if v2 else None
     expected_subs = expected_sub_count()
     history_months = []
-    for month in sorted(by_month):
+    docs_by_month = {}  # month -> built doc, for narrative's prev/months-back lookups
+
+    sorted_months = sorted(by_month)
+    for i, month in enumerate(sorted_months):
         dt, raw = by_month[month]
-        doc = build_month_doc_v2(month, dt, raw) if v2 else build_month_doc(month, dt, raw)
+        doc = build_month_doc_v2(month, dt, raw, bands) if v2 else build_month_doc(month, dt, raw)
+        docs_by_month[month] = doc
 
         warnings = validate_month(month, doc, args.min_sub_coverage, expected_subs)
         if warnings:
             doc['validation_warnings'] = warnings
+
+        if v2:
+            prev_doc = docs_by_month.get(sorted_months[i - 1]) if i > 0 else None
+            months_back_doc = docs_by_month.get(sorted_months[i - 3]) if i >= 3 else None
+            doc['narrative'] = build_narrative(month, doc, prev_doc, months_back_doc)
 
         out_path = docs_dir / f'{month}.json'
         with open(out_path, 'w') as f:
@@ -279,23 +487,27 @@ def main():
         print(f"  Wrote {out_path.name}")
 
         all_scores = [d['final_score'] for d in doc['subreddits'].values()]
-        history_months.append({
+        sev_bands = bands if v2 else {'moderate': 20, 'high': 40}
+        history_entry = {
             'month':         month,
             'analysis_date': dt.isoformat(),
             'data_file':     f'{month}.json',
             'aggregate': {
                 'avg_score':        round(sum(all_scores) / len(all_scores), 1) if all_scores else 0,
-                'pct_moderate_plus': round(sum(1 for s in all_scores if s >= 20) / len(all_scores) * 100) if all_scores else 0,
-                'pct_high_plus':     round(sum(1 for s in all_scores if s >= 40) / len(all_scores) * 100) if all_scores else 0,
+                'pct_moderate_plus': round(sum(1 for s in all_scores if s >= sev_bands['moderate']) / len(all_scores) * 100) if all_scores else 0,
+                'pct_high_plus':     round(sum(1 for s in all_scores if s >= sev_bands['high']) / len(all_scores) * 100) if all_scores else 0,
                 'sub_count':    len(all_scores),
                 'max_score':    round(max(all_scores), 1) if all_scores else 0,
                 'min_score':    round(min(all_scores), 1) if all_scores else 0,
             },
             'summary': {
-                sub: {'final_score': d['final_score'], 'severity': get_severity(d['final_score'])}
+                sub: {'final_score': d['final_score'], 'severity': get_severity(d['final_score'], bands) if v2 else get_severity(d['final_score'])}
                 for sub, d in doc['subreddits'].items()
             },
-        })
+        }
+        if v2:
+            history_entry['headline'] = doc['narrative']['headline']
+        history_months.append(history_entry)
 
     history   = {'version': 2 if v2 else 1, 'months': history_months}
     hist_path = docs_dir / 'history.json'

@@ -272,5 +272,61 @@
       }
     ],
     "caveat": "n\u224825 subreddits, weak/noisy label, single point-in-time snapshot \u2014 this is real evidence, not proof. p-values here are exploratory, not confirmatory."
+  },
+  "account_model": {
+    "generated": "2026-07-30T19:54:33.837147",
+    "method": "Linear combination of LogisticRegression coefficients (from weak_label_classifier.json) applied to population-standardized account features. No intercept (none persisted from the original fit) \u2014 this is a relative risk ranking (min-max rescaled 0-100), not a calibrated probability.",
+    "coefficients": {
+      "account_age_days": -0.501,
+      "n_comments": -0.295,
+      "kpd_log": 0.184,
+      "pct_top10": 0.119,
+      "comments_per_day": 0.099,
+      "link_ratio_log": 0.082,
+      "pct_first5": 0.068,
+      "n_subs": 0.065,
+      "n_posts": 0.06,
+      "unverified": -0.048
+    },
+    "coefficient_source": "output/v2/weak_label_classifier.json",
+    "source_n_sampled": 7872,
+    "source_gone_rate": 0.042,
+    "source_cv_roc_auc_mean": 0.663,
+    "source_cv_roc_auc_std": 0.039,
+    "n_accounts_scored": 29018,
+    "top_risk_percentile": 90,
+    "final_score_definition": "% of a (subreddit, month)'s posting/commenting activity that comes from accounts in that MONTH's own top-decile risk_score tier (not a fixed global population threshold \u2014 see month_relative_high_risk). Originally used a fixed global threshold; changed after finding it produced a near-monotonic 13-month score climb (4.6\u219223.0 avg) driven almost entirely by the active population trending younger over time, not by increasing relative risk \u2014 confirmed by the fact that ALL 25 subreddits rose in lockstep regardless of topic, and that median poster account age genuinely fell (1180\u2192683 days) over the same window. Month-relative thresholding removes that drift (flat ~10 avg across all 14 months) while barely moving predictive validity (backtest early/late r: 0.668/0.794 \u2192 0.659/0.759).",
+    "caveat": "AUC ~0.6 means this ranks risk better than chance but is far from a confident classifier \u2014 treat final_score as a weak-to-moderate signal, not a verdict. It answers \"risky relative to this month's contemporaries\", not \"risky in absolute/historical terms\" \u2014 see final_score_definition."
+  },
+  "severity_bands": {
+    "generated": "2026-07-30T19:54:33.837171",
+    "method": "percentiles of the (subreddit, month) pct_high_risk rollup (% of activity from top-risk-decile accounts) across every month already collected",
+    "n_sub_months": 350,
+    "moderate": 12.0,
+    "high": 19.0,
+    "critical": 25.0
+  },
+  "predictive_backtest": {
+    "generated": "2026-07-30T19:28:57.003485",
+    "method": "Spearman correlation of subreddit pct_high_risk (averaged over a 4-month window) against current gone_rate, compared for an early window (2025-06..09) vs. a late window (2026-04..07) \u2014 tests whether an early reading predicts later attrition or the score only tracks concurrent decline.",
+    "early_window": [
+      "2025-06",
+      "2025-07",
+      "2025-08",
+      "2025-09"
+    ],
+    "late_window": [
+      "2026-04",
+      "2026-05",
+      "2026-06",
+      "2026-07"
+    ],
+    "n_subs": 25,
+    "early_window_spearman_r": 0.689,
+    "early_window_p_value": 0.0,
+    "late_window_spearman_r": 0.781,
+    "late_window_p_value": 0.0,
+    "verdict": "EARLY tracks the outcome about as well as LATE \u2014 real forward-looking signal: a reading from ~10-13 months before the gone-check still predicted who would show elevated attrition, not just concurrent decline.",
+    "caveat": "subreddit-level, window-level check, not an account-level point-in-time forecast \u2014 see module docstring. n=25 subs is small; directional evidence, not a precise estimate."
   }
 }

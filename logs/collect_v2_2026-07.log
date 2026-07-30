@@ -64,3 +64,149 @@
 11:48:28  Months written: ['2026-07']
 11:48:28  Checkpoint cleared — collection complete.
 11:48:28  ============================================================
+23:53:14  ============================================================
+23:53:14  Reddit Bot Analysis V2 — collection  month=2026-07
+23:53:14  Posts cap: 40/month  Comment sample: 10/month
+23:53:14  ============================================================
+23:53:14  Subreddits (override): ['india', 'ipl']
+23:53:16      r/india: +20 supplementary non-top posts (survivorship-bias fix)
+23:53:32      r/india: 60 posts  10 comment-sampled  104 comment rows
+23:53:36      r/ipl: +20 supplementary non-top posts (survivorship-bias fix)
+23:53:51      r/ipl: 60 posts  10 comment-sampled  100 comment rows
+23:53:53  Phase 1 done — 120 posts  204 comment rows
+23:53:53  Accounts: 88 posters + 196 commenters = 275 unique  (275 to fetch, 0 cached)
+23:55:44    profiles 100/275 …
+23:57:37    profiles 200/275 …
+23:59:01  Profiles fetched: 269 total in cache
+23:59:01    2026-07: 120 posts (20 comment-sampled)  204 comment rows  → posts_2026-07.csv
+23:59:01  Months written: ['2026-07']
+23:59:01  Checkpoint cleared — collection complete.
+23:59:01  ============================================================
+23:59:50  ============================================================
+23:59:50  Reddit Bot Analysis V2 — collection  month=2026-07
+23:59:50  Posts cap: 40/month  Comment sample: 10/month
+23:59:50  ============================================================
+23:59:50  Subreddits (file): 25
+23:59:53      r/india: +20 supplementary non-top posts (survivorship-bias fix)
+00:00:10      r/india: 60 posts  10 comment-sampled  104 comment rows
+00:00:16      r/BollyBlindsNGossip: +20 supplementary non-top posts (survivorship-bias fix)
+00:00:30      r/BollyBlindsNGossip: 60 posts  10 comment-sampled  111 comment rows
+00:00:35      r/indiasocial: +20 supplementary non-top posts (survivorship-bias fix)
+00:00:51      r/indiasocial: 60 posts  10 comment-sampled  102 comment rows
+00:00:55      r/developersIndia: +20 supplementary non-top posts (survivorship-bias fix)
+00:01:11      r/developersIndia: 60 posts  10 comment-sampled  107 comment rows
+00:01:15      r/IndiaCricket: +20 supplementary non-top posts (survivorship-bias fix)
+00:01:30      r/IndiaCricket: 60 posts  10 comment-sampled  105 comment rows
+00:01:35      r/bollywood: +20 supplementary non-top posts (survivorship-bias fix)
+00:01:51      r/bollywood: 60 posts  10 comment-sampled  106 comment rows
+00:01:55      r/IndianStockMarket: +20 supplementary non-top posts (survivorship-bias fix)
+00:02:10      r/IndianStockMarket: 60 posts  10 comment-sampled  104 comment rows
+00:02:16      r/indiaspeaks: +20 supplementary non-top posts (survivorship-bias fix)
+00:02:31      r/indiaspeaks: 60 posts  10 comment-sampled  102 comment rows
+00:02:46      r/IndiaInvestments: 8 posts  8 comment-sampled  44 comment rows
+00:02:50      r/AskIndia: +20 supplementary non-top posts (survivorship-bias fix)
+00:03:05      r/AskIndia: 60 posts  10 comment-sampled  109 comment rows
+00:03:10      r/ipl: +20 supplementary non-top posts (survivorship-bias fix)
+00:03:25      r/ipl: 60 posts  10 comment-sampled  100 comment rows
+00:03:29      r/IndiaTech: +20 supplementary non-top posts (survivorship-bias fix)
+00:03:45      r/IndiaTech: 60 posts  10 comment-sampled  103 comment rows
+00:03:50      r/IndianGaming: +20 supplementary non-top posts (survivorship-bias fix)
+00:04:05      r/IndianGaming: 60 posts  10 comment-sampled  110 comment rows
+00:04:09      r/RelationshipIndia: +20 supplementary non-top posts (survivorship-bias fix)
+00:04:24      r/RelationshipIndia: 60 posts  10 comment-sampled  110 comment rows
+00:04:28      r/personalfinanceindia: +20 supplementary non-top posts (survivorship-bias fix)
+00:04:43      r/personalfinanceindia: 60 posts  10 comment-sampled  109 comment rows
+00:04:48      r/unitedstatesofindia: +20 supplementary non-top posts (survivorship-bias fix)
+00:05:04      r/unitedstatesofindia: 60 posts  10 comment-sampled  106 comment rows
+00:05:09      r/IndianStreetBets: +20 supplementary non-top posts (survivorship-bias fix)
+00:05:24      r/IndianStreetBets: 60 posts  10 comment-sampled  99 comment rows
+00:05:29      r/JEENEETards: +20 supplementary non-top posts (survivorship-bias fix)
+00:05:44      r/JEENEETards: 60 posts  10 comment-sampled  104 comment rows
+00:05:49      r/ISRO: +20 supplementary non-top posts (survivorship-bias fix)
+00:06:04      r/ISRO: 60 posts  10 comment-sampled  71 comment rows
+00:06:11      r/UPSC: +20 supplementary non-top posts (survivorship-bias fix)
+00:06:26      r/UPSC: 60 posts  10 comment-sampled  112 comment rows
+00:06:30      r/StartUpIndia: +20 supplementary non-top posts (survivorship-bias fix)
+00:06:45      r/StartUpIndia: 60 posts  10 comment-sampled  101 comment rows
+00:06:49      r/TwoXIndia: +20 supplementary non-top posts (survivorship-bias fix)
+00:07:04      r/TwoXIndia: 60 posts  10 comment-sampled  103 comment rows
+00:07:09      r/teenindia: +20 supplementary non-top posts (survivorship-bias fix)
+00:07:25      r/teenindia: 60 posts  10 comment-sampled  108 comment rows
+00:07:29      r/AskIndianWomen: +20 supplementary non-top posts (survivorship-bias fix)
+00:07:44      r/AskIndianWomen: 60 posts  10 comment-sampled  101 comment rows
+00:07:48      r/IndianFood: +20 supplementary non-top posts (survivorship-bias fix)
+00:08:03      r/IndianFood: 60 posts  10 comment-sampled  107 comment rows
+00:08:05  Phase 1 done — 1448 posts  2538 comment rows
+00:08:05  Accounts: 1152 posters + 2338 commenters = 3392 unique  (3392 to fetch, 0 cached)
+00:09:57    profiles 100/3392 …
+00:11:49    profiles 200/3392 …
+00:13:42    profiles 300/3392 …
+00:15:34    profiles 400/3392 …
+00:17:27    profiles 500/3392 …
+00:19:19    profiles 600/3392 …
+00:21:12    profiles 700/3392 …
+00:23:05    profiles 800/3392 …
+00:24:57    profiles 900/3392 …
+00:26:50    profiles 1000/3392 …
+00:28:42    profiles 1100/3392 …
+00:29:27  ============================================================
+00:29:27  Reddit Bot Analysis V2 — collection  month=2026-07
+00:29:27  Posts cap: 40/month  Comment sample: 10/month
+00:29:27  ============================================================
+00:29:27  Subreddits (file): 25
+00:29:27  Resuming: 25 subs done (AskIndia, AskIndianWomen, BollyBlindsNGossip, ISRO, IndiaCricket, IndiaInvestments, IndiaTech, IndianFood, IndianGaming, IndianStockMarket, IndianStreetBets, JEENEETards, RelationshipIndia, StartUpIndia, TwoXIndia, UPSC, bollywood, developersIndia, india, indiasocial, indiaspeaks, ipl, personalfinanceindia, teenindia, unitedstatesofindia)
+00:29:27    r/india                     skip (checkpoint)
+00:29:27    r/BollyBlindsNGossip        skip (checkpoint)
+00:29:27    r/indiasocial               skip (checkpoint)
+00:29:27    r/developersIndia           skip (checkpoint)
+00:29:27    r/IndiaCricket              skip (checkpoint)
+00:29:27    r/bollywood                 skip (checkpoint)
+00:29:27    r/IndianStockMarket         skip (checkpoint)
+00:29:27    r/indiaspeaks               skip (checkpoint)
+00:29:27    r/IndiaInvestments          skip (checkpoint)
+00:29:27    r/AskIndia                  skip (checkpoint)
+00:29:27    r/ipl                       skip (checkpoint)
+00:29:27    r/IndiaTech                 skip (checkpoint)
+00:29:27    r/IndianGaming              skip (checkpoint)
+00:29:27    r/RelationshipIndia         skip (checkpoint)
+00:29:27    r/personalfinanceindia      skip (checkpoint)
+00:29:27    r/unitedstatesofindia       skip (checkpoint)
+00:29:27    r/IndianStreetBets          skip (checkpoint)
+00:29:27    r/JEENEETards               skip (checkpoint)
+00:29:27    r/ISRO                      skip (checkpoint)
+00:29:27    r/UPSC                      skip (checkpoint)
+00:29:27    r/StartUpIndia              skip (checkpoint)
+00:29:27    r/TwoXIndia                 skip (checkpoint)
+00:29:27    r/teenindia                 skip (checkpoint)
+00:29:27    r/AskIndianWomen            skip (checkpoint)
+00:29:27    r/IndianFood                skip (checkpoint)
+00:29:27  Phase 1 done — 1448 posts  2538 comment rows
+00:29:27  Accounts: 1152 posters + 2338 commenters = 3392 unique  (2308 to fetch, 1084 cached)
+00:31:19    profiles 100/2308 …
+00:33:11    profiles 200/2308 …
+00:35:04    profiles 300/2308 …
+00:36:56    profiles 400/2308 …
+00:38:49    profiles 500/2308 …
+00:40:41    profiles 600/2308 …
+00:42:34    profiles 700/2308 …
+00:44:26    profiles 800/2308 …
+00:46:18    profiles 900/2308 …
+00:48:11    profiles 1000/2308 …
+00:50:04    profiles 1100/2308 …
+00:51:56    profiles 1200/2308 …
+00:53:48    profiles 1300/2308 …
+00:55:41    profiles 1400/2308 …
+00:57:33    profiles 1500/2308 …
+00:59:26    profiles 1600/2308 …
+01:01:18    profiles 1700/2308 …
+01:03:10    profiles 1800/2308 …
+01:05:03    profiles 1900/2308 …
+01:06:55    profiles 2000/2308 …
+01:08:48    profiles 2100/2308 …
+01:10:40    profiles 2200/2308 …
+01:12:32    profiles 2300/2308 …
+01:12:41  Profiles fetched: 3343 total in cache
+01:12:42    2026-07: 1448 posts (248 comment-sampled)  2538 comment rows  → posts_2026-07.csv
+01:12:42  Months written: ['2026-07']
+01:12:42  Checkpoint cleared — collection complete.
+01:12:42  ============================================================
