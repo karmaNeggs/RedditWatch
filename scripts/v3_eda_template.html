@@ -91,6 +91,10 @@
 
   /* ---- correlation heatmap ---- */
   .corr-wrap { overflow-x: auto; padding-bottom: 6px; }
+  .marker-defs { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 10px; margin-bottom: 4px; }
+  .marker-def { border: 1px solid var(--border); border-radius: 3px; padding: 10px 12px; background: var(--surface); }
+  .marker-def .md-name { font-size: 12px; font-weight: 650; color: var(--accent); margin-bottom: 4px; }
+  .marker-def .md-desc { font-size: 12px; color: var(--ink-2); line-height: 1.5; }
   .marker-table { border-collapse: collapse; font-size: 12px; min-width: 640px; }
   .marker-table th, .marker-table td { padding: 7px 14px; text-align: right; border-bottom: 1px solid var(--grid); }
   .marker-table th:first-child, .marker-table td:first-child { text-align: left; font-family: system-ui, sans-serif; }
@@ -162,8 +166,17 @@
 </section>
 
 <section id="sec-botmarkers">
-  <div class="section-head"><h2>Bot-marker composite — top 1% profile comparison</h2></div>
-  <p class="section-note">Unsupervised separation check, <b>not a validated detector</b> — no label exists yet, that's Stage 3/4's job. Six theory-motivated markers (removal rate, deletion rate, thin history, karma extremeness on comments and on posts, cross-sub reception spread), each converted to a percentile rank so they combine without hand-tuned weights. Question: does combining them concentrate suspicious signal better than any marker alone? Compares the profile of the top 1% of accounts by each marker, independently selected.</p>
+  <div class="section-head"><h2>Bot-marker composite</h2></div>
+  <p class="section-note">Unsupervised separation check, <b>not a validated detector</b> — no label exists yet, that's Stage 3/4's job. Six theory-motivated markers, each converted to a percentile rank (0–100, higher = more suspicious) so they combine without hand-tuned weights. <span class="mono">botmarker_composite</span> = mean of whichever are non-null for that account (≥3 required) — a synthesis of the six below, not a 7th independent one.</p>
+  <div class="marker-defs" id="marker-defs">
+    <div class="marker-def"><div class="md-name mono">removal_rate</div><div class="md-desc">Share of captured comments removed by mods, AutoModerator, or admins. Direct "kicked out" signal.</div></div>
+    <div class="marker-def"><div class="md-name mono">deleted_later_rate</div><div class="md-desc">Alive when we captured it, gone by the recheck (T+36h). Content getting scrubbed after the fact.</div></div>
+    <div class="marker-def"><div class="md-name mono">thin_history_score</div><div class="md-desc">Inverse of how many times we've seen this account across the whole 24-month corpus. "Shows little to no history."</div></div>
+    <div class="marker-def"><div class="md-name mono">karma_extremeness</div><div class="md-desc">|mean comment score − population median| / MAD. Catches <b>both</b> archetypes discussed in review — heavily downvoted (ragebait) <i>and</i> heavily upvoted (appreciation-bot) — since both are "disproportionate" relative to typical, just in opposite directions.</div></div>
+    <div class="marker-def"><div class="md-name mono">karma_per_post_extremeness</div><div class="md-desc">Same idea, for authored posts rather than comments. Only defined for the ~13% of accounts who authored a sampled post.</div></div>
+    <div class="marker-def"><div class="md-name mono">reception_spread</div><div class="md-desc">Best-sub-average-score minus worst-sub-average-score for that account. Does well in one community, gets rejected in another — "extreme vote behaviour on different subs."</div></div>
+  </div>
+  <p class="section-note" style="margin-top:16px;">Top-1%-by-marker profile comparison — does combining markers concentrate suspicious signal better than any one alone?</p>
   <div class="corr-wrap"><table class="marker-table mono" id="marker-table"></table></div>
 </section>
 
