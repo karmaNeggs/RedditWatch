@@ -1,0 +1,464 @@
+<title>V3 — Account Feature Survey</title>
+<style>
+  :root {
+    color-scheme: light;
+    --page:      #f9f9f7;
+    --surface:   #fcfcfb;
+    --ink:       #0b0b0b;
+    --ink-2:     #52514e;
+    --muted:     #898781;
+    --grid:      #e1e0d9;
+    --baseline:  #c3c2b7;
+    --border:    rgba(11,11,11,0.10);
+    --accent:    #2a78d6;
+    --accent-2:  #eb6834;
+    --pos:       #2a78d6;
+    --neg:       #e34948;
+    --divzero:   #f0efec;
+    --good:      #0ca30c;
+    --warning:   #fab219;
+    --critical:  #d03b3b;
+    --seq-100:   #cde2fb; --seq-200: #9ec5f4; --seq-300: #6da7ec;
+    --seq-400:   #3987e5; --seq-500: #256abf; --seq-600: #184f95; --seq-700: #0d366b;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) {
+      color-scheme: dark;
+      --page: #0d0d0d; --surface: #1a1a19; --ink: #ffffff; --ink-2: #c3c2b7;
+      --muted: #898781; --grid: #2c2c2a; --baseline: #383835;
+      --border: rgba(255,255,255,0.10);
+      --accent: #3987e5; --accent-2: #d95926; --pos: #3987e5; --neg: #e66767;
+      --divzero: #383835;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --page: #0d0d0d; --surface: #1a1a19; --ink: #ffffff; --ink-2: #c3c2b7;
+    --muted: #898781; --grid: #2c2c2a; --baseline: #383835;
+    --border: rgba(255,255,255,0.10);
+    --accent: #3987e5; --accent-2: #d95926; --pos: #3987e5; --neg: #e66767;
+    --divzero: #383835;
+  }
+
+  * { box-sizing: border-box; }
+  html, body {
+    background: var(--page); color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    margin: 0; padding: 0;
+  }
+  body { padding: 28px 32px 80px; max-width: 1320px; margin: 0 auto; }
+  .mono { font-family: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace; font-variant-numeric: tabular-nums; }
+
+  header.page-head { margin-bottom: 28px; }
+  .eyebrow {
+    font-size: 11px; letter-spacing: 0.09em; text-transform: uppercase;
+    color: var(--muted); font-weight: 600; margin-bottom: 6px;
+  }
+  h1 { font-size: 26px; font-weight: 650; margin: 0 0 6px; text-wrap: balance; letter-spacing: -0.01em; }
+  .subtitle { font-size: 14px; color: var(--ink-2); max-width: 68ch; line-height: 1.55; margin: 0 0 20px; }
+
+  .vitals { display: flex; gap: 0; border: 1px solid var(--border); border-radius: 3px; overflow: hidden; width: fit-content; }
+  .vital { padding: 10px 20px; border-right: 1px solid var(--border); }
+  .vital:last-child { border-right: none; }
+  .vital .v-label { font-size: 10px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted); margin-bottom: 3px; }
+  .vital .v-value { font-size: 18px; font-weight: 600; }
+
+  section { margin-top: 42px; }
+  .section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 4px; border-bottom: 1px solid var(--grid); padding-bottom: 10px; }
+  .section-head h2 { font-size: 15px; font-weight: 650; margin: 0; }
+  .section-note { font-size: 12.5px; color: var(--muted); margin: 8px 0 18px; max-width: 78ch; line-height: 1.5; }
+
+  /* ---- univariate grid ---- */
+  .hist-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(272px, 1fr)); gap: 14px; }
+  .hist-card { border: 1px solid var(--border); border-radius: 3px; padding: 12px 14px 10px; background: var(--surface); }
+  .hist-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 2px; }
+  .hist-name { font-size: 12.5px; font-weight: 600; }
+  .hist-family { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+  .toggle { display: flex; border: 1px solid var(--border); border-radius: 3px; overflow: hidden; flex-shrink: 0; }
+  .toggle button {
+    font: inherit; font-size: 10px; padding: 3px 8px; border: none; background: transparent; color: var(--ink-2);
+    cursor: pointer; letter-spacing: 0.03em;
+  }
+  .toggle button.active { background: var(--accent); color: #fff; }
+  .toggle button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .hist-svg-wrap { margin-top: 6px; }
+  .hist-stats { display: flex; flex-wrap: wrap; gap: 2px 10px; font-size: 10.5px; color: var(--ink-2); margin-top: 4px; }
+  .pm-flag {
+    display: inline-flex; align-items: center; gap: 4px; font-size: 10px; color: var(--warning);
+    margin-top: 4px; font-weight: 600;
+  }
+  .pm-flag::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--warning); }
+
+  /* ---- correlation heatmap ---- */
+  .corr-wrap { overflow-x: auto; padding-bottom: 6px; }
+  .marker-table { border-collapse: collapse; font-size: 12px; min-width: 640px; }
+  .marker-table th, .marker-table td { padding: 7px 14px; text-align: right; border-bottom: 1px solid var(--grid); }
+  .marker-table th:first-child, .marker-table td:first-child { text-align: left; font-family: system-ui, sans-serif; }
+  .marker-table thead th { color: var(--muted); font-weight: 600; text-transform: uppercase; font-size: 10px; letter-spacing: 0.04em; border-bottom: 1px solid var(--baseline); }
+  .marker-table tr.hi-row td { font-weight: 650; color: var(--critical); }
+  .corr-legend { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--muted); margin-bottom: 12px; }
+  .corr-legend .bar { width: 140px; height: 10px; border-radius: 2px; background: linear-gradient(90deg, var(--neg), var(--divzero), var(--pos)); }
+  .risk-legend { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--muted); margin-bottom: 14px; }
+  .risk-legend .bar { width: 120px; height: 10px; border-radius: 2px; background: linear-gradient(90deg, var(--divzero), var(--critical)); }
+  .risk-legend .swatch-gray { display: inline-block; width: 10px; height: 10px; border-radius: 2px; background: var(--muted); opacity: 0.35; vertical-align: -1px; }
+
+  /* ---- density panels ---- */
+  .density-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 18px; }
+  .density-card { border: 1px solid var(--border); border-radius: 3px; padding: 14px 16px; background: var(--surface); }
+  .density-caption { font-size: 12px; color: var(--ink-2); margin: 0 0 10px; line-height: 1.4; }
+  .axis-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+
+  /* ---- findings log ---- */
+  .findings { display: flex; flex-direction: column; gap: 0; border: 1px solid var(--border); border-radius: 3px; overflow: hidden; }
+  .finding { display: grid; grid-template-columns: 88px 1fr; gap: 16px; padding: 12px 16px; border-bottom: 1px solid var(--grid); background: var(--surface); }
+  .finding:last-child { border-bottom: none; }
+  .finding .f-date { font-size: 11px; color: var(--muted); padding-top: 1px; }
+  .finding .f-body { font-size: 13px; line-height: 1.55; }
+  .finding .f-body b { font-weight: 650; }
+  .finding.flag-open { border-left: 2px solid var(--warning); }
+  .finding.flag-done { border-left: 2px solid var(--good); }
+
+  footer { margin-top: 48px; padding-top: 16px; border-top: 1px solid var(--grid); font-size: 11px; color: var(--muted); }
+
+  .tooltip {
+    position: fixed; pointer-events: none; z-index: 50;
+    background: var(--ink); color: var(--page); font-size: 11px; line-height: 1.4;
+    padding: 6px 9px; border-radius: 3px; opacity: 0; transition: opacity 0.08s;
+    font-family: ui-monospace, monospace; white-space: nowrap;
+  }
+  .tooltip.show { opacity: 1; }
+
+  svg text { fill: var(--muted); font-size: 9px; font-family: system-ui, sans-serif; }
+  rect:focus-visible, g:focus-visible { outline: 2px solid var(--accent); }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+
+<header class="page-head">
+  <div class="eyebrow">V3 · Exposure-Weighted Inauthenticity Scoring</div>
+  <h1>Account Feature Survey</h1>
+  <p class="subtitle">Univariate, bivariate, and transform views over the Stage-0/account-feature layer, for eyeballing distribution shape before it's trusted in a model — this is the check that caught three separate screening bugs (see the log below). Data is a bipartite sample: an account appears only when it's in a sampled post's first-10-arrivals or top-10-by-score, not a census of any account's full history.</p>
+  <div class="vitals mono" id="vitals"></div>
+</header>
+
+<section id="sec-univariate">
+  <div class="section-head"><h2>Univariate — distribution shape per feature</h2></div>
+  <p class="section-note">Raw vs. transformed view, toggle per tile. Amber dot = point-mass ≥20% of accounts sit on one value (usually 0) — real, not noise, but it means a plain bell-curve fit on the raw values will find a fake "second population" at that spike. <span class="mono">n</span> is accounts with a non-null value; timing features are gated to accounts with ≥5 sampled comments (21% of the population) since a rate computed from 1–2 points isn't a rate.</p>
+  <div class="risk-legend mono" id="risk-legend"></div>
+  <div class="hist-grid" id="hist-grid"></div>
+</section>
+
+<section id="sec-corr">
+  <div class="section-head"><h2>Bivariate — Spearman correlation</h2></div>
+  <p class="section-note">Rank correlation, not Pearson — invariant to the raw/log/signed-log choice above, so it sidesteps re-litigating a transform per pair. Diverging scale, gray at ρ=0.</p>
+  <div class="corr-legend"><span>−1</span><span class="bar"></span><span>+1</span></div>
+  <div class="corr-wrap" id="corr-wrap"></div>
+</section>
+
+<section id="sec-density">
+  <div class="section-head"><h2>Selected bivariate pairs — binned density</h2></div>
+  <p class="section-note">347,886 raw points would just be an overplotted smear, so these are log-scaled 2D bin counts (darker = more accounts in that cell), on the transform each marginal actually needs.</p>
+  <div class="density-grid" id="density-grid"></div>
+</section>
+
+<section id="sec-botmarkers">
+  <div class="section-head"><h2>Bot-marker composite — top 1% profile comparison</h2></div>
+  <p class="section-note">Unsupervised separation check, <b>not a validated detector</b> — no label exists yet, that's Stage 3/4's job. Six theory-motivated markers (removal rate, deletion rate, thin history, karma extremeness on comments and on posts, cross-sub reception spread), each converted to a percentile rank so they combine without hand-tuned weights. Question: does combining them concentrate suspicious signal better than any marker alone? Compares the profile of the top 1% of accounts by each marker, independently selected.</p>
+  <div class="corr-wrap"><table class="marker-table mono" id="marker-table"></table></div>
+</section>
+
+<section id="sec-findings">
+  <div class="section-head"><h2>Findings log</h2></div>
+  <p class="section-note">Running notes from building this layer — full detail lives in <span class="mono">V3_PLAN.md</span> §10.4, this is the condensed trail.</p>
+  <div class="findings" id="findings"></div>
+</section>
+
+<footer>
+  V3 Account Feature Survey · generated from <span class="mono">data/v3/analysis/v3.duckdb</span> · 347,886 accounts, 24-month window (2024-08→2026-07) · scripts/v3_account_features.py, v3_stage1_univariate.py
+</footer>
+
+<div class="tooltip mono" id="tooltip"></div>
+
+<script id="eda-data" type="application/json">__EDA_JSON__</script>
+<script>
+(function () {
+  const DATA = JSON.parse(document.getElementById('eda-data').textContent);
+  const tooltip = document.getElementById('tooltip');
+
+  function showTip(evt, html) {
+    tooltip.innerHTML = html;
+    tooltip.classList.add('show');
+    moveTip(evt);
+  }
+  function moveTip(evt) {
+    const pad = 14;
+    let x = evt.clientX + pad, y = evt.clientY + pad;
+    tooltip.style.left = x + 'px';
+    tooltip.style.top = y + 'px';
+  }
+  function hideTip() { tooltip.classList.remove('show'); }
+
+  function isDark() {
+    const root = document.documentElement;
+    if (root.getAttribute('data-theme') === 'dark') return true;
+    if (root.getAttribute('data-theme') === 'light') return false;
+    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+  }
+
+  const SEQ_LIGHT = ['#cde2fb', '#9ec5f4', '#6da7ec', '#3987e5', '#256abf', '#184f95', '#0d366b'];
+  const SEQ_DARK  = ['#0d366b', '#184f95', '#256abf', '#3987e5', '#6da7ec', '#9ec5f4', '#cde2fb'];
+  function seqColor(t) { // t in [0,1]
+    const ramp = isDark() ? SEQ_DARK : SEQ_LIGHT;
+    const i = Math.min(ramp.length - 1, Math.max(0, Math.round(t * (ramp.length - 1))));
+    return ramp[i];
+  }
+  function divColor(rho) { // -1..1
+    const pos = isDark() ? '#3987e5' : '#2a78d6';
+    const neg = isDark() ? '#e66767' : '#e34948';
+    const mid = isDark() ? '#383835' : '#f0efec';
+    const t = Math.min(1, Math.abs(rho));
+    const base = rho >= 0 ? pos : neg;
+    return mixHex(mid, base, t);
+  }
+  function mixHex(a, b, t) {
+    const pa = hexToRgb(a), pb = hexToRgb(b);
+    const r = Math.round(pa[0] + (pb[0] - pa[0]) * t);
+    const g = Math.round(pa[1] + (pb[1] - pa[1]) * t);
+    const bl = Math.round(pa[2] + (pb[2] - pa[2]) * t);
+    return `rgb(${r},${g},${bl})`;
+  }
+  function hexToRgb(h) {
+    h = h.replace('#', '');
+    return [parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)];
+  }
+  const RISK_SCALE_MAX = DATA.meta.risk_scale_max || 0.3;
+  function riskColor(meanRisk, binN) {
+    if (meanRisk === null || binN < 20) return null; // too few accounts in this bin to trust the estimate
+    const neutral = isDark() ? '#383835' : '#f0efec';
+    const hot = '#d03b3b'; // status critical -- fixed across themes per palette spec, not re-stepped
+    const t = Math.min(1, Math.max(0, meanRisk / RISK_SCALE_MAX));
+    return mixHex(neutral, hot, t);
+  }
+
+  function svgEl(tag, attrs) {
+    const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+    for (const k in attrs) el.setAttribute(k, attrs[k]);
+    return el;
+  }
+  function fmtNum(x) {
+    if (Math.abs(x) >= 1e6) return x.toLocaleString(undefined, {notation: 'compact', maximumFractionDigits: 1});
+    if (Math.abs(x) >= 1000) return x.toLocaleString(undefined, {maximumFractionDigits: 0});
+    if (Math.abs(x) < 1 && x !== 0) return x.toFixed(3);
+    return (Math.round(x * 100) / 100).toString();
+  }
+
+  // ---------------- vitals ----------------
+  const vitals = document.getElementById('vitals');
+  const vitalsData = [
+    ['Accounts', DATA.meta.n_accounts.toLocaleString()],
+    ['With ≥5 comments', DATA.meta.n_timing.toLocaleString() + '  (' + (100*DATA.meta.n_timing/DATA.meta.n_accounts).toFixed(1) + '%)'],
+    ['Features surveyed', DATA.histograms.length],
+  ];
+  vitalsData.forEach(([label, value]) => {
+    const d = document.createElement('div');
+    d.className = 'vital';
+    d.innerHTML = `<div class="v-label">${label}</div><div class="v-value">${value}</div>`;
+    vitals.appendChild(d);
+  });
+
+  document.getElementById('risk-legend').innerHTML =
+    `bar color = mean <b>${DATA.meta.risk_metric}</b> within that bin (pop. avg ${(100*DATA.meta.risk_pop_mean).toFixed(1)}%) ` +
+    `<span class="bar"></span> 0% → ${(100*RISK_SCALE_MAX).toFixed(0)}%+ ` +
+    `&nbsp;·&nbsp; <span class="swatch-gray"></span> bin has &lt;20 accounts, too small to color`;
+
+  // ---------------- histograms ----------------
+  const W = 244, H = 92, PAD_L = 4, PAD_B = 14;
+
+  function drawHist(svg, bins) {
+    svg.innerHTML = '';
+    const counts = bins.counts, edges = bins.edges;
+    const riskMean = bins.risk_mean || [], riskN = bins.risk_n || [];
+    const maxC = Math.max(...counts);
+    const n = counts.length;
+    const barW = (W - PAD_L) / n;
+    const plotH = H - PAD_B;
+    counts.forEach((c, i) => {
+      const h = maxC > 0 ? (c / maxC) * plotH : 0;
+      const x = PAD_L + i * barW;
+      const y = plotH - h;
+      const rMean = riskMean[i], rN = riskN[i] || 0;
+      const colored = riskColor(rMean, rN);
+      const rect = svgEl('rect', {
+        x: x + 0.5, y: y, width: Math.max(0.5, barW - 1), height: h,
+        fill: colored || 'var(--muted)', 'fill-opacity': colored ? 1 : 0.35, rx: 1, tabindex: '-1',
+      });
+      rect.addEventListener('mousemove', (e) => {
+        const riskLine = rMean !== null && rMean !== undefined
+          ? `<br>${DATA.meta.risk_metric} ≈ ${(rMean*100).toFixed(1)}%${rN < 20 ? ' (n too small, shown gray)' : ''}`
+          : '';
+        showTip(e, `${fmtNum(edges[i])} – ${fmtNum(edges[i+1])}<br>n = ${c.toLocaleString()}${riskLine}`);
+      });
+      rect.addEventListener('mouseleave', hideTip);
+      svg.appendChild(rect);
+    });
+    svg.appendChild(svgEl('line', {
+      x1: PAD_L, y1: plotH + 0.5, x2: W, y2: plotH + 0.5, stroke: 'var(--baseline)', 'stroke-width': 1,
+    }));
+  }
+
+  const histGrid = document.getElementById('hist-grid');
+  DATA.histograms.forEach((h) => {
+    const card = document.createElement('div');
+    card.className = 'hist-card';
+    const hasTx = !!h.transformed;
+    const stats = h.stats;
+    card.innerHTML = `
+      <div class="hist-top">
+        <div>
+          <div class="hist-name">${h.feature}</div>
+          <div class="hist-family">${h.family}</div>
+        </div>
+        ${hasTx ? `<div class="toggle" role="group" aria-label="transform toggle">
+          <button data-mode="raw" class="active">raw</button>
+          <button data-mode="tx">${h.transformed.label}</button>
+        </div>` : ''}
+      </div>
+      <div class="hist-svg-wrap">
+        <svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" preserveAspectRatio="none"></svg>
+      </div>
+      <div class="hist-stats mono">
+        <span>med ${fmtNum(stats.median)}</span><span>p90 ${fmtNum(stats.p90)}</span><span>n ${h.n.toLocaleString()}</span>
+      </div>
+      ${h.point_mass ? `<div class="pm-flag">point mass ${(h.point_mass.share*100).toFixed(0)}% @ ${fmtNum(h.point_mass.value)}</div>` : ''}
+    `;
+    histGrid.appendChild(card);
+    const svg = card.querySelector('svg');
+    drawHist(svg, h.raw);
+    if (hasTx) {
+      const btns = card.querySelectorAll('.toggle button');
+      btns.forEach((b) => b.addEventListener('click', () => {
+        btns.forEach((x) => x.classList.remove('active'));
+        b.classList.add('active');
+        drawHist(svg, b.dataset.mode === 'raw' ? h.raw : h.transformed);
+      }));
+    }
+  });
+
+  // ---------------- correlation heatmap ----------------
+  const feats = DATA.corr_features;
+  const matrix = DATA.corr_matrix;
+  const cell = 26, labelW = 150, labelH = 90;
+  const corrSvg = svgEl('svg', {
+    viewBox: `0 0 ${labelW + feats.length * cell} ${labelH + feats.length * cell}`,
+    width: labelW + feats.length * cell, height: labelH + feats.length * cell,
+  });
+  feats.forEach((f, i) => {
+    const t = svgEl('text', { x: labelW - 6, y: labelH + i * cell + cell / 2 + 3, 'text-anchor': 'end', 'font-size': 10 });
+    t.textContent = f; corrSvg.appendChild(t);
+    const t2 = svgEl('text', {
+      x: labelW + i * cell + cell / 2, y: labelH - 6, 'text-anchor': 'start', 'font-size': 10,
+      transform: `rotate(-55 ${labelW + i * cell + cell/2} ${labelH - 6})`,
+    });
+    t2.textContent = f; corrSvg.appendChild(t2);
+  });
+  feats.forEach((fi, i) => {
+    feats.forEach((fj, j) => {
+      const rho = matrix[i][j];
+      const rect = svgEl('rect', {
+        x: labelW + j * cell, y: labelH + i * cell, width: cell - 1, height: cell - 1,
+        fill: divColor(rho), rx: 1,
+      });
+      rect.addEventListener('mousemove', (e) => {
+        showTip(e, `${fi}<br>× ${fj}<br>ρ = ${rho.toFixed(2)}`);
+      });
+      rect.addEventListener('mouseleave', hideTip);
+      corrSvg.appendChild(rect);
+    });
+  });
+  document.getElementById('corr-wrap').appendChild(corrSvg);
+
+  // ---------------- density panels ----------------
+  const densityGrid = document.getElementById('density-grid');
+  DATA.density_panels.forEach((p) => {
+    const card = document.createElement('div');
+    card.className = 'density-card';
+    const gw = 220, gh = 220;
+    const nx = p.grid[0].length, ny = p.grid.length;
+    const cw = gw / nx, ch = gh / ny;
+    const maxV = Math.max(...p.grid.flat());
+    const svg = svgEl('svg', { viewBox: `0 0 ${gw+40} ${gh+34}`, width: '100%', height: 260, preserveAspectRatio: 'xMidYMid meet' });
+    p.grid.forEach((row, ry) => {
+      row.forEach((v, rx) => {
+        const t = maxV > 0 ? v / maxV : 0;
+        const rect = svgEl('rect', {
+          x: 34 + rx * cw, y: gh - (ry + 1) * ch, width: cw + 0.5, height: ch + 0.5,
+          fill: t === 0 ? 'var(--divzero)' : seqColor(t),
+        });
+        const rawCount = Math.round(Math.expm1(v));
+        rect.addEventListener('mousemove', (e) => showTip(e, `n ≈ ${rawCount.toLocaleString()}`));
+        rect.addEventListener('mouseleave', hideTip);
+        svg.appendChild(rect);
+      });
+    });
+    svg.appendChild(svgEl('line', { x1: 34, y1: gh + 0.5, x2: 34 + gw, y2: gh + 0.5, stroke: 'var(--baseline)' }));
+    svg.appendChild(svgEl('line', { x1: 33.5, y1: 0, x2: 33.5, y2: gh, stroke: 'var(--baseline)' }));
+    const xLabel = svgEl('text', { x: 34 + gw/2, y: gh + 26, 'text-anchor': 'middle', 'font-size': 10 });
+    xLabel.textContent = p.x_feature + (p.x_transform !== 'none' ? ` (${p.x_transform})` : '');
+    svg.appendChild(xLabel);
+    const yLabel = svgEl('text', { x: -gh/2, y: 12, 'text-anchor': 'middle', 'font-size': 10, transform: 'rotate(-90)' });
+    yLabel.textContent = p.y_feature + (p.y_transform !== 'none' ? ` (${p.y_transform})` : '');
+    svg.appendChild(yLabel);
+    card.innerHTML = `<p class="density-caption">${p.caption}<br><span class="mono" style="color:var(--muted)">n=${p.n.toLocaleString()}</span></p>`;
+    card.appendChild(svg);
+    densityGrid.appendChild(card);
+  });
+
+  // ---------------- bot-marker top-1% table ----------------
+  if (DATA.marker_top1pct) {
+    const table = document.getElementById('marker-table');
+    const fmtPct = (x) => x === null || x === undefined ? '—' : (100*x).toFixed(1) + '%';
+    let html = '<thead><tr><th>top 1% by</th><th>n</th><th>removal rate</th><th>controversiality</th><th>deleted-later rate</th><th>mean n comments</th></tr></thead><tbody>';
+    DATA.marker_top1pct.forEach((r) => {
+      const isComposite = r.marker === 'botmarker_composite';
+      html += `<tr class="${isComposite ? 'hi-row' : ''}"><td>${r.marker}</td><td>${r.n.toLocaleString()}</td>` +
+        `<td>${fmtPct(r.removal_rate)}</td><td>${fmtPct(r.controversiality)}</td>` +
+        `<td>${fmtPct(r.deleted_later)}</td><td>${r.mean_n_comments !== null ? r.mean_n_comments.toFixed(2) : '—'}</td></tr>`;
+    });
+    html += `<tr><td class="mono" style="color:var(--muted); font-style:italic;">population avg</td><td>${DATA.meta.n_accounts.toLocaleString()}</td>` +
+      `<td>${fmtPct(DATA.meta.risk_pop_mean)}</td><td colspan="3">—</td></tr>`;
+    table.innerHTML = html + '</tbody>';
+  }
+
+  // ---------------- findings log ----------------
+  const FINDINGS = [
+    { date: '2026-08-05', flag: 'done', html: '<b>Full collection complete</b> — 128,374 posts, 2,312,696 commenter rows, 45 subs × 24 months. One divide-by-zero bug (101-post sub-months) and one silent-truncation bug (retry exhaustion mid-pagination, 645 posts / 0.5%) found and fixed; checkpointing meant zero re-fetched data either time.' },
+    { date: '2026-08-06', flag: 'done', html: '<b>Stage 0 cleaning layer built</b> — DuckDB over the raw cells, dedup on the intentional first10/top10 tag overlap (30% of rows). A SQL <span class="mono">NULL OR FALSE = NULL</span> trap silently collapsed the clean table to 2 rows before being caught.' },
+    { date: '2026-08-06', flag: 'open', html: '<b>The corpus is a bipartite sample, not a census.</b> Median 2 comments/account, 48.4% of 347,886 accounts are singletons. This is the direct empirical reason the pair layer (not account scoring) is the plan\'s primary detector — most accounts don\'t carry enough individual signal.' },
+    { date: '2026-08-06', flag: 'open', html: '<b>Naive dip-test + GMM/BIC screening is unreliable at this scale.</b> First pass flagged 18/19 features "bimodal" — not credible (pilot found 3/7). Point-mass inflation and census-scale BIC both fixed; a third issue (GMM approximating heavy-tailed-but-unimodal shape with extra components) is still open — needs per-feature transforms + a visual KDE-valley check, not more threshold tuning.' },
+    { date: '2026-08-06', flag: 'done', html: '<b>Removal rate is the strongest account-level signal found so far</b> — prompted by a real-world observation (thin-history accounts on Reddit are often ones whose content got quietly removed). Singleton accounts show <b>8.8%</b> comment-removal rate vs <b>3.8%</b> for 10+-comment accounts — a clean, monotonic 2.3× gradient, and it connects directly to the plan\'s removal-based label channels.' },
+    { date: '2026-08-06', flag: 'open', html: '<b>"Post-and-leave" hypothesis tested, null result.</b> Split accounts into never-repeats-in-a-thread vs. repeats — both show near-identical bimodal score structure. The bimodality looks like a generic property of Reddit scoring, not a disengagement signature, at least on this operationalization. Kept in the record rather than discarded.' },
+    { date: '2026-08-06', flag: 'done', html: '<b>Silo-mismatch pattern — real, volume-controlled.</b> Reframed from "score variance across subs = bot-like" (wrong — a human who never leaves their aligned silo would also show low variance) to "keeps returning to a sub where it\'s net-downvoted while doing fine elsewhere." No political-lean labels needed. 2.0% of multi-sub accounts show it; they run <b>~2× controversiality</b> (6.2% vs 3.1%) and ~1.3× removal rate vs. peers — and the gap holds within every activity-level bucket, so it survives the obvious volume confound.' },
+    { date: '2026-08-06', flag: 'done', html: '<b>Age proxy: today minus first-seen, not account creation date.</b> True calibration would need ~1,750 live-Reddit lookups (script written, on hold) — instead using <span class="mono">days_since_first_seen</span>, free and non-zero even for the 48% singleton accounts (unlike the span-based proxy it replaces), on the reasoning that per-account noise cancels out at n=347,886. Feeds comments/posts/karma-per-day-since-first-seen.' },
+    { date: '2026-08-06', flag: 'done', html: '<b>Risk-colored histograms fixed on the second try.</b> First version colored bars by account-level removal-rate percentiles — visually flat, because bin averages are far more compressed than individual values. Recalibrated to the actual observed range of bin-means; surfaced a real pattern: account_ordinal runs 3.5% removal (oldest) → 13.3% (newest), ~4×, near-monotonic.' },
+    { date: '2026-08-06', flag: 'open', html: '<b>Bot-marker composite: the top-1% comparison is trustworthy, the dip-test screen on the same markers is not.</b> Composite\'s top 1% hits 29.5% removal rate (~4× population avg) with a different, more diffuse profile than any single marker\'s top 1% alone — real evidence combining markers helps. But the accompanying dip-test/GMM screen flagged all 7 markers "real," including plain percentile ranks, which should never show genuine bimodality on their own — percent_rank() doesn\'t spread ties, so ranking an already zero-inflated variable stays lumpy. Not fixed; flagged for next session.' },
+  ];
+  const findingsEl = document.getElementById('findings');
+  FINDINGS.forEach((f) => {
+    const d = document.createElement('div');
+    d.className = 'finding flag-' + f.flag;
+    d.innerHTML = `<div class="f-date mono">${f.date}</div><div class="f-body">${f.html}</div>`;
+    findingsEl.appendChild(d);
+  });
+
+  document.addEventListener('mousemove', (e) => { if (tooltip.classList.contains('show')) moveTip(e); });
+
+  // repaint theme-dependent colors on toggle
+  const mo = new MutationObserver(() => {
+    document.querySelectorAll('#corr-wrap rect').forEach((r, idx) => {
+      const i = Math.floor(idx / feats.length), j = idx % feats.length;
+      r.setAttribute('fill', divColor(matrix[i][j]));
+    });
+  });
+  mo.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+})();
+</script>

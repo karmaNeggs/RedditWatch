@@ -4,7 +4,9 @@ A bot-activity monitoring system for 25 Indian subreddits. Scores each community
 
 **Live dashboard:** https://karmaneggs.github.io/RedditWatch/
 
-> **V1 archived.** The original 4-component pipeline (`data/`, `output/*.json`, `docs/data/`, and the V1 scripts) has been moved to `archive/v1/` — superseded by V2's comment-ring detection and calibrated weights. See `archive/v1/README` context below. Everything in this doc describes the current V2 pipeline.
+> **V1 archived.** The original 4-component pipeline (`data/`, `output/*.json`, `docs/data/`, and the V1 scripts) has been moved to `archive/v1/` — superseded by V2's comment-ring detection and calibrated weights. See `archive/v1/README` context below. Everything in this doc describes the current V2 pipeline (the one that publishes the live dashboard above).
+
+> **V3 is in progress and supersedes V2's approach, but hasn't shipped a dashboard yet.** V2 plateaued at ROC-AUC 0.663 (account-level ceiling, per the literature); V3 pivots to pair-level coordination detection (published ceiling 0.90-0.94). Full collection + account-feature layer are done; pair-level modeling (the actual deliverable) hasn't started. **Start at `V3_PLAN.md` → the "🚦 START HERE" block at the top** for exactly where things stand and what's next. Don't extend V2 (`scripts/collect_data_v2.py` etc.) without checking there first — V3 is the live line of work.
 
 ---
 

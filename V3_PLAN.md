@@ -11,6 +11,41 @@ Status marks: ✅ **measured** in this project · 📚 **published**, cited ·
 
 ---
 
+## 🚦 START HERE (next session) — as of 2026-08-06
+
+**Done:** full collection (§10.3, 128,374 posts / 2,312,696 commenter rows,
+data committed) → Stage 0 clean + analysis layer (§10.4, `data/v3/analysis/v3.duckdb`,
+gitignored, rebuild with `python3 scripts/v3_stage0_build.py`) → account
+feature table (§10.4, 347,886 accounts × 40+ columns, rebuild with
+`python3 scripts/v3_account_features.py`) → EDA page with risk-colored
+histograms + bot-marker composite (rebuild with `python3 scripts/v3_eda_build.py`
+→ `docs/v3-research/eda/index.html`, published at
+https://claude.ai/code/artifact/26b907c2-1410-4b94-852a-b2cd10febcad).
+
+**Two open threads, both flagged in §10.4, neither silently trusted:**
+1. GMM/BIC dip-test screening (`scripts/v3_stage1_univariate.py`,
+   `scripts/v3_botmarker_composite.py`) still over-flags "bimodal" on
+   percentile-ranked/zero-inflated features — root cause identified
+   (`percent_rank()` doesn't spread ties) but not fixed.
+2. Base36 age calibration is on hold, not abandoned — script
+   (`scripts/v3_calibrate_age_sample.py`) works, live Reddit access
+   confirmed, just deprioritized in favor of the free `days_since_first_seen`
+   proxy.
+
+**Not started: Stage 2 (bivariate/segmentation) → Stage 3 (account XGBoost per
+label channel) → Stage 4 (pair-level model — where the plan's 0.90+ AUC claim
+actually lives, §1/§4.4) → Stage 5 (prevalence) → rally+GDELT → dashboard.**
+Account-level work (everything done so far) explicitly **feeds** the pair
+layer per §1 — it was never meant to be the deliverable on its own. Stage 4
+is the next big lift, not more account-feature mining.
+
+**Before touching account_features again:** read the docstring at the top of
+`scripts/v3_account_features.py` — it explains the bipartite-sampling
+constraint (median 2 comments/account) and the three different "age-like"
+quantities now in the table, so they don't get re-litigated or conflated.
+
+---
+
 ## 0. What changed, and why V2 is closed
 
 V2 plateaued at ROC-AUC **0.663**. Two experiments run 2026-08-04 established why.
@@ -856,14 +891,259 @@ to SEO marketing content with no paper behind it.
        spanning **347,886 distinct accounts**. Tier split (high/medium/low)
        294K/509K/814K rows — plausible given the control tier includes more,
        higher-volume subs.
-   - **Not yet built: the account-level feature table (A1–A41, §4.3).**
-     Stage 1's dip test / GMM-BIC sweep operates on *computed features*, and
-     most of the A-family (the timing family especially — A7 interval
-     entropy, A9 Kim–Jo burstiness, A13 session structure) don't exist yet as
-     columns; `commenters_clean` only has the raw per-comment rows they'd be
-     derived from. This is the concrete next task, not yet started.
-   - Stages 1–4 (univariate screening, bivariate/segmentation, account
-     XGBoost, pair model): not yet started.
+   - ✅ **Account-level feature table (A1–A41, §4.3), done 2026-08-06.**
+     `scripts/v3_account_features.py`, writes `account_features` (347,886
+     rows, 30 columns) into `v3.duckdb`.
+     - **Load-bearing finding, discovered before building any timing
+       feature:** the corpus is a **bipartite sample**, not a per-account
+       census — an account only appears when it's in a *sampled* post's
+       first-10-arrivals or top-10-by-score. Measured distribution:
+       **median 2 comments/account, 48.4% of all 347,886 accounts are
+       singletons** (exactly 1 comment in the whole 24-month corpus), only
+       **21.0% (72,939) have ≥5**, only ~10% have ≥10. This is not a defect —
+       it's the direct empirical reason the plan's own account-vs-pair split
+       (§1) is the right call: most accounts simply don't carry enough
+       individual signal for a timing feature to mean anything, which is
+       exactly why the pair layer (§4.4, co-appearance across accounts) is
+       the primary detector rather than an account-level score.
+     - **Two tiers, gated on sample size accordingly:** Tier 1 (all 347,886
+       accounts) — provenance (`account_ordinal`, uncalibrated), footprint
+       (`subreddit_entropy`, tier shares, `hobby_absence`), reception
+       (mean/median/stddev comment score, controversiality rate, submitter
+       rate, mean depth), username morphology (A3 — regex for Reddit's
+       `Adjective-Noun-NNNN`/`Adjective_Noun_NNNN` auto-generated pattern,
+       **42.9% match** — visually spot-checked against 30 random matches,
+       genuinely the auto-generated format, not regex overmatch, e.g.
+       `Ok-Willingness-6039`, `Honest_Lettuce_7181`). Tier 2 (the 72,939
+       accounts with ≥5 comments) — A7 interval entropy, A9 burstiness via
+       the **Kim–Jo finite-size correction** (§4.3's own warning about the
+       naive Goh–Barabási statistic being length-biased — implemented the
+       closed-form `A_n` correction, not the naive `B`), A8 interval
+       quantization (cron-signature detection). Range check: `burstiness_kimjo`
+       came out in `[-0.94, 0.9999...]`, inside the theoretical `[-1,1]` bound
+       — not proof of correctness but rules out a broken formula.
+     - **Deliberately not built: A10–A13 (circadian dead hours, circadian
+       centroid, weekday:weekend ratio, session structure).** The pilot's
+       450-account behavioral check (§10.2) found real multimodal structure
+       in circadian features — but that used each account's **last 50
+       comments via a separate direct API pull**, not this bipartite sample.
+       At median n=2 in-corpus, "zero activity in hour H" is a sparsity
+       artefact for ~90% of accounts, not a circadian signal, and there's no
+       Kim–Jo-style correction for that the way there is for burstiness.
+       Doing this properly at scale means a **supplemental full-history pull**
+       (same method as the pilot check) for a bounded account subset — not
+       yet started, and not faked here with an underpowered proxy.
+     - Two SQL bugs hit and fixed while building this (both would have
+       silently miscounted, not crashed): (1) an ambiguous `author` column
+       reference across a `commenters_clean`/`posts` join, caught immediately
+       by DuckDB's binder; (2) `con.register()` doesn't accept a raw Python
+       list of dicts (only DataFrame/Arrow/relation/ndarray) — fixed by
+       wrapping in `pandas.DataFrame` before registering.
+   - ✅ **`removal_rate` / `deleted_later_rate` added as account features,
+     done 2026-08-06** — user-prompted, and the single strongest signal found
+     in this stage so far. Hypothesis (from direct Reddit browsing experience,
+     not the literature): accounts with thin visible history are often ones
+     whose content got quietly removed/hidden, not just accounts we happened
+     to under-sample. Tested directly against `meta_removal_type` /
+     `meta_was_deleted_later` (already collected, just not previously rolled
+     up to account level) rather than assumed:
+
+     | times seen in corpus | n accounts | mean removal rate |
+     |---|---|---|
+     | 1 (singleton) | 168,458 | **8.8%** |
+     | 2–4 | 106,489 | 6.0% |
+     | 5–9 | 38,638 | 4.7% |
+     | 10+ | 34,301 | **3.8%** |
+
+     Clean monotonic gradient, singleton accounts removed **~2.3×** more often
+     than 10+-comment accounts. Real signal, not proof of any single cause —
+     equally consistent with new-account spam filtering or drive-by
+     throwaways as with shadowbanning specifically — but a materially better
+     account-level feature than anything Stage 1's automated screen
+     surfaced on its own, and it directly connects to the §6 label channels
+     (which *are* removal-based), unlike most of the A-family.
+   - ⚠️ **Stage 1 (univariate screening) attempted 2026-08-06, output not
+     trustworthy, needs redoing properly.** `scripts/v3_stage1_univariate.py`
+     ran dip test + GMM/BIC across account_features and flagged **18 of 19
+     features "bimodal."** Not credible on its face (pilot found 3 of 7).
+     Traced to three compounding pitfalls, two fixed, one still open:
+     1. **Zero/point-mass inflation** (§5.2) — `n_posts_sample` etc. are
+        >=25–90% a single value; a GMM fit to the raw distribution finds a
+        near-zero-variance spike component, producing separation scores in
+        the hundreds (693, 4000). **Fixed**: hurdle split, point-mass share
+        reported on its own, dip/GMM run only on the remainder.
+     2. **Dip test + BIC both break at census n.** Subsampling only the dip
+        test to diptest's validated n<=72,000 wasn't enough — BIC's `log(n)`
+        penalty means even a trivial fit gain from an extra Gaussian reads
+        as "significant" at n in the hundreds of thousands. Generalizes §8's
+        "at census n, p-values stop discriminating" to model selection, not
+        only significance testing. **Fixed**: both the dip test and the
+        GMM/BIC fit run on the same fixed, seeded n=20,000 subsample.
+     3. **Still open: GMM/BIC on a heavy-tailed-but-genuinely-unimodal raw
+        feature will always "find" extra components.** `mean_comment_score`'s
+        raw histogram is a single peak near 0–20 with a smooth monotonic
+        decay to 4,625 — no visible second mode — but a Gaussian mixture
+        approximates that skew with 2–3 offset components regardless,
+        because that actually gets the true underlying data density closer,
+        even though there is only one real population. This is *not* the
+        same bug as (1); it survives the point-mass fix because there's no
+        single dominant value to split off, just smooth skew. Needs a
+        **per-feature transform pass** (signed-log for signed heavy-tailed
+        features, not just non-negative counts) plus an actual KDE-valley
+        visual check before any "bimodal" verdict is trusted — not more
+        automated threshold tuning, which would just be tuning until the
+        output looks plausible rather than being correct. **Not done.**
+     Given §1 already frames account features as feeding the pair layer
+     rather than being the deliverable, this is deprioritized relative to
+     Stage 4 rather than fixed immediately.
+   - ✅ **EDA page, done 2026-08-06.** `scripts/v3_eda_build.py` (data prep,
+     DuckDB → summary stats only, nothing raw leaves the database) +
+     `scripts/v3_eda_template.html` (page shell) → `docs/v3-research/eda/index.html`,
+     git-tracked and rebuildable after any `account_features` change. Per
+     feature: raw + transformed histogram (toggle), point-mass flag; a
+     Spearman correlation matrix across the 19 non-timing features (rank
+     correlation specifically to sidestep re-litigating a transform choice
+     per pair — invariant to it by construction); 3 log-scaled 2D density
+     panels for pairs called out by findings above. Doubles as the running
+     findings log's second surface (condensed version of this section).
+   - ✅ **User-directed feature round, done 2026-08-06** — activity span,
+     conversation-engagement, and silo-mismatch features, plus two hypothesis
+     tests run directly against them.
+     - `observed_span_days`, `comments_per_day_observed`,
+       `sample_score_per_day_observed` — first_seen/last_seen_utc were
+       already computed in Stage 0 but never turned into rate features.
+       Explicitly **not** true account age (that needs the base36
+       calibration below) — this is rate-of-observed-activity, a different
+       and immediately-available quantity.
+     - `repeat_engagement_rate` (does an account ever comment more than once
+       in the *same* sampled thread) and `own_post_reply_rate` (rolled up
+       from the post-level `submitter_reply_rate` already collected, for the
+       ~13% of accounts who authored a sampled post) — built to test a
+       "bots post-and-leave regardless of whether they're ragebaiting
+       (downvoted) or in an aligned/appreciation context (upvoted)"
+       hypothesis.
+     - **Hypothesis test 1 (null result, kept in the record):** compared
+       `mean_comment_score`'s distribution shape (dip test + GMM, the
+       corrected Stage-1 methodology) between "post-and-leave"
+       (`repeat_engagement_rate=0`) and "engaged" accounts. **Both groups
+       show near-identical bimodal structure** (component means barely
+       differ, ~70/30 weights in both) — the bimodality looks like a
+       generic property of how Reddit scores comments, not something
+       specific to disengaged accounts. Only 1.4–2.4% of accounts in either
+       group have a negative mean score, so the "ragebait gets downvoted"
+       half isn't showing up at volume on this operationalization. Caveats:
+       "never double-posts in the same thread" isn't the same claim as
+       "ignores replies," and this was tested pooled across all 45 subs,
+       which could dilute a sub-tier-specific pattern.
+     - `n_subs_rejected_but_returned`, `best_sub_mean_score`,
+       `worst_sub_mean_score`, `reception_spread`,
+       `shows_silo_mismatch_pattern` — reframed from a rejected first
+       version of this idea. The first framing (score variance across subs
+       = context-independence = bot-like) was wrong: a human who simply
+       never leaves their aligned silo would *also* show low variance, for
+       an unrelated reason (restricted footprint, not context-blindness).
+       The corrected version needs no political-lean labels on subs at
+       all — it only asks whether an account **keeps returning to a sub
+       where it's net-downvoted** (`mean_score_in_sub < 0`, active there
+       across ≥2 distinct months) **while doing well elsewhere**
+       (`best_sub_mean_score > 5`). A human's self-preservation instinct
+       predicts avoidance of hostile territory; a script has no such
+       feedback loop.
+     - **Hypothesis test 2 (positive, volume-controlled):** 2.0% of the
+       126,835 multi-sub accounts show this pattern. They run **~2×
+       controversiality rate (6.2% vs 3.1%) and ~1.3× removal rate (6.3% vs
+       4.8%)** vs. other multi-sub accounts. Checked for the obvious
+       confound (accounts active in more subs get more chances to hit this
+       pattern by pure volume) by re-running within `n_subs_active` buckets
+       (2–3 / 4–6 / 7+) — **the ~2× controversiality gap holds inside every
+       bucket**, not just in the pooled comparison. Real signal, not a
+       volume artefact — the strongest account-level finding in this stage
+       after `removal_rate` itself.
+   - **Base36 age calibration: put on hold by user decision, not abandoned
+     for cause.** Live Reddit access confirmed working
+     (`scripts/reddit_auth.py`, OAuth, 53 req/min — the original audit's 403
+     was a datacenter-IP artefact as already suspected, not a credential
+     problem) and `scripts/v3_calibrate_age_sample.py` is written
+     (stratified sample across the observed `account_ordinal` range, pull
+     real `created_utc`, isotonic lower-envelope regression ordinal→date).
+     Not run: the user opted for a free alternative instead of ~1,750 live
+     lookups — see below.
+   - ✅ **Age proxy: `days_since_first_seen`, done 2026-08-06.** User's
+     framing: use *today minus first-seen* as the age denominator, and let
+     per-account noise cancel out at n=347,886 rather than paying for
+     external calibration. Materially better than the `observed_span_days`
+     already in the table (`last_seen - first_seen`) for this purpose —
+     span is exactly **0 for the 48% of accounts that are singletons**,
+     since one data point has no span, whereas `days_since_first_seen` is
+     non-zero for every account regardless of how many times we caught
+     them (range 1.8–735.5 days, median 421.6, matching the ~24-month
+     window). Feeds `comments_per_day_since_first_seen`,
+     `posts_per_day_since_first_seen`, `karma_per_day_since_first_seen`.
+     Explicitly still a proxy, not true account age — an account first
+     spotted last month could have signed up years ago and just not have
+     been sampled into a top-100 post before; the docstring in
+     `v3_account_features.py` spells out all three age-like quantities now
+     in the table (`account_ordinal`, `observed_span_days`,
+     `days_since_first_seen`) so they don't get conflated later.
+   - ✅ **Risk-colored histograms, done 2026-08-06.** User's ask: color every
+     univariate bar by mean `removal_rate` within that bin (min 20
+     accounts/bin, else rendered gray — too few to trust) so the EDA page
+     shows *where* elevated risk sits in each feature's distribution, not
+     just that a feature has structure. First version used the account-level
+     p95 of `removal_rate` (50%) as the color-scale max — visually flat,
+     because bin *averages* are far more compressed than individual-account
+     values. Fixed by calibrating the scale to the actual observed range of
+     bin-level means (p95 ≈ 20%) instead. Surfaced a real pattern in the
+     process: `account_ordinal` bins run from **3.5% removal (oldest
+     accounts) to 13.3% (newest)** — near-monotonic, ~4× — newer accounts in
+     this corpus are meaningfully likelier to get removed. Worth its own
+     look in Stage 3, not just a EDA-page curiosity.
+   - ✅ **Bot-marker composite, done 2026-08-06** (`scripts/v3_botmarker_composite.py`).
+     Explicitly an **unsupervised separation check, not a validated
+     detector** — no label exists yet. Six theory-motivated markers, each a
+     percentile rank (0–100, higher = more suspicious) so they combine
+     without hand-tuned weights: `removal_rate`, `deleted_later_rate`,
+     `thin_history_score` (inverse of `n_comments_sample` — "not showing any
+     history"), `karma_extremeness` (`|mean_comment_score − median| / MAD`
+     — catches **both** ragebait-downvoted and appreciation-upvoted
+     archetypes, not just one direction), `karma_per_post_extremeness` (same,
+     for authored posts — only ~13% of accounts have one), `reception_spread`.
+     `botmarker_composite` = mean of whichever marker percentiles are
+     non-null (≥3 required). Kept `karma_extremeness` and
+     `karma_per_post_extremeness` as two separate markers rather than
+     pre-merging them — the composite already blends both for accounts that
+     have both, while keeping them separate lets each one's own power be
+     inspected, which a pre-merge would have thrown away.
+     - **The trustworthy result: top-1%-by-marker profile comparison.**
+       Top 1% by `reception_spread` alone (removal_rate 4.6%) and by
+       `karma_extremeness` alone (3.3%) both sit *below* the population
+       average (7.0%) — in isolation, these two markers are **not**
+       removal-aligned; their extremes look more like genuinely popular
+       high-variance accounts than bot signatures. Top 1% by
+       `botmarker_composite` hits **29.5% removal rate** (~4× population
+       average) with `mean_n_comments=11.2` — a *different* population than
+       top-1%-by-`removal_rate`-alone (which is mechanically 100% removal
+       by construction, and turns out to mostly be one-off singleton
+       accounts, `mean_n_comments=1.13`, i.e. "one bad comment that got
+       nuked," not a sustained pattern). **The composite finds a more
+       diffuse, more consistently-elevated population than any single
+       marker's own top tail — genuine evidence combining markers adds
+       something, without needing a bimodality test to say so.**
+     - ⚠️ **The dip-test/GMM screen on these markers is not trustworthy as
+       reported and needs the same skepticism as Stage 1's first pass.** All
+       7 (6 markers + composite) came back "real candidate," including
+       markers that are themselves percentile ranks — which should be
+       exactly uniform for a continuous variable and never show real
+       bimodality on their own. Root cause: `percent_rank()` doesn't spread
+       out ties, so a percentile rank *of an already zero-inflated variable*
+       (e.g. `removal_rate`, 85% mass at 0) is itself still lumpy at the low
+       end — the point-mass hurdle catches the *single* largest tie but not
+       secondary clumps from other common fractions (1/6, 1/2, 1), which can
+       still fool GMM. `removal_rate`'s separation score (19.03) landed right
+       at the degenerate-ceiling edge (20) — suspicious on its face. **Not
+       fixed. Flagged for next session, not silently trusted.**
+   - Stages 2–4 (bivariate/segmentation, account XGBoost, pair model): not
+     yet started.
 5. **Rally + GDELT conditioning.** Not yet started.
 6. *(Optional)* base36 age calibration + t+90d suspension check on the top-risk
    decile, via `scripts/reddit_auth.py`. Not yet started.
