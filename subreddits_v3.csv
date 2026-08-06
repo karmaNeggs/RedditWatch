@@ -1,0 +1,46 @@
+sub_name,subscribers,category,incentive_tier,role,notes
+r/india,3400000,National,high,treatment,national news + politics
+r/indiasocial,1600000,National,high,treatment,
+r/AskIndia,840000,National,high,treatment,
+r/IndiaNostalgia,520000,National,low,control,nostalgia — low manipulation incentive despite National tag
+r/IndiaTrending,450000,National,high,treatment,"ghost sub — comments/month fell ~5270 (2023) to single digits (2026) while posts stay 30-700/mo; flag low commenter-sample months"
+r/IncredibleIndia,400000,National,low,control,tourism/imagery
+r/delhi,1300000,Cities,medium,treatment,local politics
+r/bangalore,1000000,Cities,medium,treatment,local politics
+r/mumbai,1000000,Cities,medium,treatment,local politics
+r/chennai,546000,Cities,medium,treatment,local politics
+r/hyderabad,546000,Cities,medium,treatment,local politics
+r/Kerala,513000,Cities,high,treatment,state politics — unusually politicised for a city sub
+r/kolkata,425000,Cities,medium,treatment,local politics
+r/IndiaSpeaks,1100000,Political,high,treatment,explicitly political
+r/unitedstatesofindia,550000,Political,high,treatment,"real sub, real posts via /posts/search — but /time_series has zero index coverage at every precision; use /posts/search + /comments/search client-side aggregation for its sub-month counts, not /time_series"
+r/BollyBlindsNGossip,2400000,Entertainment,medium,treatment,PR / reputation management incentive
+r/bollywood,1400000,Entertainment,medium,treatment,PR / reputation management incentive
+r/InstaCelebsGossip,1100000,Entertainment,medium,treatment,PR / reputation management incentive
+r/bollywoodmemes,787000,Entertainment,low,control,
+r/BollywoodFashion,606000,Entertainment,low,control,
+r/AnimeMirchi,559000,Entertainment,low,control,
+r/animeindian,494000,Entertainment,low,control,
+r/BollywoodMusic,460000,Entertainment,low,control,
+r/IndiaCricket,1500000,Sports,low,control,high-volume + bursty — good volume/rally control
+r/ipl,793000,Sports,low,control,"confirmed strongly seasonal (comments 260K-343K/mo Mar-May, ~10-30K rest of year, matching pattern 2025 and 2026) — use YoY same-month baselines in tracker health checks, not trailing-N-month average, or every off-season month false-flags as a cliff"
+r/CricketShitpost,598000,Sports,low,control,
+r/indiansports,411000,Sports,low,control,
+r/RelationshipIndia,573000,Social,low,control,
+r/SaimanSays,587000,Youtubers,low,control,
+r/IndianStockMarket,1300000,Finance,medium,treatment,pump-and-dump incentive
+r/IndiaInvestments,919000,Finance,medium,treatment,pump-and-dump incentive
+r/personalfinanceindia,552000,Finance,low,control,
+r/IndianStreetBets,525000,Finance,high,treatment,strongest pump-and-dump incentive in the list
+r/developersIndia,1500000,Career,low,control,
+r/JEENEETards,511000,Career,low,control,
+r/IndianFashionAddicts,507000,Lifestyle,medium,treatment,affiliate / influencer marketing incentive
+r/CarsIndia,650000,Automobiles,low,control,
+r/IndiaTech,715000,Tech,low,control,recategorised from Gaming
+r/IndianGaming,591000,Gaming,low,control,
+r/GadgetsIndia,538000,Tech,medium,treatment,affiliate marketing / product shilling; recategorised from Gaming
+r/indiameme,1500000,Memes,low,control,
+r/funnyIndia,582000,Memes,low,control,
+r/IndianDankMemes,577000,Memes,low,control,
+r/DesiVideoMemes,480000,Memes,low,control,"CONFIRMED DEAD as of 2026-08 check — public non-quarantined sub, subscribers still shown, but zero posts since 2026-03-19 (verified via direct /posts/search, not an indexing gap). Exclude from active collection until it revives; keep in registry for historical months only"
+r/ISRO,446000,Misc,low,control,narrow technical topic — cleanest low-incentive control

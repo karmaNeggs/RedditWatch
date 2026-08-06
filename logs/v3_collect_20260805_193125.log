@@ -1,0 +1,221 @@
+45 subs x 24 months = 1080 cells -> data/v3/raw
+  [india/2024-08] 120 posts, 2400 commenter rows, 78s
+[   1.3m] cells 1/1080  posts 120  req 494 (6.33/s, err 1.4%)  1.54 posts/s
+  [india/2024-09] 120 posts, 2400 commenter rows, 53s
+[   2.2m] cells 2/1080  posts 240  req 1093 (8.36/s, err 0.6%)  1.84 posts/s
+  [india/2024-10] 120 posts, 2400 commenter rows, 53s
+[   3.1m] cells 3/1080  posts 360  req 1524 (8.32/s, err 0.7%)  1.96 posts/s
+  [india/2024-11] 120 posts, 2400 commenter rows, 47s
+[   3.8m] cells 4/1080  posts 480  req 2052 (8.92/s, err 0.5%)  2.09 posts/s
+  [india/2024-12] 120 posts, 2398 commenter rows, 56s
+[   4.8m] cells 5/1080  posts 600  req 2539 (8.87/s, err 1.1%)  2.10 posts/s
+  [india/2025-01] 120 posts, 2380 commenter rows, 65s
+[   5.9m] cells 6/1080  posts 720  req 3048 (8.67/s, err 2.0%)  2.05 posts/s
+  [india/2025-02] 120 posts, 2400 commenter rows, 48s
+[   6.7m] cells 7/1080  posts 840  req 3532 (8.85/s, err 1.9%)  2.10 posts/s
+  [india/2025-03] 120 posts, 2400 commenter rows, 46s
+[   7.4m] cells 8/1080  posts 960  req 3973 (8.92/s, err 1.7%)  2.16 posts/s
+  [india/2025-04] 120 posts, 2400 commenter rows, 64s
+[   8.5m] cells 9/1080  posts 1080  req 4411 (8.66/s, err 1.6%)  2.12 posts/s
+  [india/2025-05] 120 posts, 2400 commenter rows, 74s
+[   9.7m] cells 10/1080  posts 1200  req 5058 (8.67/s, err 1.5%)  2.06 posts/s
+  [india/2025-06] 120 posts, 2400 commenter rows, 41s
+[  10.4m] cells 11/1080  posts 1320  req 5505 (8.81/s, err 1.4%)  2.11 posts/s
+  [india/2025-07] 120 posts, 2400 commenter rows, 38s
+[  11.0m] cells 12/1080  posts 1440  req 5933 (8.95/s, err 1.3%)  2.17 posts/s
+  [india/2025-08] 120 posts, 2400 commenter rows, 47s
+[  11.8m] cells 13/1080  posts 1560  req 6460 (9.11/s, err 1.2%)  2.20 posts/s
+  [india/2025-09] 120 posts, 2400 commenter rows, 52s
+[  12.7m] cells 14/1080  posts 1680  req 6887 (9.04/s, err 1.6%)  2.21 posts/s
+  [india/2025-10] 120 posts, 2398 commenter rows, 56s
+[  13.6m] cells 15/1080  posts 1800  req 7334 (8.97/s, err 1.9%)  2.20 posts/s
+  [india/2025-11] 120 posts, 2394 commenter rows, 61s
+[  14.6m] cells 16/1080  posts 1920  req 7635 (8.69/s, err 1.9%)  2.19 posts/s
+  [india/2025-12] 120 posts, 2400 commenter rows, 51s
+[  15.5m] cells 17/1080  posts 2040  req 8096 (8.71/s, err 1.9%)  2.19 posts/s
+  [india/2026-01] 120 posts, 2372 commenter rows, 32s
+[  16.0m] cells 18/1080  posts 2160  req 8459 (8.80/s, err 1.8%)  2.25 posts/s
+  [india/2026-02] 120 posts, 2400 commenter rows, 42s
+[  16.7m] cells 19/1080  posts 2280  req 8831 (8.80/s, err 2.0%)  2.27 posts/s
+  [india/2026-03] 120 posts, 2400 commenter rows, 44s
+[  17.5m] cells 20/1080  posts 2400  req 9255 (8.84/s, err 1.9%)  2.29 posts/s
+  [india/2026-04] 120 posts, 2400 commenter rows, 42s
+[  18.2m] cells 21/1080  posts 2520  req 9633 (8.85/s, err 1.9%)  2.31 posts/s
+  [india/2026-05] 120 posts, 2400 commenter rows, 52s
+[  19.0m] cells 22/1080  posts 2640  req 10011 (8.78/s, err 1.8%)  2.31 posts/s
+  [india/2026-06] 120 posts, 2400 commenter rows, 37s
+[  19.6m] cells 23/1080  posts 2760  req 10303 (8.75/s, err 1.8%)  2.34 posts/s
+  [india/2026-07] 120 posts, 2400 commenter rows, 50s
+[  20.5m] cells 24/1080  posts 2880  req 10593 (8.63/s, err 1.8%)  2.35 posts/s
+  [indiasocial/2024-08] 120 posts, 2400 commenter rows, 97s
+[  22.1m] cells 25/1080  posts 3000  req 10982 (8.29/s, err 1.8%)  2.26 posts/s
+  [indiasocial/2024-09] 120 posts, 2400 commenter rows, 67s
+[  23.2m] cells 26/1080  posts 3120  req 11352 (8.16/s, err 1.8%)  2.24 posts/s
+  [indiasocial/2024-10] 120 posts, 2400 commenter rows, 61s
+[  24.2m] cells 27/1080  posts 3240  req 11752 (8.09/s, err 1.8%)  2.23 posts/s
+  [indiasocial/2024-11] 120 posts, 2400 commenter rows, 88s
+[  25.7m] cells 28/1080  posts 3360  req 12108 (7.86/s, err 1.9%)  2.18 posts/s
+  [indiasocial/2024-12] 120 posts, 2400 commenter rows, 59s
+[  26.7m] cells 29/1080  posts 3480  req 12454 (7.78/s, err 1.9%)  2.18 posts/s
+  [indiasocial/2025-01] 120 posts, 2400 commenter rows, 141s
+[  29.0m] cells 30/1080  posts 3600  req 13031 (7.49/s, err 1.8%)  2.07 posts/s
+  [indiasocial/2025-02] 120 posts, 2400 commenter rows, 68s
+[  30.1m] cells 31/1080  posts 3720  req 13674 (7.56/s, err 1.7%)  2.06 posts/s
+  [indiasocial/2025-03] 120 posts, 2400 commenter rows, 72s
+[  31.3m] cells 32/1080  posts 3840  req 14251 (7.58/s, err 1.7%)  2.04 posts/s
+  [indiasocial/2025-04] 120 posts, 2400 commenter rows, 87s
+[  32.8m] cells 33/1080  posts 3960  req 14891 (7.57/s, err 1.7%)  2.01 posts/s
+  [indiasocial/2025-05] 120 posts, 2400 commenter rows, 64s
+[  33.8m] cells 34/1080  posts 4080  req 15422 (7.59/s, err 1.8%)  2.01 posts/s
+  [indiasocial/2025-06] 120 posts, 2400 commenter rows, 71s
+[  35.0m] cells 35/1080  posts 4200  req 15959 (7.59/s, err 1.7%)  2.00 posts/s
+  [indiasocial/2025-07] 120 posts, 2400 commenter rows, 115s
+[  36.9m] cells 36/1080  posts 4320  req 16729 (7.55/s, err 2.0%)  1.95 posts/s
+  [indiasocial/2025-08] 120 posts, 2400 commenter rows, 67s
+[  38.1m] cells 37/1080  posts 4440  req 17465 (7.65/s, err 1.9%)  1.94 posts/s
+  [indiasocial/2025-09] 120 posts, 2400 commenter rows, 57s
+[  39.0m] cells 38/1080  posts 4560  req 18080 (7.73/s, err 1.8%)  1.95 posts/s
+  [indiasocial/2025-10] 120 posts, 2392 commenter rows, 69s
+[  40.2m] cells 39/1080  posts 4680  req 18526 (7.69/s, err 1.8%)  1.94 posts/s
+  [indiasocial/2025-11] 120 posts, 2400 commenter rows, 55s
+[  41.1m] cells 40/1080  posts 4800  req 19131 (7.76/s, err 1.8%)  1.95 posts/s
+  [indiasocial/2025-12] 120 posts, 2400 commenter rows, 59s
+[  42.1m] cells 41/1080  posts 4920  req 19622 (7.77/s, err 1.8%)  1.95 posts/s
+  [indiasocial/2026-01] 120 posts, 2400 commenter rows, 50s
+[  42.9m] cells 42/1080  posts 5040  req 20085 (7.80/s, err 1.7%)  1.96 posts/s
+  [indiasocial/2026-02] 120 posts, 2394 commenter rows, 60s
+[  43.9m] cells 43/1080  posts 5160  req 20576 (7.81/s, err 1.9%)  1.96 posts/s
+  [indiasocial/2026-03] 120 posts, 2396 commenter rows, 47s
+[  44.7m] cells 44/1080  posts 5280  req 21028 (7.84/s, err 1.9%)  1.97 posts/s
+  [indiasocial/2026-04] 120 posts, 2400 commenter rows, 36s
+[  45.3m] cells 45/1080  posts 5400  req 21429 (7.89/s, err 1.9%)  1.99 posts/s
+  [indiasocial/2026-05] 120 posts, 2400 commenter rows, 48s
+[  46.1m] cells 46/1080  posts 5520  req 21888 (7.92/s, err 1.9%)  2.00 posts/s
+  [indiasocial/2026-06] 120 posts, 2400 commenter rows, 47s
+[  46.9m] cells 47/1080  posts 5640  req 22382 (7.96/s, err 1.9%)  2.01 posts/s
+  [indiasocial/2026-07] 120 posts, 2400 commenter rows, 62s
+[  47.9m] cells 48/1080  posts 5760  req 22856 (7.95/s, err 1.9%)  2.00 posts/s
+  [AskIndia/2024-08] 120 posts, 2400 commenter rows, 49s
+[  48.7m] cells 49/1080  posts 5880  req 23376 (8.00/s, err 2.0%)  2.01 posts/s
+  [AskIndia/2024-09] 120 posts, 2400 commenter rows, 43s
+[  49.4m] cells 50/1080  posts 6000  req 23899 (8.05/s, err 2.0%)  2.02 posts/s
+  [AskIndia/2024-10] 120 posts, 2400 commenter rows, 73s
+[  50.7m] cells 51/1080  posts 6120  req 24541 (8.07/s, err 2.1%)  2.01 posts/s
+  [AskIndia/2024-11] 120 posts, 2400 commenter rows, 65s
+[  51.8m] cells 52/1080  posts 6240  req 25216 (8.12/s, err 2.1%)  2.01 posts/s
+  [AskIndia/2024-12] 120 posts, 2400 commenter rows, 55s
+[  52.7m] cells 53/1080  posts 6360  req 25787 (8.16/s, err 2.1%)  2.01 posts/s
+  [AskIndia/2025-01] 120 posts, 2400 commenter rows, 37s
+[  53.3m] cells 54/1080  posts 6480  req 26329 (8.24/s, err 2.1%)  2.03 posts/s
+  [AskIndia/2025-02] 120 posts, 2400 commenter rows, 39s
+[  53.9m] cells 55/1080  posts 6600  req 26859 (8.30/s, err 2.1%)  2.04 posts/s
+  [AskIndia/2025-03] 120 posts, 2400 commenter rows, 53s
+[  54.8m] cells 56/1080  posts 6720  req 27370 (8.32/s, err 2.2%)  2.04 posts/s
+  [AskIndia/2025-04] 120 posts, 2400 commenter rows, 59s
+[  55.8m] cells 57/1080  posts 6840  req 27869 (8.32/s, err 2.3%)  2.04 posts/s
+  [AskIndia/2025-05] 120 posts, 2400 commenter rows, 50s
+[  56.6m] cells 58/1080  posts 6960  req 28324 (8.33/s, err 2.4%)  2.05 posts/s
+  [AskIndia/2025-06] 120 posts, 2396 commenter rows, 31s
+[  57.1m] cells 59/1080  posts 7080  req 28792 (8.40/s, err 2.3%)  2.06 posts/s
+  [AskIndia/2025-07] 120 posts, 2400 commenter rows, 41s
+[  57.8m] cells 60/1080  posts 7200  req 29303 (8.45/s, err 2.4%)  2.08 posts/s
+  [AskIndia/2025-08] 120 posts, 2360 commenter rows, 61s
+[  58.8m] cells 61/1080  posts 7320  req 29771 (8.43/s, err 2.5%)  2.07 posts/s
+  [AskIndia/2025-09] 120 posts, 2400 commenter rows, 59s
+[  59.8m] cells 62/1080  posts 7440  req 30260 (8.43/s, err 2.5%)  2.07 posts/s
+  [AskIndia/2025-10] 120 posts, 2398 commenter rows, 40s
+[  60.5m] cells 63/1080  posts 7560  req 30604 (8.43/s, err 2.5%)  2.08 posts/s
+  [AskIndia/2025-11] 120 posts, 2400 commenter rows, 40s
+[  61.2m] cells 64/1080  posts 7680  req 30983 (8.44/s, err 2.5%)  2.09 posts/s
+  [AskIndia/2025-12] 120 posts, 2400 commenter rows, 35s
+[  61.7m] cells 65/1080  posts 7800  req 31352 (8.46/s, err 2.5%)  2.11 posts/s
+  [AskIndia/2026-01] 120 posts, 2400 commenter rows, 51s
+[  62.6m] cells 66/1080  posts 7920  req 31808 (8.47/s, err 2.5%)  2.11 posts/s
+  [AskIndia/2026-02] 120 posts, 2400 commenter rows, 31s
+[  63.1m] cells 67/1080  posts 8040  req 32195 (8.50/s, err 2.4%)  2.12 posts/s
+  [AskIndia/2026-03] 120 posts, 2400 commenter rows, 38s
+[  63.7m] cells 68/1080  posts 8160  req 32561 (8.51/s, err 2.5%)  2.13 posts/s
+  [AskIndia/2026-04] 120 posts, 2400 commenter rows, 20s
+[  64.1m] cells 69/1080  posts 8280  req 32946 (8.57/s, err 2.5%)  2.15 posts/s
+  [AskIndia/2026-05] 120 posts, 2400 commenter rows, 49s
+[  64.9m] cells 70/1080  posts 8400  req 33306 (8.55/s, err 2.6%)  2.16 posts/s
+  [AskIndia/2026-06] 120 posts, 2400 commenter rows, 19s
+[  65.2m] cells 71/1080  posts 8520  req 33593 (8.58/s, err 2.5%)  2.18 posts/s
+  [AskIndia/2026-07] 120 posts, 2400 commenter rows, 46s
+[  66.0m] cells 72/1080  posts 8640  req 33933 (8.57/s, err 2.6%)  2.18 posts/s
+  [IndiaNostalgia/2024-08] 120 posts, 2176 commenter rows, 11s
+[  66.2m] cells 73/1080  posts 8760  req 34178 (8.61/s, err 2.6%)  2.21 posts/s
+  [IndiaNostalgia/2024-09] 120 posts, 2110 commenter rows, 33s
+[  66.7m] cells 74/1080  posts 8880  req 34453 (8.60/s, err 2.7%)  2.22 posts/s
+  [IndiaNostalgia/2024-10] 120 posts, 1834 commenter rows, 16s
+[  67.0m] cells 75/1080  posts 9000  req 34704 (8.63/s, err 2.7%)  2.24 posts/s
+  [IndiaNostalgia/2024-11] 120 posts, 2050 commenter rows, 41s
+[  67.7m] cells 76/1080  posts 9120  req 34979 (8.61/s, err 2.8%)  2.25 posts/s
+  [IndiaNostalgia/2024-12] 120 posts, 1934 commenter rows, 20s
+[  68.0m] cells 77/1080  posts 9240  req 35234 (8.63/s, err 2.8%)  2.26 posts/s
+  [IndiaNostalgia/2025-01] 120 posts, 2280 commenter rows, 11s
+[  68.2m] cells 78/1080  posts 9360  req 35479 (8.67/s, err 2.7%)  2.29 posts/s
+  [IndiaNostalgia/2025-02] 120 posts, 2276 commenter rows, 46s
+[  69.0m] cells 79/1080  posts 9480  req 35759 (8.64/s, err 2.8%)  2.29 posts/s
+  [IndiaNostalgia/2025-03] 120 posts, 2268 commenter rows, 22s
+[  69.3m] cells 80/1080  posts 9600  req 36007 (8.66/s, err 2.8%)  2.31 posts/s
+  [IndiaNostalgia/2025-04] 120 posts, 2158 commenter rows, 27s
+[  69.8m] cells 81/1080  posts 9720  req 36259 (8.66/s, err 2.8%)  2.32 posts/s
+  [IndiaNostalgia/2025-05] 120 posts, 2142 commenter rows, 30s
+[  70.3m] cells 82/1080  posts 9840  req 36514 (8.66/s, err 2.8%)  2.33 posts/s
+  [IndiaNostalgia/2025-06] 120 posts, 2282 commenter rows, 26s
+[  70.7m] cells 83/1080  posts 9960  req 36767 (8.67/s, err 2.8%)  2.35 posts/s
+  [IndiaNostalgia/2025-07] 120 posts, 2290 commenter rows, 39s
+[  71.4m] cells 84/1080  posts 10080  req 37019 (8.65/s, err 2.8%)  2.35 posts/s
+  [IndiaNostalgia/2025-08] 120 posts, 2144 commenter rows, 14s
+[  71.6m] cells 85/1080  posts 10200  req 37263 (8.68/s, err 2.8%)  2.37 posts/s
+  [IndiaNostalgia/2025-09] 120 posts, 2266 commenter rows, 20s
+[  71.9m] cells 86/1080  posts 10320  req 37509 (8.69/s, err 2.8%)  2.39 posts/s
+  [IndiaNostalgia/2025-10] 120 posts, 2188 commenter rows, 12s
+[  72.1m] cells 87/1080  posts 10440  req 37755 (8.73/s, err 2.8%)  2.41 posts/s
+  [IndiaNostalgia/2025-11] 120 posts, 2130 commenter rows, 33s
+[  72.7m] cells 88/1080  posts 10560  req 38045 (8.73/s, err 2.9%)  2.42 posts/s
+  [IndiaNostalgia/2025-12] 120 posts, 2316 commenter rows, 15s
+[  72.9m] cells 89/1080  posts 10680  req 38291 (8.75/s, err 2.9%)  2.44 posts/s
+  [IndiaNostalgia/2026-01] 120 posts, 2316 commenter rows, 10s
+[  73.1m] cells 90/1080  posts 10800  req 38543 (8.79/s, err 2.8%)  2.46 posts/s
+  [IndiaNostalgia/2026-02] 120 posts, 2170 commenter rows, 52s
+[  73.9m] cells 91/1080  posts 10920  req 38822 (8.75/s, err 2.9%)  2.46 posts/s
+  [IndiaNostalgia/2026-03] 120 posts, 2286 commenter rows, 12s
+[  74.2m] cells 92/1080  posts 11040  req 39067 (8.78/s, err 2.9%)  2.48 posts/s
+  [IndiaNostalgia/2026-04] 120 posts, 2284 commenter rows, 35s
+[  74.7m] cells 93/1080  posts 11160  req 39345 (8.78/s, err 3.0%)  2.49 posts/s
+  [IndiaNostalgia/2026-05] 120 posts, 2352 commenter rows, 11s
+[  74.9m] cells 94/1080  posts 11280  req 39601 (8.81/s, err 3.0%)  2.51 posts/s
+  [IndiaNostalgia/2026-06] 120 posts, 2334 commenter rows, 12s
+[  75.1m] cells 95/1080  posts 11400  req 39847 (8.84/s, err 2.9%)  2.53 posts/s
+  [IndiaNostalgia/2026-07] 120 posts, 2218 commenter rows, 47s
+[  75.9m] cells 96/1080  posts 11520  req 40119 (8.81/s, err 3.0%)  2.53 posts/s
+  [IndiaTrending/2024-08] 120 posts, 104 commenter rows, 11s
+[  76.1m] cells 97/1080  posts 11640  req 40264 (8.82/s, err 3.0%)  2.55 posts/s
+  [IndiaTrending/2024-09] 120 posts, 12 commenter rows, 10s
+[  76.2m] cells 98/1080  posts 11760  req 40396 (8.83/s, err 3.0%)  2.57 posts/s
+  [IndiaTrending/2024-10] 120 posts, 88 commenter rows, 29s
+[  76.7m] cells 99/1080  posts 11880  req 40568 (8.81/s, err 3.1%)  2.58 posts/s
+  [IndiaTrending/2024-11] 120 posts, 48 commenter rows, 7s
+[  76.8m] cells 100/1080  posts 12000  req 40703 (8.83/s, err 3.1%)  2.60 posts/s
+  [IndiaTrending/2024-12] 120 posts, 108 commenter rows, 6s
+[  76.9m] cells 101/1080  posts 12120  req 40846 (8.85/s, err 3.1%)  2.63 posts/s
+  [IndiaTrending/2025-01] 120 posts, 58 commenter rows, 5s
+[  77.0m] cells 102/1080  posts 12240  req 40977 (8.87/s, err 3.1%)  2.65 posts/s
+Traceback (most recent call last):
+  File "/Users/anupamvashist/Documents/Project writeups/Analysis Report- reddit-bot-analysis/scripts/v3_collect.py", line 524, in <module>
+    main()
+  File "/Users/anupamvashist/Documents/Project writeups/Analysis Report- reddit-bot-analysis/scripts/v3_collect.py", line 514, in main
+    result = process_cell(sub, tier, y, m, args.out_dir, args.workers, stats)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anupamvashist/Documents/Project writeups/Analysis Report- reddit-bot-analysis/scripts/v3_collect.py", line 447, in process_cell
+    counter = matched_random_sample(top, rest, k=min(20, len(rest)))
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anupamvashist/Documents/Project writeups/Analysis Report- reddit-bot-analysis/scripts/v3_collect.py", line 167, in matched_random_sample
+    [i / (k - 1) for i in range(k)]] if len(top_nc) > 1 else [top_nc[0]] * k
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/anupamvashist/Documents/Project writeups/Analysis Report- reddit-bot-analysis/scripts/v3_collect.py", line 167, in <listcomp>
+    [i / (k - 1) for i in range(k)]] if len(top_nc) > 1 else [top_nc[0]] * k
+     ~~^~~~~~~~~
+ZeroDivisionError: division by zero

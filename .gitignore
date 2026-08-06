@@ -29,3 +29,7 @@ Thumbs.db
 # Data / output (uncomment if you don't want to track these)
 # data/
 # output/
+
+# V3 analysis layer: fully rebuilt from data/v3/raw/ via scripts/v3_stage0_build.py
+# in ~6s -- committing it would bloat git history on every rebuild for no benefit.
+data/v3/analysis/
