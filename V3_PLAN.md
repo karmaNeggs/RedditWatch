@@ -43,21 +43,51 @@ strip cap doesn't catch, and the 9-candidate count is itself
 threshold-sensitive (3–9 across two reasonable settings) — flagged, not
 resolved.
 
-**Stage 3 headline: one channel needs scrutiny before it gets cited.**
-`admin_removal` scored **0.896 AUC on rung 4** (grouped+blocked+purged) —
-well above the plan's own 0.65–0.80 Kumar-2017 ceiling for account-level
-detection. An ablation ruled out the obvious leak (temporal truncation from
-ban-capped activity windows: dropping the whole `provenance_age` family
-barely moved it, 0.902 vs 0.896) — the signal is broadly distributed, not one
-leaky feature family. Working hypothesis, **not proof**: "removed by reddit"
-is a more extreme construct (platform-wide ban) than Kumar's generic
-sockpuppet label, so a higher ceiling isn't inherently implausible — but
-don't repeat 0.896 without this caveat attached. The other 4 channels landed
-in-range: `self_deletion` 0.778, `comment_removed_ambiguous` 0.805,
-`automod_filtered` 0.653, `moderator_removed` 0.637. Full detail, the
-cross-channel transfer matrix, and two more open flags (a construct-validity
-violation on 3/5 channels, a doc/code mismatch in the sanitisation script) in
-§10.4.
+**Stage 3 headline, corrected 2026-08-06 (same day, second pass): `admin_removal`'s
+0.896 was leakage, not signal — fixed, and the corrected number is 0.743.**
+Root cause **confirmed by direct SQL inspection**, not inferred:
+`v3_account_features.py` aggregates every "behavioral" feature over *all* of
+an account's sampled rows with no exclusion for rows that themselves define
+the label — for a thin-history account (22.9% of `admin_removal` positives
+are singletons; median account-wide is 2 comments) the "behavioral" features
+being fitted on **are substantially the removed row's own metadata**, not
+independent past behavior. Diagnostic sweep: rung-4 AUC restricted to
+`n_comments_sample ≥ 5` → 0.822; `≥ 10` → **0.743**, landing exactly inside
+Kumar's 0.65–0.80. The specific mechanical sub-hypothesis (removed-content
+`score` corrupted by the `_meta` block's +16s/+36h snapshot merge, §3) was
+tested directly and **rejected** — admin-removed comments score *higher*
+(mean 31.5) than the same account's kept comments (mean 19.2), the opposite
+of a depressed-score artefact.
+
+**The literal fix (leave-one-out: rebuild features excluding each channel's
+own label rows) was tried, and made things worse — rejected, not adopted.**
+It turns thin-history accounts' features into `NaN`, which XGBoost's
+missing-value handling then reads as a near-perfect label proxy — a
+*different*, worse leak (`self_deletion` rung-4 collapsed to 0.419;
+`automod_filtered` spiked to 0.989 — that inconsistency is itself the
+tell). **Adopted instead: volume-gating** (`n_comments_sample ≥ 10`, dilutes
+any single row to ≤1/10 of the aggregate — no new leak introduced). Gated
+rung-4, side by side with the original:
+
+| channel | original rung4 | **gated rung4 (adopted)** |
+|---|---|---|
+| `admin_removal` | 0.896 | **0.743** ✅ in range |
+| `self_deletion` | 0.778 | **0.695** ✅ in range |
+| `comment_removed_ambiguous` | 0.805 | **0.641** ⚠️ now *below* range, unexplained |
+| `automod_filtered` | 0.653 | 0.725 (barely moves — label is post-level, this leak mechanism doesn't apply) |
+| `moderator_removed` | 0.637 | 0.687 (same — post-level label) |
+
+Also surfaced: `admin_removal` ∩ `self_deletion` = 39.9% account overlap,
+`self_deletion` ∩ `comment_removed_ambiguous` = 68.6% — the "5 independent
+channels" framing needs this caveat; self-deletion plausibly often *follows*
+another moderation action rather than being independent of it. Full
+before/after table, the rejected-LOO numbers, and the rest of the §8
+leakage-register walk (items 2/3/4/6) are in §10.4.
+
+**Bottom line for Stage 4: nothing here points to an account-level result
+near pair-model territory.** The 0.90+ claim continues to rest entirely on
+Stage 4's pair-level model, not on any Stage 3 channel — which is what §1
+said from the start.
 
 **One open thread remains:** Base36 age calibration is on hold, not
 abandoned — script (`scripts/v3_calibrate_age_sample.py`) works, live Reddit
@@ -68,9 +98,7 @@ access confirmed, just deprioritized in favor of the free
 actually lives, §1/§4.4) → Stage 5 (prevalence) → rally+GDELT → dashboard.**
 Account-level work (everything done so far, Stage 3 included) explicitly
 **feeds** the pair layer per §1 — it was never meant to be the deliverable on
-its own, and per §1's own framing the fact that `admin_removal` already
-touches pair-model territory (0.896) is a reason to move to Stage 4, not a
-reason to keep tuning Stage 3. Stage 4 is the next big lift.
+its own. Stage 4 is the next big lift.
 
 **Before touching account_features again:** read the docstring at the top of
 `scripts/v3_account_features.py` — it explains the bipartite-sampling
@@ -1383,6 +1411,69 @@ to SEO marketing content with no paper behind it.
        (`mean_post_score`, `own_post_reply_rate`) instead — the "who is this
        account" channels and the "was this specific post bad" channels split
        on different feature families, not just different AUCs.
+   - ✅ **Stage 3 leakage audit + correction, done 2026-08-06 (same day,
+     second pass), user-directed** ("dig in first, need full sanitisation and
+     least assumptions before moving fwd" — in response to `admin_removal`'s
+     0.896). Same files as Stage 3 (`scripts/v3_stage3_account_model.py`,
+     `docs/v3-research/eda/stage3.html`/`stage3_data.json`); original numbers
+     kept visible on the page, labeled as superseded, not deleted.
+     - **Phase 1 diagnostics.** Singleton share of `admin_removal` positives:
+       735/3,204 = 22.9% (their one sampled row *is* the label-defining row).
+       Rung-4 AUC restricted to `n_comments_sample ≥ 5` → 0.822; `≥ 10` →
+       0.743 (inside 0.65–0.80). Score-corruption sub-hypothesis (removed
+       content's `score` distorted by the §3 `_meta` block's +16s/+36h
+       snapshot merge) tested directly on the 207 accounts with both removed
+       and kept comments: admin-removed comments score *higher* (mean 31.5)
+       than the same account's kept comments (mean 19.2) — rejected, the
+       opposite of what a depressed-score artefact would predict.
+     - **Mechanism confirmed by direct SQL inspection of
+       `v3_account_features.py`:** every behavioral aggregate is computed
+       over all of an account's sampled rows, with no exclusion for rows
+       that themselves satisfy a removal condition. Not inferred from the
+       AUC pattern — read directly off the query.
+     - **Leave-one-out fix attempted, rejected — made things worse.**
+       Rebuilding features per-channel excluding each channel's own
+       label-defining rows leaves thin-history accounts with `NaN` features,
+       which XGBoost's native missing-value handling then exploits as a
+       near-perfect label proxy (a different, worse leak). Numbers that
+       exposed this: rung-1 jumped to 0.97–0.98 across the board (nonsense —
+       random-CV should never be *that* clean); rung-4 became wildly
+       inconsistent by channel (`self_deletion` collapsed to 0.419,
+       `automod_filtered` spiked to 0.989) — internal inconsistency was
+       itself the tell that the "fix" was a new leak, not a correction. One
+       genuine SQL bug caught and fixed en route (the same `NULL OR FALSE =
+       NULL` three-valued-logic trap already documented for
+       `is_confirmed_automation_seed` in Stage 0) — fixing it didn't rescue
+       the approach, the missingness leak remained regardless.
+     - **Adopted instead: volume-gating** (`VOLUME_GATE_THRESHOLD = 10` on
+       `n_comments_sample`) — dilutes any single row to ≤1/10 of the
+       aggregate, introduces no new leak. Full gated-vs-original rung-4:
+       `admin_removal` 0.896→**0.743** (in range), `self_deletion`
+       0.778→**0.695** (in range), `comment_removed_ambiguous`
+       0.805→**0.641** (now *below* range — flagged, not explained further),
+       `automod_filtered` 0.653→0.725 and `moderator_removed` 0.637→0.687
+       (both barely move). The last two barely moving is itself informative,
+       not an oversight: their labels are post-level, not comment-level, so
+       this specific leak mechanism structurally doesn't apply to them —
+       confirmed separately by dropping their 4 post-derived features, which
+       also barely moved their AUC (0.653→0.635, 0.637→0.622). Their
+       original numbers look comparatively credible as a result.
+     - **§8 leakage-register walk, items not already covered:**
+       - Item 2: `admin_removal` ∩ `self_deletion` = 39.9% account overlap;
+         `self_deletion` ∩ `comment_removed_ambiguous` = 68.6%. The 5-channel
+         set is not as independent as the original framing implied —
+         self-deletion plausibly often follows other moderation action.
+       - Item 3: confirmed by inspection, no `retrieved_on`-derived column
+         exists in `account_features_model`.
+       - Item 4: a canary test (username-morphology + `account_ordinal`
+         only, nothing else) returned AUC 0.489 — pure noise, ruling out
+         collection-time-artifact explanations for the age-like features.
+       - Item 6: broadened score-adjacent ablation (score family +
+         `controversiality_rate` + `is_submitter_rate` + `mean_depth`)
+         barely moved `admin_removal` (0.896→0.887) — not the primary
+         driver, the row-inclusion mechanism above is.
+     - **Still open, not fixed:** `comment_removed_ambiguous`'s gated number
+       (0.641) sits *below* the Kumar floor with no explanation yet.
    - Stage 4 (pair model): not yet started — the next big lift per §1/§7.
 5. **Rally + GDELT conditioning.** Not yet started.
 6. *(Optional)* base36 age calibration + t+90d suspension check on the top-risk
