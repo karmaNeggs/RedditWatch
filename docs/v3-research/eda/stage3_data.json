@@ -1,0 +1,829 @@
+{
+  "channels": {
+    "admin_removal": {
+      "n_population": 347886,
+      "n_positives": 3204,
+      "positive_rate": 0.009209913592383712,
+      "population": "all",
+      "rung1_random_cv": {
+        "auc": 0.9241770767940323,
+        "fold_aucs": [
+          0.9221093306284,
+          0.9285183256007649,
+          0.9227457627912802,
+          0.9213223133485222,
+          0.927098769620245
+        ]
+      },
+      "rung2_grouped_cv": {
+        "auc": 0.9242791978277598,
+        "fold_aucs": [
+          0.9216586130693378,
+          0.930597942892644,
+          0.9168084175188012,
+          0.9305032923691225,
+          0.9232388102102507
+        ]
+      },
+      "rung3_chrono_blocked": {
+        "auc": 0.9204936218312179,
+        "n_test": 104365,
+        "n_pos_test": 632
+      },
+      "rung4_grouped_blocked_purged": {
+        "auc": 0.8963325636276288,
+        "n_test": 104365,
+        "n_pos_test": 632,
+        "n_features_selected": 30,
+        "selected_features": [
+          "own_post_reply_rate",
+          "karma_per_post_extremeness",
+          "mean_post_score",
+          "n_posts_sample_nonzero",
+          "comments_per_day_since_first_seen",
+          "high_tier_share_nonzero",
+          "interval_entropy",
+          "posts_per_day_since_first_seen",
+          "n_comments_sample",
+          "medium_tier_share",
+          "interval_quantization_rate",
+          "medium_tier_share_nonzero",
+          "low_tier_share_ne_1.0",
+          "high_tier_share",
+          "shows_silo_mismatch_pattern",
+          "burstiness_kimjo",
+          "controversiality_rate_nonzero",
+          "low_tier_share",
+          "karma_per_day_since_first_seen",
+          "controversiality_rate",
+          "subreddit_entropy",
+          "n_posts_sample",
+          "score_stddev",
+          "mean_depth",
+          "days_since_first_seen",
+          "observed_span_days",
+          "mean_body_len",
+          "worst_sub_mean_score",
+          "repeat_engagement_rate",
+          "account_ordinal"
+        ]
+      },
+      "subreddit_blocked": {
+        "auc": 0.8831123849929252,
+        "n_test": 75542,
+        "n_pos_test": 369,
+        "test_subs": [
+          "BollywoodMusic",
+          "GadgetsIndia",
+          "IndiaInvestments",
+          "RelationshipIndia",
+          "SaimanSays",
+          "hyderabad",
+          "indiasocial",
+          "kolkata",
+          "personalfinanceindia"
+        ]
+      },
+      "rung4_without_score_family": {
+        "auc": 0.874021602685668
+      },
+      "volume_only_baseline_auc": 0.6159562350738087,
+      "permutation_floor_auc": 0.5158379445707879,
+      "pu_learning": {
+        "c": 0.7496583461761475,
+        "prevalence_naive": 0.18473607301712036,
+        "prevalence_pu_corrected": 0.24642702100152816,
+        "recall_at_fpr": {
+          "0.01": 0.2234375,
+          "0.05": 0.5890625
+        },
+        "n_holdout_pos": 640,
+        "degenerate": false
+      },
+      "shap": {
+        "family": {
+          "provenance_age": 0.8366281307818533,
+          "reception": 0.7890319258639054,
+          "footprint": 0.40639632454252367,
+          "engagement_pattern": 0.23079415532467024,
+          "bot_marker_extremeness": 0.16308075860828256,
+          "timing_tier2": 0.05605207603771854,
+          "passthrough_bool": 0.0015049650691561372
+        },
+        "top_features": [
+          [
+            "comments_per_day_since_first_seen",
+            0.27026787757495097
+          ],
+          [
+            "mean_depth",
+            0.2419008263270074
+          ],
+          [
+            "own_post_reply_rate",
+            0.22168843903922944
+          ],
+          [
+            "observed_span_days",
+            0.21190585749491034
+          ],
+          [
+            "worst_sub_mean_score",
+            0.1917673725619142
+          ],
+          [
+            "mean_body_len",
+            0.16845398066085482
+          ],
+          [
+            "karma_per_post_extremeness",
+            0.16308075860828256
+          ],
+          [
+            "account_ordinal",
+            0.14964206978214073
+          ],
+          [
+            "low_tier_share",
+            0.13040931890929652
+          ],
+          [
+            "posts_per_day_since_first_seen",
+            0.1156068108773892
+          ]
+        ]
+      },
+      "within_kumar_range": false
+    },
+    "self_deletion": {
+      "n_population": 347886,
+      "n_positives": 47730,
+      "positive_rate": 0.13720011727979856,
+      "population": "all",
+      "rung1_random_cv": {
+        "auc": 0.8027672622946452,
+        "fold_aucs": [
+          0.8011125938021599,
+          0.8044025614624435,
+          0.7978712097300853,
+          0.8050332506579848,
+          0.8056948559470883
+        ]
+      },
+      "rung2_grouped_cv": {
+        "auc": 0.8042557480418165,
+        "fold_aucs": [
+          0.7992762884952067,
+          0.8052548654510128,
+          0.8062218428955512,
+          0.8072717083982205,
+          0.8031610542677824
+        ]
+      },
+      "rung3_chrono_blocked": {
+        "auc": 0.7850274003325225,
+        "n_test": 104365,
+        "n_pos_test": 11059
+      },
+      "rung4_grouped_blocked_purged": {
+        "auc": 0.7776629588448558,
+        "n_test": 104365,
+        "n_pos_test": 11059,
+        "n_features_selected": 22,
+        "selected_features": [
+          "burstiness_kimjo",
+          "n_comments_sample",
+          "karma_per_post_extremeness",
+          "interval_entropy",
+          "worst_sub_mean_score",
+          "comments_per_day_since_first_seen",
+          "n_threads_with_repeat",
+          "controversiality_rate_nonzero",
+          "own_post_reply_rate",
+          "account_ordinal",
+          "n_own_posts_with_comments",
+          "comments_per_day_observed",
+          "high_tier_share_nonzero",
+          "n_own_posts_with_comments_ne_1",
+          "score_stddev",
+          "observed_span_days_nonzero",
+          "sample_score_per_day_observed",
+          "controversiality_rate",
+          "mean_depth_nonzero",
+          "karma_per_day_since_first_seen",
+          "mean_post_score",
+          "high_tier_share"
+        ]
+      },
+      "subreddit_blocked": {
+        "auc": 0.7809536410396338,
+        "n_test": 75542,
+        "n_pos_test": 10674,
+        "test_subs": [
+          "BollywoodMusic",
+          "GadgetsIndia",
+          "IndiaInvestments",
+          "RelationshipIndia",
+          "SaimanSays",
+          "hyderabad",
+          "indiasocial",
+          "kolkata",
+          "personalfinanceindia"
+        ]
+      },
+      "rung4_without_score_family": {
+        "auc": 0.7653550019051121
+      },
+      "volume_only_baseline_auc": 0.6418301220222038,
+      "permutation_floor_auc": 0.6011438324779872,
+      "pu_learning": {
+        "c": 0.64002525806427,
+        "prevalence_naive": 0.3971866965293884,
+        "prevalence_pu_corrected": 0.6205797216982705,
+        "recall_at_fpr": {
+          "0.01": 0.1418395139325372,
+          "0.05": 0.3345904043578462
+        },
+        "n_holdout_pos": 9546,
+        "degenerate": false
+      },
+      "shap": {
+        "family": {
+          "provenance_age": 1.1883922120351489,
+          "reception": 0.5209478143207977,
+          "footprint": 0.3130070738446885,
+          "engagement_pattern": 0.135510860083783,
+          "timing_tier2": 0.07892764861668332,
+          "bot_marker_extremeness": 0.04373743239831411
+        },
+        "top_features": [
+          [
+            "account_ordinal",
+            0.7140716563052826
+          ],
+          [
+            "worst_sub_mean_score",
+            0.2726034968586485
+          ],
+          [
+            "karma_per_day_since_first_seen",
+            0.20634425178943583
+          ],
+          [
+            "n_comments_sample",
+            0.20198292980260302
+          ],
+          [
+            "score_stddev",
+            0.17007283516733626
+          ],
+          [
+            "own_post_reply_rate",
+            0.08810553538937738
+          ],
+          [
+            "comments_per_day_observed",
+            0.08682507141651738
+          ],
+          [
+            "observed_span_days_nonzero",
+            0.07788468737274029
+          ],
+          [
+            "burstiness_kimjo",
+            0.0691719378287576
+          ],
+          [
+            "high_tier_share",
+            0.06882496326853085
+          ]
+        ]
+      },
+      "within_kumar_range": true
+    },
+    "comment_removed_ambiguous": {
+      "n_population": 347886,
+      "n_positives": 27118,
+      "positive_rate": 0.0779508229707433,
+      "population": "all",
+      "rung1_random_cv": {
+        "auc": 0.8271172948544521,
+        "fold_aucs": [
+          0.8287764546346601,
+          0.824604486530442,
+          0.8244470729376684,
+          0.8255144756489771,
+          0.8324517656327868
+        ]
+      },
+      "rung2_grouped_cv": {
+        "auc": 0.8283614631852174,
+        "fold_aucs": [
+          0.8239503334927272,
+          0.8330592882145732,
+          0.8301435728911244,
+          0.8278433109704195,
+          0.82681150409725
+        ]
+      },
+      "rung3_chrono_blocked": {
+        "auc": 0.8084289566600273,
+        "n_test": 104365,
+        "n_pos_test": 6900
+      },
+      "rung4_grouped_blocked_purged": {
+        "auc": 0.8048286058837918,
+        "n_test": 104365,
+        "n_pos_test": 6900,
+        "n_features_selected": 20,
+        "selected_features": [
+          "interval_quantization_rate",
+          "n_comments_sample",
+          "burstiness_kimjo",
+          "n_threads_active_ne_1",
+          "high_tier_share_nonzero",
+          "account_ordinal",
+          "comments_per_day_since_first_seen",
+          "observed_span_days",
+          "worst_sub_mean_score",
+          "controversiality_rate_nonzero",
+          "karma_per_day_since_first_seen",
+          "score_stddev",
+          "high_tier_share",
+          "comments_per_day_observed",
+          "low_tier_share",
+          "controversiality_rate",
+          "days_since_first_seen",
+          "medium_tier_share",
+          "n_low_tier_subs",
+          "is_submitter_rate"
+        ]
+      },
+      "subreddit_blocked": {
+        "auc": 0.794691650976062,
+        "n_test": 75542,
+        "n_pos_test": 6038,
+        "test_subs": [
+          "BollywoodMusic",
+          "GadgetsIndia",
+          "IndiaInvestments",
+          "RelationshipIndia",
+          "SaimanSays",
+          "hyderabad",
+          "indiasocial",
+          "kolkata",
+          "personalfinanceindia"
+        ]
+      },
+      "rung4_without_score_family": {
+        "auc": 0.7989705750931029
+      },
+      "volume_only_baseline_auc": 0.5910365452629966,
+      "permutation_floor_auc": 0.5814577371912117,
+      "pu_learning": {
+        "c": 0.660431444644928,
+        "prevalence_naive": 0.3589640259742737,
+        "prevalence_pu_corrected": 0.5435295803749408,
+        "recall_at_fpr": {
+          "0.01": 0.2616632860040568,
+          "0.05": 0.4228286926055689
+        },
+        "n_holdout_pos": 5423,
+        "degenerate": false
+      },
+      "shap": {
+        "family": {
+          "provenance_age": 1.0426852549204975,
+          "reception": 0.5299738571917094,
+          "footprint": 0.5196881956569585,
+          "timing_tier2": 0.04210276713904744
+        },
+        "top_features": [
+          [
+            "account_ordinal",
+            0.6512474959493723
+          ],
+          [
+            "worst_sub_mean_score",
+            0.3408609175826781
+          ],
+          [
+            "n_comments_sample",
+            0.1340007435654416
+          ],
+          [
+            "observed_span_days",
+            0.13346835622824296
+          ],
+          [
+            "comments_per_day_since_first_seen",
+            0.12027649391102284
+          ],
+          [
+            "karma_per_day_since_first_seen",
+            0.11414033625812021
+          ],
+          [
+            "high_tier_share",
+            0.09875538704169211
+          ],
+          [
+            "high_tier_share_nonzero",
+            0.09624372838351944
+          ],
+          [
+            "n_threads_active_ne_1",
+            0.08596378708147684
+          ],
+          [
+            "score_stddev",
+            0.07532516187454892
+          ]
+        ]
+      },
+      "within_kumar_range": false
+    },
+    "automod_filtered": {
+      "n_population": 45861,
+      "n_positives": 4395,
+      "positive_rate": 0.0958330607705894,
+      "population": "post_authors",
+      "rung1_random_cv": {
+        "auc": 0.7349267546908642,
+        "fold_aucs": [
+          0.7346286024357892,
+          0.73879635052603,
+          0.7384558533132879,
+          0.7223577035298417,
+          0.7402467370757403
+        ]
+      },
+      "rung2_grouped_cv": {
+        "auc": 0.7356409245081308,
+        "fold_aucs": [
+          0.726816156778437,
+          0.7394287066431019,
+          0.7440932158287881,
+          0.7283481552614365,
+          0.7406844528140584
+        ]
+      },
+      "rung3_chrono_blocked": {
+        "auc": 0.6635384203466993,
+        "n_test": 13758,
+        "n_pos_test": 1122
+      },
+      "rung4_grouped_blocked_purged": {
+        "auc": 0.6533394740094086,
+        "n_test": 13758,
+        "n_pos_test": 1122,
+        "n_features_selected": 30,
+        "selected_features": [
+          "n_own_posts_with_comments_ne_1",
+          "posts_per_day_since_first_seen",
+          "mean_post_score",
+          "n_own_posts_with_comments",
+          "medium_tier_share",
+          "karma_per_post_extremeness",
+          "n_posts_sample",
+          "is_submitter_rate",
+          "is_submitter_rate_nonzero",
+          "high_tier_share",
+          "n_low_tier_subs_ne_1",
+          "n_low_tier_subs",
+          "worst_sub_mean_score",
+          "karma_extremeness",
+          "low_tier_share",
+          "account_ordinal",
+          "own_post_reply_rate",
+          "score_stddev",
+          "repeat_engagement_rate",
+          "mean_body_len",
+          "karma_per_day_since_first_seen",
+          "burstiness_kimjo",
+          "observed_span_days",
+          "controversiality_rate",
+          "comments_per_day_since_first_seen",
+          "interval_entropy",
+          "subreddit_entropy",
+          "days_since_first_seen",
+          "comments_per_day_observed",
+          "reception_spread"
+        ]
+      },
+      "subreddit_blocked": {
+        "auc": 0.6054096873018926,
+        "n_test": 11464,
+        "n_pos_test": 753,
+        "test_subs": [
+          "BollywoodMusic",
+          "GadgetsIndia",
+          "IndiaInvestments",
+          "RelationshipIndia",
+          "SaimanSays",
+          "hyderabad",
+          "indiasocial",
+          "kolkata",
+          "personalfinanceindia"
+        ]
+      },
+      "rung4_without_score_family": {
+        "auc": 0.6443587176157982
+      },
+      "volume_only_baseline_auc": 0.5560912953342148,
+      "permutation_floor_auc": 0.5141384889031901,
+      "pu_learning": {
+        "c": 0.5579298138618469,
+        "prevalence_naive": 0.4022282660007477,
+        "prevalence_pu_corrected": 0.7209298661002302,
+        "recall_at_fpr": {
+          "0.01": 0.11376564277588168,
+          "0.05": 0.26393629124004553
+        },
+        "n_holdout_pos": 879,
+        "degenerate": false
+      },
+      "shap": {
+        "family": {
+          "reception": 0.6391048668710309,
+          "footprint": 0.4885865519774717,
+          "provenance_age": 0.40478768113584124,
+          "engagement_pattern": 0.2400512149767483,
+          "bot_marker_extremeness": 0.23087981823782114,
+          "timing_tier2": 0.13867535834731276
+        },
+        "top_features": [
+          [
+            "mean_post_score",
+            0.2945016443619849
+          ],
+          [
+            "high_tier_share",
+            0.18025611195154345
+          ],
+          [
+            "medium_tier_share",
+            0.17973803846920997
+          ],
+          [
+            "karma_per_post_extremeness",
+            0.13260952041348512
+          ],
+          [
+            "own_post_reply_rate",
+            0.11058891733587031
+          ],
+          [
+            "posts_per_day_since_first_seen",
+            0.10571170727684473
+          ],
+          [
+            "repeat_engagement_rate",
+            0.09976269602288414
+          ],
+          [
+            "mean_body_len",
+            0.09914952245539106
+          ],
+          [
+            "karma_extremeness",
+            0.09827029782433602
+          ],
+          [
+            "worst_sub_mean_score",
+            0.09330670558964853
+          ]
+        ]
+      },
+      "within_kumar_range": true
+    },
+    "moderator_removed": {
+      "n_population": 45861,
+      "n_positives": 4970,
+      "positive_rate": 0.10837094699199756,
+      "population": "post_authors",
+      "rung1_random_cv": {
+        "auc": 0.694285475145756,
+        "fold_aucs": [
+          0.6820117180199817,
+          0.6991783209634218,
+          0.702376104085115,
+          0.6877753933694082,
+          0.70210023066827
+        ]
+      },
+      "rung2_grouped_cv": {
+        "auc": 0.6921428475477354,
+        "fold_aucs": [
+          0.6921582456115036,
+          0.7014506537519665,
+          0.6801902104050508,
+          0.6840032469269124,
+          0.7033167141721661
+        ]
+      },
+      "rung3_chrono_blocked": {
+        "auc": 0.6401412163585981,
+        "n_test": 13758,
+        "n_pos_test": 1465
+      },
+      "rung4_grouped_blocked_purged": {
+        "auc": 0.6369852539626175,
+        "n_test": 13758,
+        "n_pos_test": 1465,
+        "n_features_selected": 30,
+        "selected_features": [
+          "n_own_posts_with_comments_ne_1",
+          "n_own_posts_with_comments",
+          "posts_per_day_since_first_seen",
+          "n_posts_sample",
+          "high_tier_share_nonzero",
+          "mean_post_score",
+          "low_tier_share_ne_1.0",
+          "karma_per_post_extremeness",
+          "own_post_reply_rate",
+          "low_tier_share",
+          "worst_sub_mean_score",
+          "subreddit_entropy",
+          "high_tier_share",
+          "username_digit_suffix_len",
+          "score_stddev",
+          "account_ordinal",
+          "interval_quantization_rate",
+          "karma_per_day_since_first_seen",
+          "karma_extremeness",
+          "sample_score_per_day_observed",
+          "repeat_engagement_rate",
+          "days_since_first_seen",
+          "mean_body_len",
+          "comments_per_day_observed",
+          "observed_span_days",
+          "controversiality_rate",
+          "mean_depth",
+          "username_char_entropy",
+          "reception_spread",
+          "burstiness_kimjo"
+        ]
+      },
+      "subreddit_blocked": {
+        "auc": 0.6837830639776923,
+        "n_test": 11464,
+        "n_pos_test": 928,
+        "test_subs": [
+          "BollywoodMusic",
+          "GadgetsIndia",
+          "IndiaInvestments",
+          "RelationshipIndia",
+          "SaimanSays",
+          "hyderabad",
+          "indiasocial",
+          "kolkata",
+          "personalfinanceindia"
+        ]
+      },
+      "rung4_without_score_family": {
+        "auc": 0.6233259362066539
+      },
+      "volume_only_baseline_auc": 0.5675924504330969,
+      "permutation_floor_auc": 0.5395155014174258,
+      "pu_learning": {
+        "c": 0.5343290567398071,
+        "prevalence_naive": 0.4215790033340454,
+        "prevalence_pu_corrected": 0.7889876060761082,
+        "recall_at_fpr": {
+          "0.01": 0.09054325955734406,
+          "0.05": 0.2323943661971831
+        },
+        "n_holdout_pos": 994,
+        "degenerate": false
+      },
+      "shap": {
+        "family": {
+          "engagement_pattern": 0.5052141347388793,
+          "reception": 0.42165828604143923,
+          "provenance_age": 0.3791496758063572,
+          "footprint": 0.18609625854184464,
+          "bot_marker_extremeness": 0.13944903802728462,
+          "username_morphology": 0.09569314135235538,
+          "timing_tier2": 0.06451994848635087
+        },
+        "top_features": [
+          [
+            "own_post_reply_rate",
+            0.24771671219487404
+          ],
+          [
+            "mean_post_score",
+            0.18006910703127252
+          ],
+          [
+            "posts_per_day_since_first_seen",
+            0.1608548795911279
+          ],
+          [
+            "n_own_posts_with_comments_ne_1",
+            0.1466272816144031
+          ],
+          [
+            "low_tier_share",
+            0.09116994741127765
+          ],
+          [
+            "n_own_posts_with_comments",
+            0.09089482098463517
+          ],
+          [
+            "karma_per_post_extremeness",
+            0.074450980269913
+          ],
+          [
+            "mean_body_len",
+            0.06944078864707413
+          ],
+          [
+            "account_ordinal",
+            0.06613697527037554
+          ],
+          [
+            "karma_extremeness",
+            0.06499805775737162
+          ]
+        ]
+      },
+      "within_kumar_range": false
+    }
+  },
+  "meta": {
+    "n_accounts": 347886,
+    "n_post_authors": 55688,
+    "kumar_range": [
+      0.65,
+      0.8
+    ]
+  },
+  "construct_validity": {
+    "admin_removal": {
+      "high": 0.18895775964618627,
+      "medium": 0.17111036212075365,
+      "low": 0.1311296229539879
+    },
+    "self_deletion": {
+      "high": 0.4299437859494172,
+      "medium": 0.3632146806212299,
+      "low": 0.37835457756917545
+    },
+    "comment_removed_ambiguous": {
+      "high": 0.4538231741516855,
+      "medium": 0.30692126309647705,
+      "low": 0.32997515390177495
+    },
+    "automod_filtered": {
+      "high": 0.1742989410545753,
+      "medium": 0.354249677325088,
+      "low": 0.27438841630345784
+    },
+    "moderator_removed": {
+      "high": 0.49594757228942987,
+      "medium": 0.4547241688043895,
+      "low": 0.43011036674014363
+    }
+  },
+  "cross_channel_transfer": {
+    "admin_removal": {
+      "admin_removal": 0.7834622547105609,
+      "self_deletion": 0.5389761849386083,
+      "comment_removed_ambiguous": 0.5219023337279295,
+      "automod_filtered": 0.5697061292920493,
+      "moderator_removed": 0.5709590821198252
+    },
+    "self_deletion": {
+      "admin_removal": 0.539787999423416,
+      "self_deletion": 0.7654118475292897,
+      "comment_removed_ambiguous": 0.7661745383589696,
+      "automod_filtered": 0.5775039100252206,
+      "moderator_removed": 0.6484925989873358
+    },
+    "comment_removed_ambiguous": {
+      "admin_removal": 0.5138450453491104,
+      "self_deletion": 0.7214330113657615,
+      "comment_removed_ambiguous": 0.8363970968115187,
+      "automod_filtered": 0.5629467090298688,
+      "moderator_removed": 0.5844698254824489
+    },
+    "automod_filtered": {
+      "admin_removal": 0.6300110503299019,
+      "self_deletion": 0.5561508707916374,
+      "comment_removed_ambiguous": 0.5630952384041389,
+      "automod_filtered": 0.7780503944539564,
+      "moderator_removed": 0.5749727806077373
+    },
+    "moderator_removed": {
+      "admin_removal": 0.5654630193184563,
+      "self_deletion": 0.6619600224527142,
+      "comment_removed_ambiguous": 0.5846378285306388,
+      "automod_filtered": 0.5696479761891632,
+      "moderator_removed": 0.7725744061099374
+    }
+  },
+  "common_transfer_population_n": 55688
+}

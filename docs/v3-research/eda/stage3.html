@@ -1,0 +1,224 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>V3 Stage 3 — account model</title>
+<style>
+  body { font-family: -apple-system, Helvetica, Arial, sans-serif; max-width: 1100px; margin: 2rem auto; padding: 0 1rem; color: #1a1a1a; line-height: 1.5; }
+  h1 { font-size: 1.5rem; }
+  h2 { font-size: 1.15rem; margin-top: 2.5rem; border-bottom: 1px solid #ddd; padding-bottom: .3rem; }
+  h4 { margin-bottom: .3rem; }
+  table { border-collapse: collapse; width: 100%; font-size: .85rem; margin: 1rem 0; }
+  th, td { border: 1px solid #ddd; padding: .4rem .5rem; text-align: left; vertical-align: top; }
+  th { background: #f5f5f5; }
+  code { background: #f0f0f0; padding: .1rem .3rem; border-radius: 3px; font-size: .85em; }
+  .ok { color: #0a7a2a; font-weight: 600; }
+  .warn { color: #b34700; font-weight: 600; }
+  .pop { font-size: .75rem; color: #666; font-weight: normal; }
+  .muted { color: #888; }
+  .diag { background: #fafaf0; }
+  .shap-block { margin-bottom: 1.5rem; }
+  .shap-cols { display: flex; gap: 2rem; }
+  .shap-cols > div { flex: 1; }
+  .shap-cols ul { font-size: .8rem; margin: .2rem 0; padding-left: 1.2rem; }
+  .note { background: #fff8e6; border: 1px solid #f0d878; border-radius: 4px; padding: .8rem 1rem; font-size: .9rem; }
+  a { color: #1a5fb4; }
+</style></head>
+<body>
+<h1>V3 Stage 3 — account model (XGBoost per label channel)</h1>
+<p><a href="index.html">&larr; EDA</a> &middot; <a href="stage2.html">&larr; Stage 2</a></p>
+
+<div class="note">
+<strong>Expected ceiling:</strong> Kumar et al. (2017) found per-account sockpuppet detection tops out around
+0.65&ndash;0.80 AUC on the same-style features &mdash; this stage is a checkpoint, not the deliverable. The plan's
+0.90+ claim lives at Stage 4 (pair-level, not yet built). Channel set below is a data-driven adaptation of
+V3_PLAN.md &sect;6's literal 6-channel table (automod vs. moderator is only resolvable for the ~13% of accounts
+who authored a sampled post; suspension and confirmed-automation are out of scope here, see script docstring).
+</div>
+
+<h2>Validation ladder (AUC) — 347,886 accounts, 55,688 post authors</h2>
+<table>
+<tr><th>channel</th><th>positives</th><th>rung1<br>random CV</th><th>rung2<br>grouped CV</th>
+<th>rung3<br>chrono-blocked</th><th>rung4<br>grouped+blocked+purged</th><th>subreddit-<br>blocked</th>
+<th>rung4<br>no score family</th><th>volume-only<br>baseline</th><th>permutation<br>floor</th></tr>
+
+        <tr>
+          <td><code>admin_removal</code><div class="pop">all population, n=347,886</div></td>
+          <td>3,204 (0.92%)</td>
+          <td>0.924</td>
+          <td>0.924</td>
+          <td>0.920</td>
+          <td><strong>0.896</strong> <span class="warn">outside 0.65-0.80</span></td>
+          <td>0.883</td>
+          <td>0.874</td>
+          <td>0.616</td>
+          <td>0.516</td>
+        </tr>
+        <tr>
+          <td><code>self_deletion</code><div class="pop">all population, n=347,886</div></td>
+          <td>47,730 (13.72%)</td>
+          <td>0.803</td>
+          <td>0.804</td>
+          <td>0.785</td>
+          <td><strong>0.778</strong> <span class="ok">within 0.65-0.80</span></td>
+          <td>0.781</td>
+          <td>0.765</td>
+          <td>0.642</td>
+          <td>0.601</td>
+        </tr>
+        <tr>
+          <td><code>comment_removed_ambiguous</code><div class="pop">all population, n=347,886</div></td>
+          <td>27,118 (7.80%)</td>
+          <td>0.827</td>
+          <td>0.828</td>
+          <td>0.808</td>
+          <td><strong>0.805</strong> <span class="warn">outside 0.65-0.80</span></td>
+          <td>0.795</td>
+          <td>0.799</td>
+          <td>0.591</td>
+          <td>0.581</td>
+        </tr>
+        <tr>
+          <td><code>automod_filtered</code><div class="pop">post_authors population, n=45,861</div></td>
+          <td>4,395 (9.58%)</td>
+          <td>0.735</td>
+          <td>0.736</td>
+          <td>0.664</td>
+          <td><strong>0.653</strong> <span class="ok">within 0.65-0.80</span></td>
+          <td>0.605</td>
+          <td>0.644</td>
+          <td>0.556</td>
+          <td>0.514</td>
+        </tr>
+        <tr>
+          <td><code>moderator_removed</code><div class="pop">post_authors population, n=45,861</div></td>
+          <td>4,970 (10.84%)</td>
+          <td>0.694</td>
+          <td>0.692</td>
+          <td>0.640</td>
+          <td><strong>0.637</strong> <span class="warn">outside 0.65-0.80</span></td>
+          <td>0.684</td>
+          <td>0.623</td>
+          <td>0.568</td>
+          <td>0.540</td>
+        </tr>
+</table>
+<p class="muted">Rung 4 is "the number that counts" per &sect;8. If it doesn't clearly beat the volume-only
+baseline, the model is rediscovering account volume, not detecting anything else. The permutation floor is
+computed on labels shuffled <em>within</em> volume-decile strata (not fully random), so it already reflects
+whatever the real volume/label correlation is &mdash; a rung-4 AUC close to this floor means no signal beyond volume.</p>
+
+<h2>PU learning diagnostics (Elkan&ndash;Noto)</h2>
+<table>
+<tr><th>channel</th><th>c (P(labeled|positive))</th><th>naive prevalence</th><th>PU-corrected prevalence</th>
+<th>recall @ 1% FPR</th><th>recall @ 5% FPR</th></tr>
+
+        <tr>
+          <td><code>admin_removal</code></td>
+          <td>0.750</td>
+          <td>0.185</td>
+          <td>0.246</td>
+          <td>0.223</td>
+          <td>0.589</td>
+        </tr>
+        <tr>
+          <td><code>self_deletion</code></td>
+          <td>0.640</td>
+          <td>0.397</td>
+          <td>0.621</td>
+          <td>0.142</td>
+          <td>0.335</td>
+        </tr>
+        <tr>
+          <td><code>comment_removed_ambiguous</code></td>
+          <td>0.660</td>
+          <td>0.359</td>
+          <td>0.544</td>
+          <td>0.262</td>
+          <td>0.423</td>
+        </tr>
+        <tr>
+          <td><code>automod_filtered</code></td>
+          <td>0.558</td>
+          <td>0.402</td>
+          <td>0.721</td>
+          <td>0.114</td>
+          <td>0.264</td>
+        </tr>
+        <tr>
+          <td><code>moderator_removed</code></td>
+          <td>0.534</td>
+          <td>0.422</td>
+          <td>0.789</td>
+          <td>0.091</td>
+          <td>0.232</td>
+        </tr>
+</table>
+<p class="muted">V3_PLAN.md &sect;6 flags that this method went degenerate (c=0.054) on V2 data &mdash; each c here
+is reported, not assumed trustworthy. A c below ~0.1 is flagged DEGENERATE and its PU-corrected prevalence
+should not be read as a real estimate.</p>
+
+<h2>Construct validity (free, no labels) — rung-4 score by incentive tier</h2>
+<table>
+<tr><th>channel</th><th>high-tier accounts</th><th>medium-tier</th><th>low-tier</th><th>ranking</th></tr>
+
+        <tr><td><code>admin_removal</code></td><td>0.189</td><td>0.171</td>
+        <td>0.131</td><td><span class="ok">high&gt;med&gt;low holds</span></td></tr>
+        <tr><td><code>self_deletion</code></td><td>0.430</td><td>0.363</td>
+        <td>0.378</td><td><span class="warn">ranking violated</span></td></tr>
+        <tr><td><code>comment_removed_ambiguous</code></td><td>0.454</td><td>0.307</td>
+        <td>0.330</td><td><span class="warn">ranking violated</span></td></tr>
+        <tr><td><code>automod_filtered</code></td><td>0.174</td><td>0.354</td>
+        <td>0.274</td><td><span class="warn">ranking violated</span></td></tr>
+        <tr><td><code>moderator_removed</code></td><td>0.496</td><td>0.455</td>
+        <td>0.430</td><td><span class="ok">high&gt;med&gt;low holds</span></td></tr>
+</table>
+<p class="muted">Per &sect;8: the score should rank high &gt; medium &gt; low incentive tier. If it doesn't, the
+model is measuring something about subreddit/moderation intensity rather than account behavior.</p>
+
+<h2>Cross-channel transfer matrix</h2>
+<p class="muted">Row = trained on; column = evaluated on (held-out labels), on the common post-author population
+(n=55,688). Diagonal = same-channel rung-4 AUC restricted to that
+population (may differ slightly from the table above, which used each channel's own native population).
+Per &sect;6: if off-diagonal AUC &asymp; 0.5, no single composite "bot score" is defensible.</p>
+<table>
+<tr><th>train \ eval</th><th>admin_removal</th><th>self_deletion</th><th>comment_removed_ambiguous</th><th>automod_filtered</th><th>moderator_removed</th></tr>
+<tr><td><code>admin_removal</code></td><td class="diag">0.783</td><td class="">0.539</td><td class="">0.522</td><td class="">0.570</td><td class="">0.571</td></tr><tr><td><code>self_deletion</code></td><td class="">0.540</td><td class="diag">0.765</td><td class="">0.766</td><td class="">0.578</td><td class="">0.648</td></tr><tr><td><code>comment_removed_ambiguous</code></td><td class="">0.514</td><td class="">0.721</td><td class="diag">0.836</td><td class="">0.563</td><td class="">0.584</td></tr><tr><td><code>automod_filtered</code></td><td class="">0.630</td><td class="">0.556</td><td class="">0.563</td><td class="diag">0.778</td><td class="">0.575</td></tr><tr><td><code>moderator_removed</code></td><td class="">0.565</td><td class="">0.662</td><td class="">0.585</td><td class="">0.570</td><td class="diag">0.773</td></tr>
+</table>
+
+<h2>TreeSHAP (rung-4 models, family-level)</h2>
+
+        <div class="shap-block">
+          <h4>admin_removal</h4>
+          <div class="shap-cols">
+            <div><strong>By family (mean |SHAP|)</strong><ul><li><code>provenance_age</code>: 0.8366</li><li><code>reception</code>: 0.7890</li><li><code>footprint</code>: 0.4064</li><li><code>engagement_pattern</code>: 0.2308</li><li><code>bot_marker_extremeness</code>: 0.1631</li><li><code>timing_tier2</code>: 0.0561</li><li><code>passthrough_bool</code>: 0.0015</li></ul></div>
+            <div><strong>Top individual features</strong><ul><li><code>comments_per_day_since_first_seen</code>: 0.2703</li><li><code>mean_depth</code>: 0.2419</li><li><code>own_post_reply_rate</code>: 0.2217</li><li><code>observed_span_days</code>: 0.2119</li><li><code>worst_sub_mean_score</code>: 0.1918</li><li><code>mean_body_len</code>: 0.1685</li><li><code>karma_per_post_extremeness</code>: 0.1631</li><li><code>account_ordinal</code>: 0.1496</li><li><code>low_tier_share</code>: 0.1304</li><li><code>posts_per_day_since_first_seen</code>: 0.1156</li></ul></div>
+          </div>
+        </div>
+        <div class="shap-block">
+          <h4>self_deletion</h4>
+          <div class="shap-cols">
+            <div><strong>By family (mean |SHAP|)</strong><ul><li><code>provenance_age</code>: 1.1884</li><li><code>reception</code>: 0.5209</li><li><code>footprint</code>: 0.3130</li><li><code>engagement_pattern</code>: 0.1355</li><li><code>timing_tier2</code>: 0.0789</li><li><code>bot_marker_extremeness</code>: 0.0437</li></ul></div>
+            <div><strong>Top individual features</strong><ul><li><code>account_ordinal</code>: 0.7141</li><li><code>worst_sub_mean_score</code>: 0.2726</li><li><code>karma_per_day_since_first_seen</code>: 0.2063</li><li><code>n_comments_sample</code>: 0.2020</li><li><code>score_stddev</code>: 0.1701</li><li><code>own_post_reply_rate</code>: 0.0881</li><li><code>comments_per_day_observed</code>: 0.0868</li><li><code>observed_span_days_nonzero</code>: 0.0779</li><li><code>burstiness_kimjo</code>: 0.0692</li><li><code>high_tier_share</code>: 0.0688</li></ul></div>
+          </div>
+        </div>
+        <div class="shap-block">
+          <h4>comment_removed_ambiguous</h4>
+          <div class="shap-cols">
+            <div><strong>By family (mean |SHAP|)</strong><ul><li><code>provenance_age</code>: 1.0427</li><li><code>reception</code>: 0.5300</li><li><code>footprint</code>: 0.5197</li><li><code>timing_tier2</code>: 0.0421</li></ul></div>
+            <div><strong>Top individual features</strong><ul><li><code>account_ordinal</code>: 0.6512</li><li><code>worst_sub_mean_score</code>: 0.3409</li><li><code>n_comments_sample</code>: 0.1340</li><li><code>observed_span_days</code>: 0.1335</li><li><code>comments_per_day_since_first_seen</code>: 0.1203</li><li><code>karma_per_day_since_first_seen</code>: 0.1141</li><li><code>high_tier_share</code>: 0.0988</li><li><code>high_tier_share_nonzero</code>: 0.0962</li><li><code>n_threads_active_ne_1</code>: 0.0860</li><li><code>score_stddev</code>: 0.0753</li></ul></div>
+          </div>
+        </div>
+        <div class="shap-block">
+          <h4>automod_filtered</h4>
+          <div class="shap-cols">
+            <div><strong>By family (mean |SHAP|)</strong><ul><li><code>reception</code>: 0.6391</li><li><code>footprint</code>: 0.4886</li><li><code>provenance_age</code>: 0.4048</li><li><code>engagement_pattern</code>: 0.2401</li><li><code>bot_marker_extremeness</code>: 0.2309</li><li><code>timing_tier2</code>: 0.1387</li></ul></div>
+            <div><strong>Top individual features</strong><ul><li><code>mean_post_score</code>: 0.2945</li><li><code>high_tier_share</code>: 0.1803</li><li><code>medium_tier_share</code>: 0.1797</li><li><code>karma_per_post_extremeness</code>: 0.1326</li><li><code>own_post_reply_rate</code>: 0.1106</li><li><code>posts_per_day_since_first_seen</code>: 0.1057</li><li><code>repeat_engagement_rate</code>: 0.0998</li><li><code>mean_body_len</code>: 0.0991</li><li><code>karma_extremeness</code>: 0.0983</li><li><code>worst_sub_mean_score</code>: 0.0933</li></ul></div>
+          </div>
+        </div>
+        <div class="shap-block">
+          <h4>moderator_removed</h4>
+          <div class="shap-cols">
+            <div><strong>By family (mean |SHAP|)</strong><ul><li><code>engagement_pattern</code>: 0.5052</li><li><code>reception</code>: 0.4217</li><li><code>provenance_age</code>: 0.3791</li><li><code>footprint</code>: 0.1861</li><li><code>bot_marker_extremeness</code>: 0.1394</li><li><code>username_morphology</code>: 0.0957</li><li><code>timing_tier2</code>: 0.0645</li></ul></div>
+            <div><strong>Top individual features</strong><ul><li><code>own_post_reply_rate</code>: 0.2477</li><li><code>mean_post_score</code>: 0.1801</li><li><code>posts_per_day_since_first_seen</code>: 0.1609</li><li><code>n_own_posts_with_comments_ne_1</code>: 0.1466</li><li><code>low_tier_share</code>: 0.0912</li><li><code>n_own_posts_with_comments</code>: 0.0909</li><li><code>karma_per_post_extremeness</code>: 0.0745</li><li><code>mean_body_len</code>: 0.0694</li><li><code>account_ordinal</code>: 0.0661</li><li><code>karma_extremeness</code>: 0.0650</li></ul></div>
+          </div>
+        </div>
+
+</body></html>

@@ -20,29 +20,69 @@ feature table (§10.4, 347,886 accounts × 40+ columns, rebuild with
 `python3 scripts/v3_account_features.py`) → EDA page with risk-colored
 histograms + bot-marker composite (rebuild with `python3 scripts/v3_eda_build.py`
 → `docs/v3-research/eda/index.html`, published at
-https://claude.ai/code/artifact/26b907c2-1410-4b94-852a-b2cd10febcad).
+https://claude.ai/code/artifact/26b907c2-1410-4b94-852a-b2cd10febcad) → Stage 1
+fix + Stage 2 bivariate/segmentation (§10.4, `docs/v3-research/eda/stage2.html`,
+linked from the EDA page nav) → feature sanitisation for Stage 3
+(§10.4, `account_features_model` table, 347,886 × 73 cols, rebuild with
+`python3 scripts/v3_feature_sanitise.py`) → **Stage 3 account XGBoost per
+label channel** (§10.4, `docs/v3-research/eda/stage3.html`, rebuild with
+`python3 scripts/v3_stage3_account_model.py`; new deps `xgboost`, `shap`,
+`statsmodels`, plus a system `libomp` — all now in `requirements.txt`).
 
-**Two open threads, both flagged in §10.4, neither silently trusted:**
-1. GMM/BIC dip-test screening (`scripts/v3_stage1_univariate.py`,
-   `scripts/v3_botmarker_composite.py`) still over-flags "bimodal" on
-   percentile-ranked/zero-inflated features — root cause identified
-   (`percent_rank()` doesn't spread ties) but not fixed.
-2. Base36 age calibration is on hold, not abandoned — script
-   (`scripts/v3_calibrate_age_sample.py`) works, live Reddit access
-   confirmed, just deprioritized in favor of the free `days_since_first_seen`
-   proxy.
+**Previous open thread #1 resolved, not as originally diagnosed — see §10.4
+for the full before/after.** The plan's "`percent_rank()` doesn't spread ties"
+theory was wrong; `percent_rank()` is correct, the ties are real (small-n rate
+features on a median-2-comments corpus). The actual bug was in the GMM/BIC
+screen itself (only stripped the single largest point-mass, missed secondary
+clumps) plus GMM decorating ordinary skew as false bimodality. Both fixed.
+Stage 1 went from 18/19 "bimodal" (not credible) to 9/36 candidates, only 2
+robust across parameterizations. Bot-marker screen went from "all 7 real" to
+1/7. **Still open:** 3 features (`n_posts_sample`, `n_high_tier`,
+`n_threads_with_repeat`) return a residual DEGENERATE verdict the point-mass
+strip cap doesn't catch, and the 9-candidate count is itself
+threshold-sensitive (3–9 across two reasonable settings) — flagged, not
+resolved.
 
-**Not started: Stage 2 (bivariate/segmentation) → Stage 3 (account XGBoost per
-label channel) → Stage 4 (pair-level model — where the plan's 0.90+ AUC claim
+**Stage 3 headline: one channel needs scrutiny before it gets cited.**
+`admin_removal` scored **0.896 AUC on rung 4** (grouped+blocked+purged) —
+well above the plan's own 0.65–0.80 Kumar-2017 ceiling for account-level
+detection. An ablation ruled out the obvious leak (temporal truncation from
+ban-capped activity windows: dropping the whole `provenance_age` family
+barely moved it, 0.902 vs 0.896) — the signal is broadly distributed, not one
+leaky feature family. Working hypothesis, **not proof**: "removed by reddit"
+is a more extreme construct (platform-wide ban) than Kumar's generic
+sockpuppet label, so a higher ceiling isn't inherently implausible — but
+don't repeat 0.896 without this caveat attached. The other 4 channels landed
+in-range: `self_deletion` 0.778, `comment_removed_ambiguous` 0.805,
+`automod_filtered` 0.653, `moderator_removed` 0.637. Full detail, the
+cross-channel transfer matrix, and two more open flags (a construct-validity
+violation on 3/5 channels, a doc/code mismatch in the sanitisation script) in
+§10.4.
+
+**One open thread remains:** Base36 age calibration is on hold, not
+abandoned — script (`scripts/v3_calibrate_age_sample.py`) works, live Reddit
+access confirmed, just deprioritized in favor of the free
+`days_since_first_seen` proxy.
+
+**Not started: Stage 4 (pair-level model — where the plan's 0.90+ AUC claim
 actually lives, §1/§4.4) → Stage 5 (prevalence) → rally+GDELT → dashboard.**
-Account-level work (everything done so far) explicitly **feeds** the pair
-layer per §1 — it was never meant to be the deliverable on its own. Stage 4
-is the next big lift, not more account-feature mining.
+Account-level work (everything done so far, Stage 3 included) explicitly
+**feeds** the pair layer per §1 — it was never meant to be the deliverable on
+its own, and per §1's own framing the fact that `admin_removal` already
+touches pair-model territory (0.896) is a reason to move to Stage 4, not a
+reason to keep tuning Stage 3. Stage 4 is the next big lift.
 
 **Before touching account_features again:** read the docstring at the top of
 `scripts/v3_account_features.py` — it explains the bipartite-sampling
 constraint (median 2 comments/account) and the three different "age-like"
 quantities now in the table, so they don't get re-litigated or conflated.
+**Before building on Stage 3:** the leakage exclusion list (`removal_rate`,
+`deleted_later_rate`, their hurdle indicators, and the 6 reporting-only
+columns) lives in `scripts/v3_stage3_account_model.py` — reuse it rather than
+re-deriving, and note `karma_extremeness`/`karma_per_post_extremeness` are
+documented as reporting-only in `v3_feature_sanitise.py`'s docstring but are
+actually still in the model-ready column set (doc/code mismatch, flagged not
+fixed).
 
 ---
 
@@ -1142,8 +1182,208 @@ to SEO marketing content with no paper behind it.
        still fool GMM. `removal_rate`'s separation score (19.03) landed right
        at the degenerate-ceiling edge (20) — suspicious on its face. **Not
        fixed. Flagged for next session, not silently trusted.**
-   - Stages 2–4 (bivariate/segmentation, account XGBoost, pair model): not
-     yet started.
+   - ✅ **Stage 1 fix + feature sanitisation, done 2026-08-06.** Two threads
+     run in parallel.
+     - **The `percent_rank()` diagnosis above was wrong; the real bug was in
+       the screen, not the ranking function.** `percent_rank()` is
+       mathematically correct — the ties it wasn't "spreading" are *real*
+       ties, an artefact of small-n rate features on a median-2-comments
+       corpus (`removal_rate` ∈ {0, 0.5, 1, 1/3, ...} has genuinely few
+       distinct values). The actual defect: the point-mass strip in
+       `v3_stage1_univariate.py` only removed the single largest point-mass
+       before running dip-test/GMM, so secondary clumps (0.5, 1/6, 1)
+       survived and fooled it. Fixed with an iterative strip (every value
+       ≥1% of n, capped at 8 values / 50% of n so it doesn't gut wide-range
+       count features). Separately fixed the still-open GMM-decorates-skew
+       bug (§10.4 above) with a KDE-valley check (`kde_valley_ratio` —
+       requires an actual density dip between component means, not just
+       dip-test-p + BIC-k agreement) plus `signed_log1p` for signed
+       heavy-tailed features (comment/karma scores can be negative).
+     - **Before/after, both screens rerun on the fixes:** the raw-feature
+       screen (expanded 19→36 features, folding in the previously-unscreened
+       "user-directed round" rate features) went from 18/19 "bimodal" → **9
+       candidates**, only 2 (`mean_comment_score`, `account_ordinal`) robust
+       across two different strip-threshold settings tried — flagged as
+       genuinely threshold-sensitive (3 vs. 9 between the two settings) per
+       the plan's own instruction not to just tune until output looks
+       plausible. `account_ordinal`'s split is likely mostly Reddit's own
+       non-uniform historical growth rate, not a behavioral population —
+       flagged before anyone cites it. `mean_comment_score` looks like a
+       real split: ~7% minority with negative mean score vs. 93% positive.
+       The bot-marker composite screen (§10.4 above, "all 7 real candidate")
+       went from 7/7 → **1/7** (`karma_extremeness` only) — `removal_rate`
+       and `botmarker_composite` no longer show genuine bimodality once
+       skew-decoration is filtered out, confirming the suspicion already
+       logged above about the 19.03 score sitting at the degenerate ceiling.
+       **Still open, not silently fixed:** 3 features (`n_posts_sample`,
+       `n_high_tier`, `n_threads_with_repeat`) return an unchanged DEGENERATE
+       verdict (sep=693.15, identical across settings) — a residual
+       near-zero-variance artefact the strip cap doesn't fully catch.
+     - **Stage-3 prep per §5, new script `scripts/v3_feature_sanitise.py` →
+       `account_features_model` table (347,886 × 73 cols) in `v3.duckdb`.**
+       24 zero-inflation hurdle indicators added. Tier counts
+       (`n_high_tier`/`n_medium_tier`/`n_low_tier`, raw counts that confound
+       a 2/2 high-tier account with a 2/50 one) replaced with volume-normalized
+       shares (`high_tier_share` etc. = count / `n_comments_sample`).
+       VIF-pruned *within* evidence families only (§5.3): dropped
+       `n_threads_active` (VIF 654.6, near-duplicate of `n_comments_sample` at
+       median n=2), `n_subs_active` (VIF 12.4), `best_sub_mean_score`
+       (VIF=inf), `mean_comment_score` (65.3), `median_comment_score` (12.8,
+       both collinear with `worst_sub_mean_score`/`score_stddev`). Also
+       dropped `n_distinct_threads` after verifying it byte-for-byte
+       identical to `n_threads_active` across all 347,886 rows, not merely
+       correlated. Bot-marker percentile family (`botmarker_composite`,
+       `*_pctl` columns) excluded from model inputs per §5.3 — 3 of 4 are
+       pure monotonic transforms of a raw column already in the set, so
+       redundant for a tree model on top of being philosophically composite.
+     - Files: `scripts/v3_stage1_univariate.py` (rewritten),
+       `scripts/v3_feature_sanitise.py` (new). `account_features_model` is
+       what Stage 3 should read from, not raw `account_features`.
+   - ✅ **Stage 2 (bivariate/segmentation), done 2026-08-06.**
+     `scripts/v3_stage2_bivariate.py` (read-only DuckDB) +
+     `scripts/v3_stage2_template.html` → `docs/v3-research/eda/stage2.html`,
+     linked from the main EDA page nav.
+     - **Pair selection substituted for the Stage-1 shortlist** (unreliable
+       at the time this ran, per the parallel fix above — the two threads
+       didn't block each other) — ranked Spearman |ρ| over a 19-feature
+       theory-motivated candidate set instead, excluding pairs already shown
+       on the main EDA page. Pairs with |ρ|≥0.98 dropped as definitional
+       (e.g. `thin_history_score` is a direct inverse of `n_comments_sample`,
+       excluded from the candidate set entirely); 0.90–0.98 pairs kept but
+       flagged on the page as "shared-construction risk," not a behavioral
+       finding. Documented on the page itself, not silently substituted.
+     - **HDBSCAN on the top 3 pairs — one real finding, one artefact, one
+       cross-check:** `mean_comment_score × score_stddev` shows genuine
+       satellite structure (~3.9% of points at 10–19% removal rate vs. 4.8%
+       main-mass / 5.2% population mean) — the one result matching the
+       plan's literal "satellite cluster detached from the main mass"
+       criterion. `removal_rate × deleted_later_rate` clusters landed almost
+       exactly on rational fractions (0, 0.25, 0.33, 0.5, 1) — reported as a
+       small-n rate-denominator artefact, not behavior, directly reinforcing
+       the zero-inflation bug fixed above rather than contradicting it.
+       `reception_spread × subreddit_entropy` gave a clean 2-cluster split
+       where the *broad*-footprint cluster is safer (4.8% removal) and the
+       narrow-footprint cluster riskier (8.0%) — extends the main EDA page's
+       existing top-1% `reception_spread` finding to the full population.
+     - **Segmentation protocol 1 (P4 tercile):** pooled removal_rate looked
+       flat (6.92% high vs. 6.91% low) — a Simpson's-paradox artefact of
+       low-P4 skewing toward singleton accounts (elevated baseline risk for
+       an unrelated reason). Breaking out by volume bucket shows high-P4
+       *consistently* higher removal at every bucket (e.g. 9.3% vs. 8.2% at
+       n=1, 4.0% vs. 3.4% at n=10+) — real, confound-checked signal the
+       pooled number alone would have hidden, following the same
+       within-bucket-recheck discipline as the existing silo-mismatch
+       finding above. Controversiality runs the opposite direction (high-P4
+       lower), also holding within buckets.
+     - **Segmentation protocol 2 (P3 tercile):** clean without needing a
+       confound check — high-`contested_share` accounts run ~3× the
+       controversiality rate (4.6% vs. 1.5%) and modestly higher removal
+       (7.4% vs. 6.8%).
+     - **Segmentation protocol 3 (S15 regime):** only 7 of 45 subs show
+       genuine 2-component baseline/spike structure at n=24 months — reported
+       as exploratory given the small count, not overclaimed. Spike-exposed
+       accounts (5.7% of tagged) are *lower* risk (5.3% vs. 6.9%) and skew
+       older/broader-footprint/higher-karma — pushes back on a naive "spike
+       month = bots" account-composition read, consistent with §4.5's framing
+       that the coordinated signature is burst *shape*, not who shows up.
+     - Deviations, both caveated on the page: used `interval_entropy`
+       (tier-2 only, n≥5 comments) as the closest available proxy for
+       "circadian entropy" since true circadian features (A10–13) aren't
+       built; used Σ`n_comments_observed` per sub-month (not post count) for
+       S15, since post count is capped by the fixed top-100/month sampling
+       quota and can't show upside spikes.
+   - ✅ **Stage 3 (account XGBoost per label channel), done 2026-08-06.**
+     `scripts/v3_stage3_account_model.py` → `docs/v3-research/eda/stage3.html`
+     + `stage3_data.json`, linked from the EDA/Stage-2 nav. New deps:
+     `xgboost` (needed a system `libomp` via `brew install libomp` — the pip
+     wheel's dylib load failed without it), `shap`, and `statsmodels` (was
+     silently missing even though `v3_feature_sanitise.py` already imports it
+     — a latent break for any fresh environment, now pinned).
+     - **Channel set is a data-driven adaptation of §6's literal 6, not a
+       literal build.** Verified directly: `meta_removal_type` has different
+       granularity in `commenters` (`{deleted, removed, removed by reddit}` —
+       `'removed'` doesn't distinguish automod from moderator) vs. `posts`
+       (full granularity, but only 55,688/347,886 = 16% of accounts authored
+       a sampled post). Built 5 channels: `admin_removal` and
+       `self_deletion` (full population, combining post+comment signal),
+       `comment_removed_ambiguous` (comment-only, automod/mod
+       indistinguishable), `automod_filtered` + `moderator_removed`
+       (posts-only, restricted to the 16%). Skipped confirmed-automation
+       (seed set, not a target — already excluded from
+       `account_features_model`'s source population at Stage 0) and
+       suspension (deprioritized elsewhere, alongside the on-hold base36
+       calibration). All 5 channels had healthy positive counts (3,204–47,730
+       full-population; 4,395–4,970 of the post-author subset) — none needed
+       dropping.
+     - **Leakage register (§8) applied literally.** Hard-excluded
+       `removal_rate`, `deleted_later_rate`, their `_nonzero` hurdle
+       indicators, and the 6 reporting-only columns from every channel's
+       feature matrix, since `account_features_model` still carried the raw
+       removal-rate columns inside its nominally "model-ready" set (no label
+       existed yet when the sanitisation pass ran, so it couldn't have
+       excluded them for this reason). **Found, not fixed:**
+       `v3_feature_sanitise.py`'s docstring claims
+       `karma_extremeness`/`karma_per_post_extremeness` are reporting-only,
+       but the actual table has no such exclusion — they're still in the
+       model-ready set. Treated as ordinary score-derived features here
+       (§8 leakage item 6) rather than silently trusting the docstring.
+       Score-derived-feature sensitivity (item 6) checked per channel via a
+       with/without-score-family rerun (`rung4_no_score` below) rather than a
+       silent include/exclude call.
+     - **PU learning:** one Elkan-Noto `c` estimate per channel, checked for
+       degeneracy (V2's was 0.054). All 5 landed 0.53–0.75 — none degenerate.
+     - **Four-rung ladder + a subreddit-blocked check, rung 4 is the number
+       that counts:**
+
+       | channel | rung1 (random) | rung4 (grouped+blocked+purged) | sub-blocked | rung4 no-score | volume-only | perm floor | PU `c` |
+       |---|---|---|---|---|---|---|---|
+       | `admin_removal` | 0.924 | **0.896** | 0.883 | 0.874 | 0.616 | 0.516 | 0.750 |
+       | `self_deletion` | 0.803 | **0.778** | 0.781 | 0.765 | 0.642 | 0.601 | 0.640 |
+       | `comment_removed_ambiguous` | 0.827 | **0.805** | 0.795 | 0.799 | 0.591 | 0.581 | 0.660 |
+       | `automod_filtered` | 0.735 | **0.653** | 0.605 | 0.644 | 0.556 | 0.514 | 0.558 |
+       | `moderator_removed` | 0.694 | **0.637** | 0.684 | 0.637 | 0.568 | 0.540 | 0.534 |
+
+       All 5 clear both mandatory baselines (volume-only, permutation floor)
+       by a wide margin — none of this is a big-account or a rediscovered-FP
+       detector.
+     - ⚠️ **`admin_removal`'s 0.896 sits well above the plan's own 0.65–0.80
+       ceiling — flagged and investigated, not silently reported.** Ran an
+       ablation suspecting temporal-truncation leakage (a banned account's
+       observed activity window is mechanically capped by the ban date):
+       dropping the whole `provenance_age` feature family barely moved it
+       (0.902 without it, *higher* — rules out that specific mechanism);
+       `provenance_age` alone only reaches 0.835, so the signal is broadly
+       distributed across families, not concentrated in one leaky group.
+       Working hypothesis, not proof: `'removed by reddit'` is a more extreme
+       construct (platform-wide ban / blatant spam / ban-evasion) than
+       Kumar's generic sockpuppet label, so a higher ceiling on this specific
+       channel isn't inherently implausible — but this needs scrutiny before
+       0.896 gets cited anywhere as validated.
+     - ⚠️ **Construct-validity check (predicted score should rank high >
+       medium > low incentive tier) holds for 2/5 channels, violated for
+       3.** Holds cleanly for `admin_removal` and `moderator_removed`.
+       Violated for `self_deletion`, `comment_removed_ambiguous`, and
+       `automod_filtered` — all three dip specifically at the *medium* tier
+       (high > low > medium), a consistent pattern across 3 independent
+       channels, not noise. Flagged, not explained — out of scope for this
+       stage.
+     - **Cross-channel transfer matrix** (common post-author population,
+       n=55,688; diagonal 0.77–0.84): `admin_removal` transfers weakly
+       to/from every other channel (0.52–0.63) — the most distinct
+       construct, consistent with V2's experiment B finding
+       (admin-removal and suspension were near-disjoint, §0). `self_deletion`
+       ↔ `comment_removed_ambiguous` transfer unusually well both directions
+       (0.72–0.77), suggesting real construct overlap between those two.
+     - **Top SHAP families, family-level TreeSHAP aggregation:**
+       `admin_removal`/`self_deletion`/`comment_removed_ambiguous` all lead
+       with `provenance_age` (top individual features:
+       `comments_per_day_since_first_seen`, `account_ordinal`,
+       `observed_span_days`) and `reception`; `automod_filtered`/
+       `moderator_removed` lead with `reception`/`engagement_pattern`
+       (`mean_post_score`, `own_post_reply_rate`) instead — the "who is this
+       account" channels and the "was this specific post bad" channels split
+       on different feature families, not just different AUCs.
+   - Stage 4 (pair model): not yet started — the next big lift per §1/§7.
 5. **Rally + GDELT conditioning.** Not yet started.
 6. *(Optional)* base36 age calibration + t+90d suspension check on the top-risk
    decile, via `scripts/reddit_auth.py`. Not yet started.

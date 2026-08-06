@@ -7,3 +7,6 @@ zstandard>=0.22.0
 duckdb>=1.0.0
 pyarrow>=14.0.0
 diptest>=0.10.0
+statsmodels>=0.14.0
+xgboost==3.2.0
+shap>=0.45.0

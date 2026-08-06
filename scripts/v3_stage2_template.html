@@ -1,0 +1,417 @@
+<title>V3 — Stage 2: Bivariate &amp; Segmentation</title>
+<style>
+  :root {
+    color-scheme: light;
+    --page:      #f9f9f7;
+    --surface:   #fcfcfb;
+    --ink:       #0b0b0b;
+    --ink-2:     #52514e;
+    --muted:     #898781;
+    --grid:      #e1e0d9;
+    --baseline:  #c3c2b7;
+    --border:    rgba(11,11,11,0.10);
+    --accent:    #2a78d6;
+    --accent-2:  #eb6834;
+    --pos:       #2a78d6;
+    --neg:       #e34948;
+    --divzero:   #f0efec;
+    --good:      #0ca30c;
+    --warning:   #fab219;
+    --critical:  #d03b3b;
+    --seq-100:   #cde2fb; --seq-200: #9ec5f4; --seq-300: #6da7ec;
+    --seq-400:   #3987e5; --seq-500: #256abf; --seq-600: #184f95; --seq-700: #0d366b;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) {
+      color-scheme: dark;
+      --page: #0d0d0d; --surface: #1a1a19; --ink: #ffffff; --ink-2: #c3c2b7;
+      --muted: #898781; --grid: #2c2c2a; --baseline: #383835;
+      --border: rgba(255,255,255,0.10);
+      --accent: #3987e5; --accent-2: #d95926; --pos: #3987e5; --neg: #e66767;
+      --divzero: #383835;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --page: #0d0d0d; --surface: #1a1a19; --ink: #ffffff; --ink-2: #c3c2b7;
+    --muted: #898781; --grid: #2c2c2a; --baseline: #383835;
+    --border: rgba(255,255,255,0.10);
+    --accent: #3987e5; --accent-2: #d95926; --pos: #3987e5; --neg: #e66767;
+    --divzero: #383835;
+  }
+
+  * { box-sizing: border-box; }
+  html, body {
+    background: var(--page); color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    margin: 0; padding: 0;
+  }
+  body { padding: 28px 32px 80px; max-width: 1320px; margin: 0 auto; }
+  .mono { font-family: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace; font-variant-numeric: tabular-nums; }
+  a { color: var(--accent); }
+
+  header.page-head { margin-bottom: 28px; }
+  .eyebrow { font-size: 11px; letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted); font-weight: 600; margin-bottom: 6px; }
+  h1 { font-size: 26px; font-weight: 650; margin: 0 0 6px; text-wrap: balance; letter-spacing: -0.01em; }
+  .subtitle { font-size: 14px; color: var(--ink-2); max-width: 74ch; line-height: 1.55; margin: 0 0 14px; }
+  .deviation-note {
+    border: 1px solid var(--border); border-left: 3px solid var(--warning); border-radius: 3px;
+    background: var(--surface); padding: 12px 16px; font-size: 12.5px; color: var(--ink-2);
+    line-height: 1.55; max-width: 82ch; margin-bottom: 8px;
+  }
+  .deviation-note b { color: var(--ink); }
+
+  section { margin-top: 44px; }
+  .section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 4px; border-bottom: 1px solid var(--grid); padding-bottom: 10px; }
+  .section-head h2 { font-size: 15px; font-weight: 650; margin: 0; }
+  .section-note { font-size: 12.5px; color: var(--muted); margin: 8px 0 18px; max-width: 82ch; line-height: 1.5; }
+  .caution { color: var(--warning); font-weight: 600; }
+
+  /* ---- ranked pairs table ---- */
+  .ranked-table { border-collapse: collapse; font-size: 12px; width: 100%; max-width: 720px; }
+  .ranked-table th, .ranked-table td { padding: 6px 12px; text-align: right; border-bottom: 1px solid var(--grid); }
+  .ranked-table th:first-child, .ranked-table td:first-child,
+  .ranked-table th:nth-child(2), .ranked-table td:nth-child(2) { text-align: left; }
+  .ranked-table thead th { color: var(--muted); font-weight: 600; text-transform: uppercase; font-size: 10px; letter-spacing: 0.04em; border-bottom: 1px solid var(--baseline); }
+
+  /* ---- density / hdbscan panels ---- */
+  .density-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 18px; }
+  .density-card { border: 1px solid var(--border); border-radius: 3px; padding: 14px 16px; background: var(--surface); }
+  .density-caption { font-size: 12px; color: var(--ink-2); margin: 0 0 10px; line-height: 1.45; }
+  .axis-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+
+  .hdb-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 20px; }
+  .hdb-card { border: 1px solid var(--border); border-radius: 3px; padding: 16px 18px; background: var(--surface); }
+  .hdb-top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+  .hdb-name { font-size: 13px; font-weight: 650; }
+  .hdb-meta { font-size: 11px; color: var(--muted); }
+  .hdb-body { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-start; }
+  .hdb-scatter-wrap { flex: 1 1 260px; min-width: 240px; }
+  .cluster-table { border-collapse: collapse; font-size: 11.5px; flex: 1 1 220px; }
+  .cluster-table th, .cluster-table td { padding: 5px 10px; text-align: right; border-bottom: 1px solid var(--grid); }
+  .cluster-table th:first-child, .cluster-table td:first-child { text-align: left; }
+  .cluster-table thead th { color: var(--muted); font-weight: 600; text-transform: uppercase; font-size: 9.5px; letter-spacing: 0.04em; border-bottom: 1px solid var(--baseline); }
+  .cluster-swatch { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; }
+  .hdb-note { font-size: 11.5px; color: var(--ink-2); margin-top: 10px; line-height: 1.5; }
+
+  /* ---- segmentation ---- */
+  .seg-section { margin-top: 30px; }
+  .seg-table { border-collapse: collapse; font-size: 12px; width: 100%; }
+  .seg-table th, .seg-table td { padding: 6px 12px; text-align: right; border-bottom: 1px solid var(--grid); }
+  .seg-table th:first-child, .seg-table td:first-child { text-align: left; }
+  .seg-table thead th { color: var(--muted); font-weight: 600; text-transform: uppercase; font-size: 10px; letter-spacing: 0.04em; border-bottom: 1px solid var(--baseline); }
+  .seg-table tr.row-high td { font-weight: 650; }
+  .seg-wrap { overflow-x: auto; margin-bottom: 10px; }
+  .vol-chart { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-top: 10px; }
+  .vol-card { border: 1px solid var(--border); border-radius: 3px; padding: 8px 10px; background: var(--surface); }
+  .vol-card .vc-title { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px; }
+  .vol-bar-row { display: flex; align-items: center; gap: 6px; font-size: 11px; margin-bottom: 3px; }
+  .vol-bar-label { width: 50px; flex-shrink: 0; color: var(--ink-2); }
+  .vol-bar-track { flex: 1; height: 10px; background: var(--grid); border-radius: 2px; overflow: hidden; position: relative; }
+  .vol-bar-fill { height: 100%; }
+  .vol-bar-val { width: 44px; text-align: right; flex-shrink: 0; }
+
+  footer { margin-top: 48px; padding-top: 16px; border-top: 1px solid var(--grid); font-size: 11px; color: var(--muted); }
+
+  .tooltip {
+    position: fixed; pointer-events: none; z-index: 50;
+    background: var(--ink); color: var(--page); font-size: 11px; line-height: 1.4;
+    padding: 6px 9px; border-radius: 3px; opacity: 0; transition: opacity 0.08s;
+    font-family: ui-monospace, monospace; white-space: nowrap;
+  }
+  .tooltip.show { opacity: 1; }
+
+  svg text { fill: var(--muted); font-size: 9px; font-family: system-ui, sans-serif; }
+  rect:focus-visible, g:focus-visible, circle:focus-visible { outline: 2px solid var(--accent); }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+
+<header class="page-head">
+  <div class="eyebrow">V3 · Exposure-Weighted Inauthenticity Scoring · Stage 2</div>
+  <h1>Bivariate &amp; Segmentation</h1>
+  <p class="subtitle">Pairwise density + HDBSCAN over the account-feature layer, plus three cross-level segmentation
+    protocols conditioning account behaviour on the posts an account engages with (V3_PLAN.md §7, "Stage 2").
+    <a href="index.html">← back to the univariate/correlation survey</a> · <a href="stage3.html">Stage 3 — account XGBoost per label channel →</a></p>
+  <div class="deviation-note">
+    <b>Deviation from the plan's literal text, stated up front:</b> §7 says "pairwise density grid over the Stage-1
+    shortlist." That shortlist (<span class="mono">v3_stage1_univariate.py</span>) is flagged in §10.4 as unreliable
+    (18/19 features came back "bimodal", not credible) and is being fixed in a parallel effort, not here. Candidate
+    pairs below are instead selected by ranking Spearman |ρ| over a theory-motivated feature set (excluding the 4
+    pairs already shown on the main EDA page), cross-checked against the qualitative findings already logged in
+    §10.4. This is a stated substitution, not a silent one — once the Stage-1 fix lands, this selection should be
+    re-derived from the corrected shortlist and compared against what's shown here.
+  </div>
+</header>
+
+<section id="sec-ranked">
+  <div class="section-head"><h2>Candidate pair ranking</h2></div>
+  <p class="section-note">Spearman |ρ| over the theory-motivated candidate set (bot-marker components, provenance,
+    reception, timing), pairs already shown on the main EDA page excluded. Pairs with |ρ| ≥ 0.98 are excluded
+    entirely as definitional (e.g. a feature and its own inverse), not reported here at all. Pairs with |ρ| ≥ 0.90
+    are kept but flagged — that high a correlation between two <i>different</i> constructs usually means shared
+    construction (both scale with footprint breadth, sample size, etc.), not an independent behavioural link.</p>
+  <div class="seg-wrap">
+    <table class="ranked-table mono" id="ranked-table"></table>
+  </div>
+</section>
+
+<section id="sec-density">
+  <div class="section-head"><h2>Selected pairs — binned density</h2></div>
+  <p class="section-note">Top 6 by |ρ| from the ranking above. Log-scaled 2D bin counts, on the transform each
+    marginal needs (matches the main EDA page's convention).</p>
+  <div class="density-grid" id="density-grid"></div>
+</section>
+
+<section id="sec-hdbscan">
+  <div class="section-head"><h2>HDBSCAN — top 3 pairs</h2></div>
+  <p class="section-note">Standardized (z-scored) coordinates, fit on a fixed seeded subsample (≤40,000 points) for
+    tractability, <span class="mono">min_cluster_size</span> = 0.5% of the clustered sample. Looking for a satellite
+    cluster detached from the main mass, with membership probabilities implicit in HDBSCAN's own density-based
+    assignment rather than a hand-drawn line. Point color = cluster; pale/outline points are HDBSCAN noise
+    (label −1, not assigned to any cluster). Each cluster's mean <span class="mono">removal_rate</span> is reported
+    against the population mean so a "satellite" can be checked for whether it's actually risk-elevated, not just
+    geometrically separate.</p>
+  <div class="hdb-grid" id="hdb-grid"></div>
+</section>
+
+<section id="sec-seg-p4" class="seg-section">
+  <div class="section-head"><h2>Segmentation 1 — P4 (votes / comments) tercile</h2></div>
+  <p class="section-note" id="p4-note"></p>
+  <div class="seg-wrap"><table class="seg-table mono" id="p4-pooled"></table></div>
+  <div class="vol-chart" id="p4-volume"></div>
+</section>
+
+<section id="sec-seg-p3" class="seg-section">
+  <div class="section-head"><h2>Segmentation 2 — P3 (contested_share) tercile</h2></div>
+  <p class="section-note" id="p3-note"></p>
+  <div class="seg-wrap"><table class="seg-table mono" id="p3-pooled"></table></div>
+  <div class="vol-chart" id="p3-volume"></div>
+</section>
+
+<section id="sec-seg-s15" class="seg-section">
+  <div class="section-head"><h2>Segmentation 3 — S15 sub-month regime (baseline vs. spike)</h2></div>
+  <p class="section-note" id="s15-note"></p>
+  <div class="seg-wrap"><table class="seg-table mono" id="s15-pooled"></table></div>
+  <div class="vol-chart" id="s15-volume"></div>
+</section>
+
+<footer>
+  V3 Stage 2 — Bivariate &amp; Segmentation · generated from <span class="mono">data/v3/analysis/v3.duckdb</span>
+  (read-only) · <span class="mono">scripts/v3_stage2_bivariate.py</span>
+</footer>
+
+<div class="tooltip mono" id="tooltip"></div>
+
+<script id="stage2-data" type="application/json">__STAGE2_JSON__</script>
+<script>
+(function () {
+  const DATA = JSON.parse(document.getElementById('stage2-data').textContent);
+  const tooltip = document.getElementById('tooltip');
+
+  function showTip(evt, html) { tooltip.innerHTML = html; tooltip.classList.add('show'); moveTip(evt); }
+  function moveTip(evt) {
+    const pad = 14;
+    tooltip.style.left = (evt.clientX + pad) + 'px';
+    tooltip.style.top = (evt.clientY + pad) + 'px';
+  }
+  function hideTip() { tooltip.classList.remove('show'); }
+
+  function isDark() {
+    const root = document.documentElement;
+    if (root.getAttribute('data-theme') === 'dark') return true;
+    if (root.getAttribute('data-theme') === 'light') return false;
+    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+  }
+
+  const SEQ_LIGHT = ['#cde2fb', '#9ec5f4', '#6da7ec', '#3987e5', '#256abf', '#184f95', '#0d366b'];
+  const SEQ_DARK  = ['#0d366b', '#184f95', '#256abf', '#3987e5', '#6da7ec', '#9ec5f4', '#cde2fb'];
+  function seqColor(t) {
+    const ramp = isDark() ? SEQ_DARK : SEQ_LIGHT;
+    const i = Math.min(ramp.length - 1, Math.max(0, Math.round(t * (ramp.length - 1))));
+    return ramp[i];
+  }
+  const QUAL = ['#2a78d6', '#eb6834', '#0ca30c', '#d03b3b', '#8a5fd6', '#c9962b', '#2ab3a3', '#c04e8f'];
+  function clusterColor(label) { return label < 0 ? null : QUAL[label % QUAL.length]; }
+
+  function svgEl(tag, attrs) {
+    const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+    for (const k in attrs) el.setAttribute(k, attrs[k]);
+    return el;
+  }
+  function fmtNum(x) {
+    if (x === null || x === undefined) return '—';
+    if (Math.abs(x) >= 1e6) return x.toLocaleString(undefined, {notation: 'compact', maximumFractionDigits: 1});
+    if (Math.abs(x) >= 1000) return x.toLocaleString(undefined, {maximumFractionDigits: 0});
+    if (Math.abs(x) < 1 && x !== 0) return x.toFixed(3);
+    return (Math.round(x * 100) / 100).toString();
+  }
+  function fmtPct(x) { return x === null || x === undefined ? '—' : (100 * x).toFixed(1) + '%'; }
+
+  // ---------------- ranked pairs table ----------------
+  (function () {
+    const table = document.getElementById('ranked-table');
+    let html = '<thead><tr><th>feature x</th><th>feature y</th><th>ρ</th><th>n</th><th></th></tr></thead><tbody>';
+    DATA.ranked_pairs.forEach((r, i) => {
+      const flag = Math.abs(r.rho) >= 0.90 ? '<span class="caution">⚠ shared-construction risk</span>' : (i < 6 ? 'selected' : '');
+      html += `<tr><td>${r.x}</td><td>${r.y}</td><td>${r.rho >= 0 ? '+' : ''}${r.rho.toFixed(3)}</td><td>${r.n.toLocaleString()}</td><td style="text-align:left">${flag}</td></tr>`;
+    });
+    table.innerHTML = html + '</tbody>';
+  })();
+
+  // ---------------- density panels ----------------
+  const densityGrid = document.getElementById('density-grid');
+  DATA.density_panels.forEach((p) => {
+    const card = document.createElement('div');
+    card.className = 'density-card';
+    const gw = 220, gh = 220;
+    const nx = p.grid[0].length, ny = p.grid.length;
+    const cw = gw / nx, ch = gh / ny;
+    const maxV = Math.max(...p.grid.flat());
+    const svg = svgEl('svg', { viewBox: `0 0 ${gw+40} ${gh+34}`, width: '100%', height: 260, preserveAspectRatio: 'xMidYMid meet' });
+    p.grid.forEach((row, ry) => {
+      row.forEach((v, rx) => {
+        const t = maxV > 0 ? v / maxV : 0;
+        const rect = svgEl('rect', {
+          x: 34 + rx * cw, y: gh - (ry + 1) * ch, width: cw + 0.5, height: ch + 0.5,
+          fill: t === 0 ? 'var(--divzero)' : seqColor(t),
+        });
+        const rawCount = Math.round(Math.expm1(v));
+        rect.addEventListener('mousemove', (e) => showTip(e, `n ≈ ${rawCount.toLocaleString()}`));
+        rect.addEventListener('mouseleave', hideTip);
+        svg.appendChild(rect);
+      });
+    });
+    svg.appendChild(svgEl('line', { x1: 34, y1: gh + 0.5, x2: 34 + gw, y2: gh + 0.5, stroke: 'var(--baseline)' }));
+    svg.appendChild(svgEl('line', { x1: 33.5, y1: 0, x2: 33.5, y2: gh, stroke: 'var(--baseline)' }));
+    const xLabel = svgEl('text', { x: 34 + gw/2, y: gh + 26, 'text-anchor': 'middle', 'font-size': 10 });
+    xLabel.textContent = p.x_feature + (p.x_transform !== 'none' ? ` (${p.x_transform})` : '');
+    svg.appendChild(xLabel);
+    const yLabel = svgEl('text', { x: -gh/2, y: 12, 'text-anchor': 'middle', 'font-size': 10, transform: 'rotate(-90)' });
+    yLabel.textContent = p.y_feature + (p.y_transform !== 'none' ? ` (${p.y_transform})` : '');
+    svg.appendChild(yLabel);
+    card.innerHTML = `<p class="density-caption">${p.caption}<br><span class="mono" style="color:var(--muted)">n=${p.n.toLocaleString()}</span></p>`;
+    card.appendChild(svg);
+    densityGrid.appendChild(card);
+  });
+
+  // ---------------- HDBSCAN panels ----------------
+  const hdbGrid = document.getElementById('hdb-grid');
+  DATA.hdbscan.forEach((h) => {
+    const card = document.createElement('div');
+    card.className = 'hdb-card';
+    const gw = 240, gh = 240;
+    const xs = h.scatter.x, ys = h.scatter.y, labs = h.scatter.label;
+    const xMin = Math.min(...xs), xMax = Math.max(...xs);
+    const yMin = Math.min(...ys), yMax = Math.max(...ys);
+    const svg = svgEl('svg', { viewBox: `0 0 ${gw+16} ${gh+16}`, width: '100%', height: 260, preserveAspectRatio: 'xMidYMid meet' });
+    function sx(v) { return 8 + (xMax > xMin ? (v - xMin) / (xMax - xMin) : 0.5) * gw; }
+    function sy(v) { return gh - (yMax > yMin ? (v - yMin) / (yMax - yMin) : 0.5) * gh; }
+    for (let i = 0; i < xs.length; i++) {
+      const col = clusterColor(labs[i]);
+      svg.appendChild(svgEl('circle', {
+        cx: sx(xs[i]), cy: sy(ys[i]), r: 1.6,
+        fill: col || 'none', stroke: col || 'var(--muted)', 'stroke-width': col ? 0 : 0.6,
+        'fill-opacity': col ? 0.55 : 0.25, 'stroke-opacity': col ? 1 : 0.35,
+      }));
+    }
+    card.innerHTML = `<div class="hdb-top"><div class="hdb-name">${h.x_feature} × ${h.y_feature}</div>
+      <div class="hdb-meta">n=${h.n_clustered.toLocaleString()} of ${h.n_total_available.toLocaleString()} · noise ${(h.noise_share*100).toFixed(1)}%</div></div>`;
+    const body = document.createElement('div');
+    body.className = 'hdb-body';
+    const scatterWrap = document.createElement('div');
+    scatterWrap.className = 'hdb-scatter-wrap';
+    scatterWrap.appendChild(svg);
+    body.appendChild(scatterWrap);
+
+    const table = document.createElement('table');
+    table.className = 'cluster-table mono';
+    let thtml = '<thead><tr><th>cluster</th><th>n</th><th>removal</th><th>vs pop</th></tr></thead><tbody>';
+    h.clusters.forEach((c) => {
+      const col = clusterColor(c.label);
+      const delta = c.risk_mean - h.pop_risk_mean;
+      const deltaStr = (delta >= 0 ? '+' : '') + (delta * 100).toFixed(1) + 'pp';
+      thtml += `<tr><td><span class="cluster-swatch" style="background:${col}"></span>${c.label}</td><td>${c.n.toLocaleString()}</td><td>${fmtPct(c.risk_mean)}</td><td>${deltaStr}</td></tr>`;
+    });
+    thtml += `<tr><td colspan="2" style="font-style:italic;color:var(--muted)">pop. mean</td><td>${fmtPct(h.pop_risk_mean)}</td><td>—</td></tr>`;
+    table.innerHTML = thtml + '</tbody>';
+    body.appendChild(table);
+    card.appendChild(body);
+    hdbGrid.appendChild(card);
+  });
+
+  // ---------------- segmentation tables ----------------
+  const SEG_FEATURE_LABELS = {
+    days_since_first_seen: 'age proxy (days)',
+    karma_per_day_since_first_seen: 'karma/day',
+    subreddit_entropy: 'sub entropy',
+    removal_rate: 'removal rate',
+    controversiality_rate: 'controversiality',
+    botmarker_composite: 'bot-marker composite',
+    reception_spread: 'reception spread',
+    interval_entropy: 'interval entropy†',
+  };
+  function renderSegTable(elId, seg, groupKey) {
+    const el = document.getElementById(elId);
+    if (!seg || seg.skipped) { el.innerHTML = `<tbody><tr><td>skipped: ${seg ? seg.skipped : 'no data'}</td></tr></tbody>`; return; }
+    const cols = Object.keys(SEG_FEATURE_LABELS);
+    let html = `<thead><tr><th>${groupKey}</th><th>n</th>` + cols.map(c => `<th>${SEG_FEATURE_LABELS[c]}</th>`).join('') + '</tr></thead><tbody>';
+    seg.pooled.forEach((row) => {
+      const g = row[groupKey];
+      const cls = (g === 'high' || g === 'spike_exposed') ? 'row-high' : '';
+      html += `<tr class="${cls}"><td>${g}</td><td>${row.n.toLocaleString()}</td>` +
+        cols.map(c => `<td>${c.includes('rate') || c === 'controversiality_rate' ? fmtPct(row[c]) : fmtNum(row[c])}</td>`).join('') + '</tr>';
+    });
+    html += '</tbody>';
+    el.innerHTML = html;
+  }
+  function renderVolumeChart(elId, seg, groupKey, groupA, groupB) {
+    const el = document.getElementById(elId);
+    el.innerHTML = '';
+    if (!seg || seg.skipped) return;
+    const buckets = ['1 (singleton)', '2-4', '5-9', '10+'];
+    const maxRemoval = Math.max(...seg.by_volume.map(r => r.removal_rate || 0), 0.001);
+    buckets.forEach((b) => {
+      const rows = seg.by_volume.filter(r => r.vol_bucket === b);
+      if (!rows.length) return;
+      const card = document.createElement('div');
+      card.className = 'vol-card';
+      let html = `<div class="vc-title">${b} comments</div>`;
+      [groupA, groupB].forEach((g) => {
+        const r = rows.find(x => x[groupKey] === g);
+        if (!r) return;
+        const pct = (r.removal_rate || 0) / maxRemoval;
+        const col = g === groupA ? 'var(--critical)' : 'var(--accent)';
+        html += `<div class="vol-bar-row"><span class="vol-bar-label">${g}</span>
+          <span class="vol-bar-track"><span class="vol-bar-fill" style="width:${(pct*100).toFixed(0)}%;background:${col}"></span></span>
+          <span class="vol-bar-val mono">${fmtPct(r.removal_rate)}</span></div>`;
+      });
+      card.innerHTML = html;
+      el.appendChild(card);
+    });
+  }
+
+  renderSegTable('p4-pooled', DATA.p4_segmentation, 'tercile');
+  renderVolumeChart('p4-volume', DATA.p4_segmentation, 'tercile', 'high', 'low');
+  document.getElementById('p4-note').innerHTML =
+    `P4 = votes/comments on posts an account commented on (implied_votes / num_comments_reported, upvote_ratio ≥ 0.65 only) — "voted-but-not-discussed", the natural vote-manipulation signature. ` +
+    (DATA.p4_segmentation.n_accounts_tagged ? `n=${DATA.p4_segmentation.n_accounts_tagged.toLocaleString()} accounts tagged. Bars below: removal rate for the high vs. low tercile, broken out by comment-volume bucket, so a pooled difference (or a pooled non-difference) can be checked against the obvious volume confound — a pooled gap that vanishes or reverses within every bucket is not a real P4 effect.` : '');
+
+  renderSegTable('p3-pooled', DATA.p3_segmentation, 'tercile');
+  renderVolumeChart('p3-volume', DATA.p3_segmentation, 'tercile', 'high', 'low');
+  document.getElementById('p3-note').innerHTML =
+    `P3 = contested_share (1 − upvote_ratio) of posts an account commented on — do accounts drawn to controversial threads look different from those on lopsided ones? ` +
+    (DATA.p3_segmentation.n_accounts_tagged ? `n=${DATA.p3_segmentation.n_accounts_tagged.toLocaleString()} accounts tagged.` : '');
+
+  renderSegTable('s15-pooled', DATA.s15_segmentation, 'group');
+  renderVolumeChart('s15-volume', DATA.s15_segmentation, 'group', 'spike_exposed', 'baseline_only');
+  const s15 = DATA.s15_segmentation;
+  document.getElementById('s15-note').innerHTML =
+    `S15 = per-sub GMM/BIC regime test on the monthly Σn_comments_observed series (log1p), 2-component only accepted when it beats 1-component BIC <i>and</i> the minority component holds &lt;45% weight (guards against BIC just splitting a roughly-symmetric series in half). ` +
+    `<b>${s15.n_subs_two_component} of ${s15.n_subs_total}</b> subs show genuine baseline/spike regime structure — honestly sparse at n=24 months/sub, treat per-sub verdicts as exploratory. ` +
+    `${s15.n_accounts_tagged.toLocaleString()} accounts tagged; "spike_exposed" = any sampled comment fell in a flagged spike month for that sub.` +
+    `<br><span class="mono" style="color:var(--muted)">† interval_entropy is tier-2 only (accounts with ≥5 sampled comments, 21% of the population) — not true circadian entropy (A10–13), which the account-feature table deliberately doesn't build yet (see V3_PLAN.md §10.4).</span>`;
+
+  document.addEventListener('mousemove', (e) => { if (tooltip.classList.contains('show')) moveTip(e); });
+})();
+</script>
