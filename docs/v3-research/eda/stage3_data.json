@@ -69,9 +69,9 @@
         ]
       },
       "subreddit_blocked": {
-        "auc": 0.8831123849929252,
-        "n_test": 75542,
-        "n_pos_test": 369,
+        "auc": 0.8822405203449701,
+        "n_test": 75548,
+        "n_pos_test": 365,
         "test_subs": [
           "BollywoodMusic",
           "GadgetsIndia",
@@ -86,6 +86,13 @@
       },
       "rung4_without_score_family": {
         "auc": 0.874021602685668
+      },
+      "volume_gated": {
+        "threshold": 10,
+        "n_population": 34301,
+        "n_positives": 1000,
+        "rung1_auc": 0.7959599111137803,
+        "rung4_auc": 0.7431769654419119
       },
       "volume_only_baseline_auc": 0.6159562350738087,
       "permutation_floor_auc": 0.5158379445707879,
@@ -153,7 +160,8 @@
           ]
         ]
       },
-      "within_kumar_range": false
+      "within_kumar_range": false,
+      "within_kumar_range_gated": true
     },
     "self_deletion": {
       "n_population": 347886,
@@ -216,9 +224,9 @@
         ]
       },
       "subreddit_blocked": {
-        "auc": 0.7809536410396338,
-        "n_test": 75542,
-        "n_pos_test": 10674,
+        "auc": 0.7807719076896177,
+        "n_test": 75548,
+        "n_pos_test": 10692,
         "test_subs": [
           "BollywoodMusic",
           "GadgetsIndia",
@@ -233,6 +241,13 @@
       },
       "rung4_without_score_family": {
         "auc": 0.7653550019051121
+      },
+      "volume_gated": {
+        "threshold": 10,
+        "n_population": 34301,
+        "n_positives": 14537,
+        "rung1_auc": 0.7196459826697967,
+        "rung4_auc": 0.6953199520303502
       },
       "volume_only_baseline_auc": 0.6418301220222038,
       "permutation_floor_auc": 0.6011438324779872,
@@ -299,7 +314,8 @@
           ]
         ]
       },
-      "within_kumar_range": true
+      "within_kumar_range": true,
+      "within_kumar_range_gated": true
     },
     "comment_removed_ambiguous": {
       "n_population": 347886,
@@ -360,9 +376,9 @@
         ]
       },
       "subreddit_blocked": {
-        "auc": 0.794691650976062,
-        "n_test": 75542,
-        "n_pos_test": 6038,
+        "auc": 0.7949565636016979,
+        "n_test": 75548,
+        "n_pos_test": 6082,
         "test_subs": [
           "BollywoodMusic",
           "GadgetsIndia",
@@ -377,6 +393,13 @@
       },
       "rung4_without_score_family": {
         "auc": 0.7989705750931029
+      },
+      "volume_gated": {
+        "threshold": 10,
+        "n_population": 34301,
+        "n_positives": 8740,
+        "rung1_auc": 0.6978575703994133,
+        "rung4_auc": 0.6412052020390183
       },
       "volume_only_baseline_auc": 0.5910365452629966,
       "permutation_floor_auc": 0.5814577371912117,
@@ -441,7 +464,8 @@
           ]
         ]
       },
-      "within_kumar_range": false
+      "within_kumar_range": false,
+      "within_kumar_range_gated": false
     },
     "automod_filtered": {
       "n_population": 45861,
@@ -512,9 +536,9 @@
         ]
       },
       "subreddit_blocked": {
-        "auc": 0.6054096873018926,
-        "n_test": 11464,
-        "n_pos_test": 753,
+        "auc": 0.6056089509516145,
+        "n_test": 11421,
+        "n_pos_test": 759,
         "test_subs": [
           "BollywoodMusic",
           "GadgetsIndia",
@@ -529,6 +553,13 @@
       },
       "rung4_without_score_family": {
         "auc": 0.6443587176157982
+      },
+      "volume_gated": {
+        "threshold": 10,
+        "n_population": 11438,
+        "n_positives": 1516,
+        "rung1_auc": 0.7522043974664653,
+        "rung4_auc": 0.7249827344892692
       },
       "volume_only_baseline_auc": 0.5560912953342148,
       "permutation_floor_auc": 0.5141384889031901,
@@ -595,7 +626,8 @@
           ]
         ]
       },
-      "within_kumar_range": true
+      "within_kumar_range": true,
+      "within_kumar_range_gated": true
     },
     "moderator_removed": {
       "n_population": 45861,
@@ -666,9 +698,9 @@
         ]
       },
       "subreddit_blocked": {
-        "auc": 0.6837830639776923,
-        "n_test": 11464,
-        "n_pos_test": 928,
+        "auc": 0.6883913706152457,
+        "n_test": 11421,
+        "n_pos_test": 929,
         "test_subs": [
           "BollywoodMusic",
           "GadgetsIndia",
@@ -683,6 +715,13 @@
       },
       "rung4_without_score_family": {
         "auc": 0.6233259362066539
+      },
+      "volume_gated": {
+        "threshold": 10,
+        "n_population": 11438,
+        "n_positives": 1784,
+        "rung1_auc": 0.7266306003877664,
+        "rung4_auc": 0.6866640328246527
       },
       "volume_only_baseline_auc": 0.5675924504330969,
       "permutation_floor_auc": 0.5395155014174258,
@@ -750,7 +789,8 @@
           ]
         ]
       },
-      "within_kumar_range": false
+      "within_kumar_range": false,
+      "within_kumar_range_gated": true
     }
   },
   "meta": {

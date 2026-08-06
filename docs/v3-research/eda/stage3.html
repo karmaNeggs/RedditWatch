@@ -33,11 +33,33 @@ V3_PLAN.md &sect;6's literal 6-channel table (automod vs. moderator is only reso
 who authored a sampled post; suspension and confirmed-automation are out of scope here, see script docstring).
 </div>
 
+<div class="note">
+<strong>2026-08-06 correction &mdash; read this before citing any rung-4 number below.</strong>
+The un-gated <code>admin_removal</code> rung-4 AUC (0.896) sat well above the Kumar ceiling and triggered a
+dedicated leak audit. <strong>Confirmed cause:</strong> every "behavioral" feature (footprint, reception,
+engagement, provenance-rate) is aggregated over ALL of an account's sampled rows, including the row(s) that
+define the label &mdash; for a thin-history account (corpus median 2 comments/account) that feature is
+substantially just the labelled event's own metadata, not independent past behaviour. A volume-threshold sweep
+confirms it: restricting to accounts with &ge;10 sampled comments dilutes the label row to at most 1/10th of the
+aggregate and <code>admin_removal</code> drops to 0.743 (inside 0.65&ndash;0.80); <code>comment_removed_ambiguous</code>
+drops from 0.805 to 0.641 (crosses <em>below</em> the floor); <code>automod_filtered</code> / <code>moderator_removed</code>
+barely move (their label is post-level, not comment-level, so this particular mechanism doesn't apply to them).
+A full leave-one-out feature rebuild was attempted as a more principled fix and <strong>made things worse</strong>
+(AUC up to 0.98+) &mdash; thin-history accounts often have zero rows left after exclusion, and "this feature is
+NaN" becomes a near-perfect label proxy via XGBoost's missing-value handling; abandoned, kept as a documented
+negative result (full detail in the module docstring, item 5 of the leakage register). The un-gated numbers below
+are kept visible for comparison but should not be cited without the gated column next to them &mdash; see the new
+rightmost column in the table below, and the full docstring for the ruled-out sub-hypotheses (score-as-removal-
+artefact: not supported; admin_removal&harr;self_deletion account overlap: 39.9%, a real caveat on "5 independent
+channels").
+</div>
+
 <h2>Validation ladder (AUC) — 347,886 accounts, 55,688 post authors</h2>
 <table>
 <tr><th>channel</th><th>positives</th><th>rung1<br>random CV</th><th>rung2<br>grouped CV</th>
 <th>rung3<br>chrono-blocked</th><th>rung4<br>grouped+blocked+purged</th><th>subreddit-<br>blocked</th>
-<th>rung4<br>no score family</th><th>volume-only<br>baseline</th><th>permutation<br>floor</th></tr>
+<th>rung4<br>no score family</th><th>volume-only<br>baseline</th><th>permutation<br>floor</th>
+<th>rung4<br>volume-gated (n&ge;10) &mdash; corrected</th></tr>
 
         <tr>
           <td><code>admin_removal</code><div class="pop">all population, n=347,886</div></td>
@@ -46,10 +68,11 @@ who authored a sampled post; suspension and confirmed-automation are out of scop
           <td>0.924</td>
           <td>0.920</td>
           <td><strong>0.896</strong> <span class="warn">outside 0.65-0.80</span></td>
-          <td>0.883</td>
+          <td>0.882</td>
           <td>0.874</td>
           <td>0.616</td>
           <td>0.516</td>
+          <td><strong>0.743</strong> <span class="ok">within</span><div class="pop">n=34,301, pos=1,000</div></td>
         </tr>
         <tr>
           <td><code>self_deletion</code><div class="pop">all population, n=347,886</div></td>
@@ -62,6 +85,7 @@ who authored a sampled post; suspension and confirmed-automation are out of scop
           <td>0.765</td>
           <td>0.642</td>
           <td>0.601</td>
+          <td><strong>0.695</strong> <span class="ok">within</span><div class="pop">n=34,301, pos=14,537</div></td>
         </tr>
         <tr>
           <td><code>comment_removed_ambiguous</code><div class="pop">all population, n=347,886</div></td>
@@ -74,6 +98,7 @@ who authored a sampled post; suspension and confirmed-automation are out of scop
           <td>0.799</td>
           <td>0.591</td>
           <td>0.581</td>
+          <td><strong>0.641</strong> <span class="warn">outside</span><div class="pop">n=34,301, pos=8,740</div></td>
         </tr>
         <tr>
           <td><code>automod_filtered</code><div class="pop">post_authors population, n=45,861</div></td>
@@ -82,10 +107,11 @@ who authored a sampled post; suspension and confirmed-automation are out of scop
           <td>0.736</td>
           <td>0.664</td>
           <td><strong>0.653</strong> <span class="ok">within 0.65-0.80</span></td>
-          <td>0.605</td>
+          <td>0.606</td>
           <td>0.644</td>
           <td>0.556</td>
           <td>0.514</td>
+          <td><strong>0.725</strong> <span class="ok">within</span><div class="pop">n=11,438, pos=1,516</div></td>
         </tr>
         <tr>
           <td><code>moderator_removed</code><div class="pop">post_authors population, n=45,861</div></td>
@@ -94,16 +120,19 @@ who authored a sampled post; suspension and confirmed-automation are out of scop
           <td>0.692</td>
           <td>0.640</td>
           <td><strong>0.637</strong> <span class="warn">outside 0.65-0.80</span></td>
-          <td>0.684</td>
+          <td>0.688</td>
           <td>0.623</td>
           <td>0.568</td>
           <td>0.540</td>
+          <td><strong>0.687</strong> <span class="ok">within</span><div class="pop">n=11,438, pos=1,784</div></td>
         </tr>
 </table>
 <p class="muted">Rung 4 is "the number that counts" per &sect;8. If it doesn't clearly beat the volume-only
 baseline, the model is rediscovering account volume, not detecting anything else. The permutation floor is
 computed on labels shuffled <em>within</em> volume-decile strata (not fully random), so it already reflects
-whatever the real volume/label correlation is &mdash; a rung-4 AUC close to this floor means no signal beyond volume.</p>
+whatever the real volume/label correlation is &mdash; a rung-4 AUC close to this floor means no signal beyond volume.
+The rightmost column is the corrected, defensible number per the note above &mdash; prefer it over the plain rung-4
+column for any channel where the two disagree.</p>
 
 <h2>PU learning diagnostics (Elkan&ndash;Noto)</h2>
 <table>

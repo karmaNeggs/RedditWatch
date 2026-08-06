@@ -49,7 +49,73 @@ dropped.
    plus a volume-decile-stratified permutation floor (not full-random --
    preserves whatever the real volume/label correlation is, isolating
    whether the model finds anything BEYOND volume).
-5. Resolved by (1): no other feature in the table is removal-derived.
+5. **Revisited 2026-08-06 after admin_removal's 0.896 (well above the 0.65-0.80
+   Kumar ceiling) triggered a dedicated leak audit -- this was NOT actually
+   resolved by (1).** (1) only excludes the removal-RATE columns; it does
+   nothing about the fact that every "behavioral" feature (footprint,
+   reception, engagement, provenance-rate) is aggregated in
+   v3_account_features.py over ALL of an account's sampled rows, INCLUDING
+   the row(s) that define the label. For a thin-history account (median 2
+   comments/account corpus-wide) this means the "behavioral" features are
+   substantially the label-defining row's own metadata, not independent
+   past behaviour.
+   - **Confirmed via a volume-threshold sweep** (restrict population to
+     n_comments_sample >= k, so the label row is at most 1/k of each
+     account's aggregate): admin_removal rung4 AUC 0.896 (k=1) -> 0.800
+     (k=2) -> 0.822 (k=5) -> **0.743 (k=10, lands inside 0.65-0.80)**.
+     self_deletion 0.778->0.695 and comment_removed_ambiguous 0.805->0.641
+     show the same monotonic decline (the latter crosses BELOW the Kumar
+     floor once corrected -- a reversal worth flagging on its own).
+     automod_filtered (0.653->0.725) and moderator_removed (0.637->0.687)
+     do NOT decline with this gate -- expected, since their label is
+     post-level and the gate operates on comment volume; a targeted
+     ablation dropping their 4 post-derived features (n_posts_sample,
+     mean_post_score, own_post_reply_rate, n_own_posts_with_comments) barely
+     moved either (0.653->0.635, 0.637->0.622), so those two channels'
+     original numbers look comparatively credible.
+   - **A canary check** (fit on ONLY username_char_entropy,
+     username_digit_suffix_len, username_is_default_pattern, account_ordinal
+     -- features that structurally cannot depend on which rows got sampled)
+     gave admin_removal AUC=0.489, i.e. noise -- confirming all of the
+     model's real signal sits in the row-content-derived families, exactly
+     where the leak would live.
+   - **Attempted a full leave-one-out feature rebuild** (recompute every
+     contaminated feature per-channel, excluding that channel's own
+     label-defining rows from the aggregation) as the more principled fix.
+     Hit and fixed a real bug in the exclusion SQL itself first (the same
+     `NULL OR FALSE = NULL` three-valued-logic trap already documented for
+     is_confirmed_automation_seed in v3_stage0_build.py -- `WHERE NOT
+     (meta_removal_type = 'x')` silently drops every row where
+     meta_removal_type IS NULL unless wrapped in
+     `COALESCE(..., FALSE)`). Even after fixing that, **full LOO produced a
+     WORSE leak** (AUC up to 0.98+): thin-history accounts often have ZERO
+     rows left after excluding the label row, and "this feature is NaN"
+     becomes a near-perfect proxy for the label via XGBoost's native
+     missing-value handling. **Abandoned as the fix** -- kept as a
+     documented negative result, not silently discarded.
+   - **Ruled out one specific sub-hypothesis:** the _meta block's
+     text-from-+16s/score-from-+36h snapshot merge (docstring, V3_PLAN.md
+     Sec 3) raised the possibility that a removed item's `score` is a
+     removal-timing artefact rather than organic reception. Checked
+     directly (marginal and within-account, admin-removed vs. kept
+     comments) -- admin-removed comments score *higher* on average (mean
+     31.5 vs 19.2 within the same accounts), not lower/frozen. This
+     mechanism is not what's driving the excess; a broader ablation dropping
+     the whole score+reception-adjacent family (score_stddev,
+     karma_extremeness, controversiality_rate, is_submitter_rate, mean_depth)
+     barely moved admin_removal either (0.896->0.887) -- the signal is
+     genuinely broad-based across families, not concentrated in reception.
+   - **Also found, Sec 8 item 2:** admin_removal and self_deletion overlap
+     39.9% (of admin_removal accounts) -- and self_deletion / comment_
+     removed_ambiguous overlap 68.6% (of the latter). The "5 independent
+     channels" framing needs this caveat; some of the apparent cross-channel
+     structure in Sec 6's transfer matrix may be shared-account overlap, not
+     independent transfer.
+   - **Resolution adopted:** a `VOLUME_GATE_THRESHOLD`-gated re-evaluation
+     (n_comments_sample >= 10) is now computed and reported alongside every
+     rung for every channel, labeled explicitly as the corrected number --
+     the original un-gated numbers are kept visible, not deleted, but should
+     not be cited without this caveat attached.
 
 **Four-rung ladder, adapted for the account-level unit (Sec 8) -- account
 features are aggregated over the full ~24 month window, so there is no
@@ -120,6 +186,7 @@ LEAKAGE_EXCLUDE = ['removal_rate', 'deleted_later_rate', 'removal_rate_nonzero',
 SCORE_FAMILY = ['mean_post_score', 'score_stddev', 'karma_extremeness',
                 'karma_per_post_extremeness', 'reception_spread', 'worst_sub_mean_score']
 KUMAR_LOW, KUMAR_HIGH = 0.65, 0.80
+VOLUME_GATE_THRESHOLD = 10  # n_comments_sample >= this; see leakage-audit note in the module docstring
 
 CHANNELS = {
     'admin_removal': dict(
@@ -453,6 +520,23 @@ def main():
         r4_noscore = fit_eval(sub_df, feats_no_score, y, tr4, te4)
         log(f'  rung4 WITHOUT score family AUC={r4_noscore["auc"] if r4_noscore else None}')
 
+        # volume-gated re-evaluation (leakage audit, see module docstring item 5):
+        # target-row inclusion means every "behavioral" feature partly IS the
+        # label-defining row for a thin-history account. Restricting to
+        # n_comments_sample >= VOLUME_GATE_THRESHOLD dilutes that row to at most
+        # 1/threshold of each account's aggregate -- this is the corrected number.
+        gate_mask = (sub_df['n_comments_sample'] >= VOLUME_GATE_THRESHOLD).values
+        sub_gated = sub_df[gate_mask].reset_index(drop=True)
+        y_gated = y[gate_mask].reset_index(drop=True)
+        r1_gated = r4_gated = None
+        if int(y_gated.sum()) >= 20 and int((y_gated == 0).sum()) >= 20:
+            r1_gated = kfold_auc(sub_gated, feats_with_score, y_gated, groups=None)
+            tr_g, te_g = chrono_split(sub_gated, purge_frac=0.10, test_frac=0.30)
+            r4_gated = fit_eval(sub_gated, feats_with_score, y_gated, tr_g, te_g)
+        log(f'  volume-gated (n_comments_sample>={VOLUME_GATE_THRESHOLD}): '
+            f'pop={len(sub_gated)} pos={int(y_gated.sum())} '
+            f'rung1={r1_gated["auc"] if r1_gated else None} rung4={r4_gated["auc"] if r4_gated else None}')
+
         # mandatory baselines
         vol_auc = volume_only_baseline(sub_df, y, tr4, te4)
         perm_auc = permutation_floor(sub_df, y, feats_with_score, tr4, te4)
@@ -483,11 +567,18 @@ def main():
                                               'n_features_selected': r4['n_features_selected'], 'selected_features': r4['selected']} if r4 else None,
             'subreddit_blocked': {'auc': rs['auc'], 'n_test': rs['n_test'], 'n_pos_test': rs['n_pos_test'], 'test_subs': test_subs} if rs else None,
             'rung4_without_score_family': {'auc': r4_noscore['auc']} if r4_noscore else None,
+            'volume_gated': {
+                'threshold': VOLUME_GATE_THRESHOLD,
+                'n_population': len(sub_gated), 'n_positives': int(y_gated.sum()),
+                'rung1_auc': r1_gated['auc'] if r1_gated else None,
+                'rung4_auc': r4_gated['auc'] if r4_gated else None,
+            },
             'volume_only_baseline_auc': vol_auc,
             'permutation_floor_auc': perm_auc,
             'pu_learning': {k: v for k, v in pu.items()},
             'shap': shap_res,
             'within_kumar_range': (r4 is not None and KUMAR_LOW <= r4['auc'] <= KUMAR_HIGH),
+            'within_kumar_range_gated': (r4_gated is not None and KUMAR_LOW <= r4_gated['auc'] <= KUMAR_HIGH),
         })
         results['channels'][ch_name] = ch_result
 
@@ -561,9 +652,13 @@ def render_html(r):
     for ch, c in r['channels'].items():
         r4 = c.get('rung4_grouped_blocked_purged') or {}
         r4ns = c.get('rung4_without_score_family') or {}
+        vg = c.get('volume_gated') or {}
         in_range = c.get('within_kumar_range')
+        gated_in_range = c.get('within_kumar_range_gated')
         badge = ('<span class="ok">within 0.65-0.80</span>' if in_range
                  else ('<span class="warn">outside 0.65-0.80</span>' if r4.get('auc') is not None else '&mdash;'))
+        gated_badge = ('<span class="ok">within</span>' if gated_in_range
+                        else ('<span class="warn">outside</span>' if vg.get('rung4_auc') is not None else '&mdash;'))
         rows.append(f"""
         <tr>
           <td><code>{ch}</code><div class="pop">{c['population']} population, n={c['n_population']:,}</div></td>
@@ -576,6 +671,7 @@ def render_html(r):
           <td>{_fmt(r4ns.get('auc'))}</td>
           <td>{_fmt(c.get('volume_only_baseline_auc'))}</td>
           <td>{_fmt(c.get('permutation_floor_auc'))}</td>
+          <td><strong>{_fmt(vg.get('rung4_auc'))}</strong> {gated_badge}<div class="pop">n={vg.get('n_population', 0):,}, pos={vg.get('n_positives', 0):,}</div></td>
         </tr>""")
 
     pu_rows = []
@@ -661,17 +757,41 @@ V3_PLAN.md &sect;6's literal 6-channel table (automod vs. moderator is only reso
 who authored a sampled post; suspension and confirmed-automation are out of scope here, see script docstring).
 </div>
 
+<div class="note">
+<strong>2026-08-06 correction &mdash; read this before citing any rung-4 number below.</strong>
+The un-gated <code>admin_removal</code> rung-4 AUC (0.896) sat well above the Kumar ceiling and triggered a
+dedicated leak audit. <strong>Confirmed cause:</strong> every "behavioral" feature (footprint, reception,
+engagement, provenance-rate) is aggregated over ALL of an account's sampled rows, including the row(s) that
+define the label &mdash; for a thin-history account (corpus median 2 comments/account) that feature is
+substantially just the labelled event's own metadata, not independent past behaviour. A volume-threshold sweep
+confirms it: restricting to accounts with &ge;10 sampled comments dilutes the label row to at most 1/10th of the
+aggregate and <code>admin_removal</code> drops to 0.743 (inside 0.65&ndash;0.80); <code>comment_removed_ambiguous</code>
+drops from 0.805 to 0.641 (crosses <em>below</em> the floor); <code>automod_filtered</code> / <code>moderator_removed</code>
+barely move (their label is post-level, not comment-level, so this particular mechanism doesn't apply to them).
+A full leave-one-out feature rebuild was attempted as a more principled fix and <strong>made things worse</strong>
+(AUC up to 0.98+) &mdash; thin-history accounts often have zero rows left after exclusion, and "this feature is
+NaN" becomes a near-perfect label proxy via XGBoost's missing-value handling; abandoned, kept as a documented
+negative result (full detail in the module docstring, item 5 of the leakage register). The un-gated numbers below
+are kept visible for comparison but should not be cited without the gated column next to them &mdash; see the new
+rightmost column in the table below, and the full docstring for the ruled-out sub-hypotheses (score-as-removal-
+artefact: not supported; admin_removal&harr;self_deletion account overlap: 39.9%, a real caveat on "5 independent
+channels").
+</div>
+
 <h2>Validation ladder (AUC) — {r['meta']['n_accounts']:,} accounts, {r['meta']['n_post_authors']:,} post authors</h2>
 <table>
 <tr><th>channel</th><th>positives</th><th>rung1<br>random CV</th><th>rung2<br>grouped CV</th>
 <th>rung3<br>chrono-blocked</th><th>rung4<br>grouped+blocked+purged</th><th>subreddit-<br>blocked</th>
-<th>rung4<br>no score family</th><th>volume-only<br>baseline</th><th>permutation<br>floor</th></tr>
+<th>rung4<br>no score family</th><th>volume-only<br>baseline</th><th>permutation<br>floor</th>
+<th>rung4<br>volume-gated (n&ge;{VOLUME_GATE_THRESHOLD}) &mdash; corrected</th></tr>
 {''.join(rows)}
 </table>
 <p class="muted">Rung 4 is "the number that counts" per &sect;8. If it doesn't clearly beat the volume-only
 baseline, the model is rediscovering account volume, not detecting anything else. The permutation floor is
 computed on labels shuffled <em>within</em> volume-decile strata (not fully random), so it already reflects
-whatever the real volume/label correlation is &mdash; a rung-4 AUC close to this floor means no signal beyond volume.</p>
+whatever the real volume/label correlation is &mdash; a rung-4 AUC close to this floor means no signal beyond volume.
+The rightmost column is the corrected, defensible number per the note above &mdash; prefer it over the plain rung-4
+column for any channel where the two disagree.</p>
 
 <h2>PU learning diagnostics (Elkan&ndash;Noto)</h2>
 <table>
