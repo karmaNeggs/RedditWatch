@@ -103,7 +103,7 @@
   .corr-legend { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--muted); margin-bottom: 12px; }
   .corr-legend .bar { width: 140px; height: 10px; border-radius: 2px; background: linear-gradient(90deg, var(--neg), var(--divzero), var(--pos)); }
   .risk-legend { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--muted); margin-bottom: 14px; }
-  .risk-legend .bar { width: 120px; height: 10px; border-radius: 2px; background: linear-gradient(90deg, var(--divzero), var(--critical)); }
+  .risk-legend .bar { width: 120px; height: 10px; border-radius: 2px; background: linear-gradient(90deg, var(--pos), var(--divzero), var(--critical)); }
   .risk-legend .swatch-gray { display: inline-block; width: 10px; height: 10px; border-radius: 2px; background: var(--muted); opacity: 0.35; vertical-align: -1px; }
 
   /* ---- density panels ---- */
@@ -245,12 +245,23 @@
     return [parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)];
   }
   const RISK_SCALE_MAX = DATA.meta.risk_scale_max || 0.3;
+  const RISK_POP_MEAN = DATA.meta.risk_pop_mean || 0.07;
   function riskColor(meanRisk, binN) {
     if (meanRisk === null || binN < 20) return null; // too few accounts in this bin to trust the estimate
+    // Diverging, centered on the population mean -- blue = safer than typical,
+    // red = riskier than typical, not an absolute 0%-is-white scale. Asymmetric
+    // by construction: removal_rate has a hard floor at 0%, so "below average"
+    // only has RISK_POP_MEAN of room while "above average" has much more --
+    // that asymmetry is real (you can't have negative removal rate), not a bug.
     const neutral = isDark() ? '#383835' : '#f0efec';
-    const hot = '#d03b3b'; // status critical -- fixed across themes per palette spec, not re-stepped
-    const t = Math.min(1, Math.max(0, meanRisk / RISK_SCALE_MAX));
-    return mixHex(neutral, hot, t);
+    const blue = isDark() ? '#3987e5' : '#2a78d6';
+    const red = '#d03b3b'; // status critical -- fixed across themes per palette spec
+    if (meanRisk <= RISK_POP_MEAN) {
+      const t = RISK_POP_MEAN > 0 ? Math.min(1, (RISK_POP_MEAN - meanRisk) / RISK_POP_MEAN) : 0;
+      return mixHex(neutral, blue, t);
+    }
+    const t = Math.min(1, (meanRisk - RISK_POP_MEAN) / Math.max(1e-9, RISK_SCALE_MAX - RISK_POP_MEAN));
+    return mixHex(neutral, red, t);
   }
 
   function svgEl(tag, attrs) {
@@ -280,8 +291,8 @@
   });
 
   document.getElementById('risk-legend').innerHTML =
-    `bar color = mean <b>${DATA.meta.risk_metric}</b> within that bin (pop. avg ${(100*DATA.meta.risk_pop_mean).toFixed(1)}%) ` +
-    `<span class="bar"></span> 0% → ${(100*RISK_SCALE_MAX).toFixed(0)}%+ ` +
+    `bar color = mean <b>${DATA.meta.risk_metric}</b> within that bin, relative to the population average (${(100*RISK_POP_MEAN).toFixed(1)}%) ` +
+    `<span class="bar"></span> 0% (safer) ← ${(100*RISK_POP_MEAN).toFixed(1)}% avg → ${(100*RISK_SCALE_MAX).toFixed(0)}%+ (riskier) ` +
     `&nbsp;·&nbsp; <span class="swatch-gray"></span> bin has &lt;20 accounts, too small to color`;
 
   // ---------------- histograms ----------------
