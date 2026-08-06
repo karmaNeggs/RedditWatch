@@ -1,0 +1,971 @@
+# V3 plan — exposure-weighted inauthenticity scoring
+
+Supersedes `V3_FEATURE_PLAN.md` and `V3_DATA_SOURCES.md`. Those remain valid as
+background; where they disagree with this document, this document wins.
+`V3_METRIC_CATALOGUE.md` is the full candidate-metric sweep this document's §4
+was checked against and updated from (2026-08-05) — kept separate because of
+its size, not because it's optional background.
+
+Status marks: ✅ **measured** in this project · 📚 **published**, cited ·
+🔬 **hypothesis**, untested · ❌ **unavailable**, confirmed by audit.
+
+---
+
+## 0. What changed, and why V2 is closed
+
+V2 plateaued at ROC-AUC **0.663**. Two experiments run 2026-08-04 established why.
+
+**Experiment B — the label is not the problem.** ✅ Holding the 10 account
+features constant and swapping the label moved nothing:
+
+| Label | n | pos | AUC |
+|---|---|---|---|
+| `gone` (baseline) | 7,872 | 334 | 0.663 |
+| suspended only | 7,872 | 76 | 0.662 |
+| not_found only | 7,872 | 258 | 0.672 |
+| admin-removed ≥1 | 1,956 | 34 | 0.593 |
+| admin OR suspended | 1,956 | 55 | 0.623 |
+| admin_rate ≥ 50% | 1,956 | 28 | 0.502 |
+
+**Follow-up probes.** ✅ Gradient boosting on the same features scored *worse*
+than logistic (0.602 vs 0.663), so logistic was not underfitting — there is no
+structure left to extract. Elkan–Noto prior estimation was degenerate
+(c = 0.054), which is itself evidence the features barely separate the classes.
+
+**The label channels measure different constructs.** ✅ Of 34 admin-removed post
+authors, **zero** were suspended and 31 are still alive. This is not a censoring
+artefact: 0 of 35 posts by suspended authors show `[deleted]` re-attribution.
+
+**Note on the PU ceiling argument.** `AUC_pu^max = (1 + β − α)/2` is correct
+algebra, but observing 0.663 does *not* prove you sit at that ceiling — it
+cannot distinguish "at ceiling with bad labels" from "below ceiling with weak
+features". Applied to experiment B it favours the feature reading: purifying to
+suspension-only raises the ceiling while observed AUC stayed flat.
+
+**Conclusion:** the 10 account-on-paper features are exhausted. V2 is closed.
+
+### The structural pivot
+
+📚 Kumar et al. (WWW 2017), nine Disqus communities — the closest published
+analogue to Reddit — **same data, same features**:
+
+| Question | AUC |
+|---|---|
+| "Is this account a sockpuppet?" | **0.68** |
+| "Are these two accounts the same operator?" | **0.91** |
+
+V2's 0.663 sits on the documented ceiling of the *per-account framing*. The lever
+is not better features; it is **changing the unit of analysis**. Corroborated by
+TwiBot-22 (1M users, realistic 14% bot rate, best-of-35 detectors F1 **58.7**;
+Botometer accuracy **49.9** there despite F1 96–99 on older benchmarks), and by
+no published Reddit account-level detector exceeding ~F1 0.70 on a non-leaking
+label.
+
+---
+
+## 1. Objective
+
+**Exposure-weighted, not activity-weighted.** The deliverable is not "% of all
+activity that is inauthentic". It is:
+
+> For each (subreddit, month): **of what a normal visitor actually sees, how much
+> is manufactured** — and is it individual automation, coordination, or a rally —
+> with every point of score traceable to named accounts and threads a human can
+> open and check.
+
+This reframing matters. Sampling top-100 posts is *biased* as a sample of all
+activity, but it is the **correct frame** for exposure-weighted corruption:
+top-ranked posts are the population of interest, not a convenience sample. It is
+also far cheaper, which is what makes the budget work.
+
+### Three questions, three units, three honest ceilings
+
+| | Question | Unit | Output | Realistic ceiling 📚 |
+|---|---|---|---|---|
+| **A** | How much of what's seen is inauthentic? | sub-month | prevalence ± CI | quantification, **no AUC** |
+| **B** | Is there coordination? | **account-pair** | cluster list + z | **AUC 0.90–0.94** |
+| **C** | Was there a rally? | event | burst shape + residual | **no AUC** — no ground truth |
+
+Ceilings by target, for setting expectations honestly 📚:
+
+| Target | Unit | Realistic |
+|---|---|---|
+| Self-declared / obvious automation | account | F1 0.95–0.99 |
+| **Coordination / shared operator** | **pair** | **AUC 0.90–0.94** |
+| Predicting platform enforcement | account | 0.75–0.85 (0.65–0.75 without mod-action features) |
+| Modern per-account automation | account | 0.65–0.80 |
+
+**The 90%+ target is achievable at the pair level and nowhere else.** Any
+per-account "bot score" we publish is capped near 0.70 by the literature, and we
+will say so on the methodology page.
+
+---
+
+## 2. Sampling design and budget
+
+### The frame
+
+- **45 subreddits** (`subreddits_v3.csv`), 14 categories, tagged by
+  `incentive_tier` ∈ {high, medium, low}.
+- **24 months.**
+- **Top 100 posts per sub-month** by score — the exposure frame.
+- **Counter-sample:** 20 random posts per sub-month, **matched on
+  `num_comments`** to the top-100 distribution. Unmatched random sampling makes
+  every derived threshold a volume threshold in disguise.
+- **Per top post:** the **first 10** and **top 10 by score** commenters.
+
+### Budget
+
+| Bucket | Rows | Source |
+|---|---|---|
+| Sub-month series | ~1,100 | `/time_series` |
+| Posts (100 top + 20 matched random × 45 × 24) | ~130,000 | `/posts/search` full scan, keep top-N |
+| Comments (first-10 + top-10, **both top AND counter-sample** × 130,000 posts) | ~1.9–2.3M | `/comments/search` per post |
+| Accounts (unique posters + commenters) | ~300–500K | `/users/ids` |
+
+**Correction from the pilot run (2026-08-05):** the original budget line only
+counted comment extraction against the 108,000 top posts. The validated pilot
+extracted first-10/top-10 commenters from **both** top and counter-sample posts
+(130,000 total) — required for Stage 2b (matched top-vs-counter comparison,
+where the one real non-tautological lead so far, removed-comment-rate, came
+from). Row estimate rebased on the pilot's **measured yield of ~15 commenter
+rows/post** (15,806 rows / 1,051 posts), not the assumed 20/post ceiling —
+short threads and dedup both pull the real average down.
+
+**Storage:** written as **zstd-compressed NDJSON from the start**. Raw JSON at
+this row count is ~2.6 GB and would breach the 3 GB cap; zstd (measured 8–10×)
+lands at ~400–600 MB. Parquet + DuckDB for the analysis layer.
+
+### Fetched ≠ stored
+
+The API sorts only by `created_utc`, so top-100-by-score requires scanning every
+post in the month. Likewise "top 10 commenters by score" requires the whole
+thread. The rule is **compute-then-discard**: fetch the thread, compute the
+derived per-post aggregates below, store one post row + 20 comment rows, discard
+the rest.
+
+Per-post derived aggregates (stored on the post row, so thread shape survives
+without storing the thread):
+`n_comments_observed`, `n_unique_commenters`, `first10_arrival_gaps`,
+`comment_score_p50/p90/max`, `comment_score_gini`, `max_depth`, `mean_depth`,
+`pct_toplevel`, `reply_reciprocity`, `submitter_reply_rate`,
+`removed_comment_rate`, `tombstone_rate`, `bot_comment_rate`.
+
+**Estimated wall clock — corrected against pilot measurement (2026-08-05).**
+The original "2–3 hours" figure was an unvalidated guess and is **wrong by
+roughly an order of magnitude.** The pilot measured 717s for 1,051 posts
+(both top and counter-sample, full comment-thread scan, single-threaded,
+sequential) = **0.68s/post**. At that rate, 130,000 posts is:
+
+| Mode | Wall clock | Basis |
+|---|---|---|
+| Single-threaded (measured) | **~24.6h** | Direct pilot measurement — solid ground truth |
+| 2 workers | ~12.3h | Proportional extrapolation, **not validated at sustained scale** |
+| 4 workers | ~6.2h | Same caveat |
+| 8 workers | ~3.1h | Same caveat — also the ceiling the original audit called "verified-safe," but only from a 25-request burst test, not a multi-hour sustained run |
+
+**Plan on ≥6 hours, checkpointed and resumable, running unattended (background
+job, not a foreground wait).** Confirm sustainable parallel throughput on the
+first ~30 minutes of the real run before committing to a worker count — the
+25-request burst test behind the "8 req/s, zero 429s" figure is not the same
+claim as "8 req/s sustained for 6+ hours."
+
+---
+
+## 3. Data source reality (audit 2026-08-04) ✅
+
+Everything here was measured live, not read from documentation.
+
+### The `_meta` block — the most valuable find
+
+Undocumented, present on **100%** of content from ~2023-07 onward:
+
+| key | meaning |
+|---|---|
+| `removal_type` | `moderator`, `deleted`, `automod_filtered`, `reddit`, `content_takedown` |
+| `was_deleted_later` | alive at first capture, gone by T+36h ⇒ **original text retained** |
+| `was_initially_deleted` | already gone at capture ⇒ tombstone |
+| `is_edited` | the only working edit flag (top-level `edited` is ~0%) |
+| `retrieved_2nd_on` | deterministic **T+36.0h** re-check |
+
+Records are a merge of two snapshots: **text from +16s, score/removal status from
++36h**. So an item removed between those moments keeps its text *and* carries a
+label.
+
+### Removal labelling — three traps
+
+1. **`removed_by_category` is NEVER set on comments** (0/14,627). Comment removal
+   detection must use `_meta.removal_type`. On posts it undercounts by 11%; the
+   correct label is the **union** of both.
+2. **Removed comments retain original text 100%** of the time (661/661). Removed
+   **posts** only **13%** — mods act inside the 16-second capture window.
+3. A third class, **14.7% of comments**, are unlabelled tombstones identified by
+   `author == "[deleted]" AND body == "[removed]" AND collapsed_reason_code == "DELETED"`.
+
+**Rule:** `was_deleted_later == True` ⇒ text is real (382/382 posts, 55/55
+comments). Otherwise assume tombstone.
+
+### Hard era boundary at ~2023-07
+
+No `_meta`, no removal labels, no edit flags before it. **Rich modelling starts
+2023-07.** With today at 2026-08 that permits ~36 months; our 24-month window
+fits comfortably.
+
+### Pagination bug — costs 0.16% of rows silently
+
+`after` is exclusive at **second** granularity, so same-second siblings are
+skipped. Verified: second `1752539352` holds two comments; `after=1752539352`
+returns neither. **Fix:** cursor on `after = last_created_utc*1000 − 1` (ms) and
+dedupe by `id`. Validated exact against `/time_series` ground truth (r/ipl
+2025-05-25 → 5,887 rows, row-for-row). Costs ~0.6% duplicate refetch.
+
+### Account age — viable via base36 ✅
+
+There is **no account creation date anywhere in the API**. But decoding
+`author_fullname[3:]` from base36 works: lower envelope monotonic in **13/13**
+bands, Spearman 0.82, **AUC 0.986** separating pre-2023 from post-2025 accounts.
+Calibrate against the lower envelope, not the median.
+
+**Limitation:** `author_fullname` is present on 100% of non-deleted-author content
+and **0%** of deleted-author content — no cohort signal for exactly the
+population of most interest.
+
+### Dead on arrival — build no features on these ❌
+
+`collapsed_because_crowd_control` (0% — kills the old plan's C8/U25) ·
+all award fields (`gilded`, `total_awards_received`, `all_awardings` — 0 nonzero
+in 21,691 objects) · `downs` (always 0) · `ups` (byte-identical to `score`) ·
+`is_created_from_ads_ui` (always False) · `removal_reason`, `mod_reason_title`,
+`banned_by`, `num_reports` (all null) · `active_user_count`, `accounts_active` ·
+`edited` top-level (~0%) · comment `depth` (not returned by search — compute from
+`parent_id`).
+
+### Staleness ⚠️
+
+- Subreddit objects are **536 days stale** (r/india reports 2.48M subscribers vs
+  3.47M actual). **Never** use `subreddits/search.subscribers`. Use
+  `/time_series/r/<sub>/subscribers` (monthly to 2018-03, daily on demand).
+- User karma aggregates are **344–500 days stale** — usable as coarse priors
+  only, never as current-month features.
+- `score` is uniformly aged at **T+36h** — consistent across rows, good for
+  modelling, but understates late-blooming threads.
+
+### Also unavailable ❌
+
+Score trajectories (two snapshots, one score) · moderator lists / modlogs ·
+suspension status · `/posts/search/aggregate` and `/comments/search/aggregate`
+(time out on essentially everything — use `/time_series`) ·
+`/users/interactions/*` (**hard-blocked on high-volume accounts** — i.e. exactly
+the bots of interest).
+
+**Live Reddit is optional, not a dependency.** Arctic Shift covers account age
+via base36 (§3, AUC 0.986) and five of the six label channels. The only genuine
+gap is suspension status — and at ~100 calls/min, checking 300–500K accounts
+would take **80+ hours**, so it was never viable in bulk anyway. V2 also measured
+suspension as a weak label (AUC 0.662 vs 0.663 for `gone`).
+
+Two narrow, optional uses remain, both post-hoc:
+1. **Calibrate the base36 age proxy** against a few thousand known creation dates
+   — turns the lower-envelope estimate into a fitted curve. ~30 min.
+2. **t+90d suspension check on the top-risk decile only** (a few thousand
+   accounts). This is the only **account-level, externally-generated** signal in
+   the design — every Arctic Shift label is content-level — so it is the one
+   non-circular validation available.
+
+Neither blocks collection. `scripts/reddit_auth.py` already holds the
+credentials; the audit's 403 was a datacenter-IP artefact, not a credential
+problem.
+
+---
+
+## 4. Metric catalogue
+
+Every sub-level metric is expressed as a **percentile against the low-incentive
+control tier**, never as an absolute.
+
+### 4.1 Sub-month level — "what changed"
+
+From `/time_series` (nearly free) plus per-post `subreddit_subscribers`.
+
+| # | Metric |
+|---|---|
+| S1 | posts/month, comments/month, MoM delta and 3-month trend |
+| S2 | subscriber curve, MoM growth, growth-rate anomalies |
+| S3 | comments per post, MoM |
+| S4 | sum_score/month, score per post |
+| S5 | removed-post rate, removed-comment rate, tombstone rate |
+| S6 | moderator intensity (`distinguished`, `stickied`, `locked` rates) — **a confounder, not a signal** |
+| S7 | account churn — new authors appearing, prior authors disappearing |
+| S8 | Herfindahl over outbound domains |
+| S9 | posting-hour profile vs IST expectation |
+| S10 | sub age at observation month (creation date is immutable, so valid even though the subreddit object is otherwise 536 days stale — see §3) |
+| S11 | rules count and recency of last rule change — `/subreddits/rules`, confirmed working (r/india → 14 rules w/ `created_utc`); a sudden new rule is a mod response to an incident |
+| S12 | flair-scheme richness — distinct `link_flair_text` values/month, % of posts carrying flair |
+| S13 | cross-post ratio, inbound (% of this sub's posts that are themselves crossposts) and outbound/fan-out (`num_crossposts` sum / post count — how often this sub's content propagates elsewhere) |
+| S14 | NSFW / quarantine flag and transitions (`over_18`, `quarantine`) |
+| S15 | **sub-month series regime test** 🔬 — apply the Stage-1 GMM/BIC multimodality test (§7) directly to a sub's own monthly post/comment-count series, not just to account features. A sub whose monthly activity clusters into two regimes (baseline vs. spike months) is showing structure account-level tests can't see. This is a genuinely new test, not previously distinct from S1's MoM delta. |
+
+**S6 is load-bearing.** Heavily-moderated subs look cleaner for reasons unrelated
+to bots. Any cross-sub comparison ignoring mod intensity is partly ranking mod
+staffing. V2 ignored it entirely. **S6 measures moderation *intensity*, not
+moderator *count* — no endpoint returns a mod list or headcount (§3), and there
+is no viable proxy for the count itself. Keep the two constructs distinct; don't
+let S6 stand in for "how many mods does this sub have."**
+
+### 4.2 Post level — "was this pumped?"
+
+| # | Metric | Note |
+|---|---|---|
+| P1 | `score`, `upvote_ratio`, `num_comments` | raw |
+| P2 | **implied vote volume** = `S/(2r−1)` | ✅ verified; **only for r ≥ 0.65** |
+| P3 | `contested_share` = `1 − r` | exact, no algebra needed |
+| P4 | **`votes / num_comments`** — voted-but-not-discussed | the natural vote-manipulation signature |
+| P5 | comment:score ratio vs sub baseline | |
+| P6 | score per subscriber | cross-sub comparable |
+| P7 | time-to-first-comment | |
+| P8 | **first-10 arrival gaps** — tight cluster vs power-law decay | 🔬 |
+| P9 | **thread width:depth** — coordinated threads are wide and shallow | 🔬 |
+| P10 | reply reciprocity within thread | |
+| P11 | outsider share — commenters with no prior history in this sub | 📚 |
+| P12 | removed-comment rate within thread | |
+| P13 | title-template reuse across posts | 📚 |
+| P14 | domain–account concentration | |
+| P15 | `link_flair_text` as free topic label | ✅ 88% populated |
+| P16 | title length, body length, title:body ratio | ✅ trivial from raw fields — short title / no body is a link/reaction-bait signature |
+| P17 | mean thread sentiment/toxicity 🔧 | proxy, not a raw field — see A39. Same Hinglish caveat applies at post level. |
+| P18 | edit status and timing | 🔧 use `_meta.is_edited`, **not** top-level `edited` (~0% populated, dead). Timing: edited before the T+16s capture vs. between the two snapshots, via `_meta.was_deleted_later`-style logic |
+| P19 | link vs. self post | ✅ `is_self`, raw field, was never promoted to a named metric before |
+| P20 | crosspost count and fan-out (which subs) | ✅/🧩 `num_crossposts` is raw; fan-out via same-URL search across subs — was in an earlier draft, reinstated here |
+| P21 | posting time vs. the sub's own modal posting hour | 🧩 the "vs. mode" framing generalised from account level (A34–A38) to post level |
+| P22 | engagement velocity | 🔧 **proxy only** — score / hours-since-post at the fixed **T+36h** capture (§3). No true trajectory exists (two snapshots, one score); never describe this as real-time velocity. |
+| P23 | score per word | 🧩 content-length-normalised engagement efficiency |
+
+**On P2** ✅: the derivation `downs = S(1−r)/(2r−1)` is exact (verified,
+`ups − downs == score` on 12,028 posts), but the denominator → 0 as r → 0.5 and
+Reddit rounds `upvote_ratio` to 2 decimals. At r=0.55 a 0.01 error moves implied
+downvotes by 28%. **The contested-ness you want is just `1−r`, which is free and
+exact. What the algebra actually recovers is the vote *denominator*** — use it to
+normalise reach, not to measure controversy.
+
+### 4.3 Account level
+
+Note the ceiling: these feed the pair layer, they are **not** the deliverable.
+
+**Provenance.** A1 account age via base36 ✅ · A2 dormancy gap (first activity −
+creation; purchased-account signature) · A3 username morphology
+(`Adjective_Noun_1234` rate, n-gram entropy) · A4 `author_premium` ·
+A5 karma/day, post-karma:comment-karma ratio · A6 flair possession.
+
+⚠️ **A31 raw posting frequency (posts+comments per account-age-day)** — 🧩,
+computed from the same `/comments/search?author=` pull already planned for the
+timing family below. **V2 had this as `comments_per_day`; it was dropped going
+into V3 without a stated reason.** That's a regression, not a considered cut —
+reinstated here. A32 comment:post **count** ratio (`n_comments/n_posts`) — 🧩,
+distinct from A5's karma-*type* ratio, which the account-level table previously
+conflated this with; keep both, they answer different questions.
+
+**Timing** 📚 — the family V2 entirely lacks, and where the discriminative power is.
+
+| # | Metric | Note |
+|---|---|---|
+| A7 | inter-comment interval entropy | 📚 accuracy 0.848 standalone |
+| A8 | **interval quantisation** — gaps within ±2s of 60/300/900s multiples | cron signature, very low organic base rate |
+| A9 | **burstiness** | ⚠️ Goh–Barabási `B=(σ−μ)/(σ+μ)` is **length-biased** — use Kim & Jo's finite-size-corrected `A_n`, or you manufacture a volume↔botness correlation |
+| A10 | circadian dead hours (24 UTC bins with zero activity) | humans sleep |
+| A11 | circadian centroid offset vs IST | |
+| A12 | weekday:weekend ratio | |
+| A13 | session structure (split at >30min gaps) | 📚 session-position dynamics lift AUC 0.83→0.97 |
+| A14 | time-to-arrival on new threads; sustained <120s ⇒ feed monitoring | |
+| A15 | activity changepoints, **burst post trends** | |
+| A33 | **response latency** — `comment.created_utc − parent.created_utc`, distributional (median/mean) per account | ✅ was in an earlier draft, dropped before the final plan — reinstated. Humans have a floor; scripts don't. |
+
+**Content.** A16 self-similarity of own comments · A17 cross-account
+near-duplicates (MinHash/LSH) · A18 type-token ratio · A19 script/language mixing
+(Latin/Devanagari, Hinglish) · A20 emoji/punctuation fingerprint (feeds the pair
+layer) · A21 edit rate and latency via `_meta.is_edited` · A22 URL rate and domain
+concentration **(extend to per-comment link density — URL count / body length —
+distinct from the account-level rate; not currently computed)** ·
+A39 sentiment/toxicity (mean + volatility) 🔧 · A41 comment-depth tendency
+(shallow- vs. deep-commenting bias, from `parent_id` chain-walking — feeds P9).
+
+**A39 sentiment/toxicity** — 🔧 completely absent from the prior version of
+this plan (was `C6` in the pre-rewrite draft, silently dropped). No raw field;
+computed from `body` text. `nltk` (VADER, lightweight rule-based) and
+`transformers` are both confirmed installed in this environment — VADER as the
+cheap bulk default, a real classifier if quality matters more than throughput
+at census scale. ⚠️ **VADER's lexicon is English-word-based and will degrade on
+Hinglish/code-mixed comments** — the same risk already flagged in §9 for
+LLM-perplexity detectors. Do not trust it uncalibrated on this corpus.
+
+**Reception** — ⚠️ **weaker than they sound.** 📚 Kumar's community-feedback family
+scores **AUC 0.54 alone**; Reddit trolls receive *more* score than normal accounts
+(5.7 vs 4.8); LLM-generated Reddit comments draw engagement equal to or higher
+than human ones across a 9M-comment study. **Compute as residuals** against
+subreddit/hour/thread-age/depth, expect a modest lift, do not build on them.
+A23 incoming-reply rate · A24 controversiality rate ✅ (2.1% of comments — real
+signal) · A25 score-distribution shape (both tails) · A26 `is_submitter` rate ✅.
+
+**Footprint.** A27 subreddit entropy · A28 share of activity in high-incentive
+subs · A29 hobby absence (zero activity in any low-incentive sub) · A30 directed
+cross-sub flow (A-then-B; direction distinguishes source from target).
+
+**A34–A38 — the "vs. population mode" family** 🧩. Each is the account's raw
+value **expressed against the modal value of the reference population**
+(that sub-month's active accounts, or the control tier) — a different feature
+than the plain ratio, not a restatement of it:
+
+| # | Metric |
+|---|---|
+| A34 | karma/account-age-day vs. population mode |
+| A35 | comments/account-age-day (A31) vs. population mode |
+| A36 | raw posting frequency vs. population mode |
+| A37 | reply latency (A33, median) vs. population mode |
+| A38 | score-received-per-comment vs. population mode |
+
+### 4.4 Pair level — **the primary detector** 📚
+
+Bipartite **accounts × threads** (also accounts × parent-comment, accounts ×
+near-duplicate-text-cluster), validated against a **degree-preserving null**.
+This is the rigorous core of the field; everything else is decoration.
+
+| # | Metric |
+|---|---|
+| B1 | co-appearance count, and excess z vs the null |
+| B2 | co-arrival tightness — repeated arrival within Δt on the same thread |
+| B3 | text-template sharing rate |
+| B4 | stylometric similarity (char n-gram + punctuation + emoji) |
+| B5 | registration-cohort adjacency (base36 proximity) |
+| B6 | reply reciprocity — do they mainly reply to each other? |
+| B7 | temporal correlation of activity series |
+| B8 | shared-domain concentration |
+
+**Null model** — three options, increasing rigour 📚:
+
+1. **Hypergeometric SVN** (Tumminello) — exact, simplest, BH-FDR controlled
+2. **BiCM + Poisson-Binomial** (Saracco) — `p_rc = x_r y_c/(1 + x_r y_c)`,
+   V-motif `V_rr' = Σ_c m_rc m_r'c`, exact survival-function p-values
+3. **`backbone` FDSM** — curveball/fastball resampling preserving per-account
+   comment counts *and* per-thread sizes exactly. This **is** the
+   volume-matched permutation null.
+
+**Coordination interval must be derived from our own corpus.** ⚠️ CooRnet's
+`percentile_edge_weight = 0.90` default flags ~10% of edges *whether or not
+coordination exists* — a base-rate trap. A 2025 *Scientific Reports* paper shows
+transplanted thresholds (10s/5-shares from 2020) miss large amounts of
+coordination a year later. **Never inherit a published constant.**
+
+Reference point 📚: Schoch et al. achieved **74% recall at ~1% FPR** on
+activity-matched controls using nothing more than a 1-minute co-action window
+with ≥10 repetitions.
+
+### 4.5 Rally level 📚
+
+**Key insight: the discriminator is burst *shape*, not size.** Crane & Sornette
+relaxation exponents (θ=0.4): exogenous-subcritical ≈1.4, exogenous-critical
+≈0.6, endogenous-critical ≈0.2, with endogenous bursts showing power-law
+*precursory growth* before the peak.
+
+**The coordinated signature is a burst matching neither class** — tight arrival
+cluster then near-silence, no heavy tail — because organic attention always
+leaves one.
+
+| # | Metric |
+|---|---|
+| R1 | changepoint magnitude vs the sub's own baseline (PELT on deseasonalised residuals; CUSUM + BOCPD dual-detector at 0.5 confidence) |
+| R2 | Kleinberg burst detection (s=2, γ=1) |
+| R3 | relaxation-exponent fit and classification |
+| R4 | outsider-influx share |
+| R5 | new-account influx (accounts <30d old, sub-relative) |
+| R6 | arrival-burst tightness |
+| R7 | Hawkes branching ratio `n*` — portable "internal amplification" statistic |
+| R8 | **event-conditioned residual** — the metric that matters |
+
+**A nearly-free rally label** 📚: Kumar et al. (WWW 2018) measured moderator
+deletion rate **25× higher** during negative mobilisation (0.205 vs 0.008), with
+a Reddit-native matched null (matched post: same community, closest in time, no
+cross-links; matched user: same activity in past 30 days) giving a **1.6×**
+after/before baseline vs **8.8×** for cross-linked threads.
+
+**Event conditioning:** NegBin regression with GDELT lags plus a Reddit-wide
+offset, then run burst detection on the **Pearson residuals**, not raw counts.
+⚠️ **GDELT DOC 2.0 has a rolling 3-month window** — timelines must be archived
+contemporaneously or pulled via BigQuery. CausalImpact/BSTS is stronger but has a
+trap: if a campaign hits several of our 45 subs at once, using them as mutual
+controls cancels the effect.
+
+---
+
+## 5. Metric sanitisation protocol
+
+Non-optional. Each rule exists because its absence produces a confident wrong
+answer.
+
+### 5.1 Concentration metrics are size proxies until corrected 📚
+
+- Raw HHI carries an explicit `1/n` term: `E[HHI] = 1/K + (1−1/K)/n`
+- Plug-in Shannon entropy is biased **downward**
+- Sample Gini is biased downward by `O(1/n)`
+
+**Fixes:** unbiased Simpson `Σx(x−1)/(n(n−1))`; **Chao–Shen** entropy with
+Good–Turing coverage; Deltas `n/(n−1)` Gini correction. Or — universally — report
+a **null-model z-score** instead of the raw statistic, which handles any
+statistic and any bias.
+
+### 5.2 Transforms: only where they matter 📚
+
+**Skew transforms are pointless for XGBoost.** Tree splits depend only on value
+*ordering*, so log1p / Box-Cox / Yeo-Johnson leave the fitted tree identical.
+V2's skew-27/41 work matters **only** for z-score composites, PCA/FA, VIF, and
+linear baselines — where a skew of 27 genuinely makes a z-score meaningless.
+
+Winsorise at p1/p99 for reporting only, never before tree models. Handle
+zero-inflation explicitly (hurdle indicator + magnitude) rather than log1p-ing a
+75%-zero column.
+
+### 5.3 Don't hand-build composites for the model 📚
+
+Composite indices impose equal-weight fully-compensatory aggregation, discard the
+interactions XGBoost would find, and are **dominated by whichever correlation
+cluster has the most members** — a 12-member "volume" family gets 12× the weight
+of a singleton. Keep at most one composite as a *reporting artefact*, with
+OECD-style uncertainty and sensitivity analysis. Let the model learn interactions.
+
+Prune with VIF **within** evidence families (timing features are collinear with
+each other and near-orthogonal to text features — prune within, keep across).
+
+### 5.4 Volume normalisation
+
+Every count metric gets a per-subscriber or per-post denominator, and every
+cross-sub comparison carries `log1p(n_posts)` as a covariate. A big sub and a
+small sub are not comparable on raw counts.
+
+---
+
+## 6. Labels — per channel, never merged
+
+✅ Measured as **near-disjoint**, so merging them destroys signal.
+
+| Channel | Source | Role |
+|---|---|---|
+| Confirmed automation | self-declared ("I am a bot", "beep boop", "performed automatically"), `distinguished == moderator` (8.7% ✅) | **seed set** for boundary discovery — benign, so not the target |
+| Admin removal | `removed_by_category == 'reddit'` ∪ `_meta.removal_type` | strongest negative-quality signal |
+| Automod filtered | `_meta.removal_type == 'automod_filtered'` | separate channel |
+| Moderator removal | `_meta.removal_type == 'moderator'` | mostly rule violations — separate, weaker |
+| Deletion | `was_deleted_later`, tombstone triple | separate |
+| Suspension ⚠️ *optional* | live Reddit at t+90d, **top-risk decile only** | the only account-level, externally-generated signal — but infeasible in bulk (80+ h) and measured weak in V2 |
+
+**Protocol:** one PU model per channel, one class prior per channel, and a **6×6
+cross-channel transfer matrix**. **If off-diagonal AUC ≈ 0.5, no single composite
+"bot score" is defensible** — and the plan says so publicly rather than shipping
+one anyway.
+
+### PU learning 📚
+
+Not-actioned means **unknown**, not negative. Use nnPU risk estimation or
+cost-sensitive reweighting with an explicitly estimated class prior (TIcE, BBE,
+KM1/KM2, DEDPUL). ⚠️ Elkan–Noto was **degenerate on V2 data** (c=0.054) — do not
+assume it will work; check `c` before trusting any prior it reports.
+
+**Evaluating a PU model:** AUC against a PU label is biased. Report PU-corrected
+estimates and the recall-at-fixed-FPR against seed sets instead.
+
+---
+
+## 7. Models
+
+**Stage 0 — clean.** Remove sanctioned automation (AutoModerator, self-declared
+bots, `distinguished`) from A and B; report separately as A6. Remove
+deleted-author rows from modelling (keep for accounting). Compute account age at
+**event time**, not collection time.
+
+**Stage 1 — univariate.** Per feature: KDE + **Hartigan dip test** for
+unimodality, and a Gaussian mixture with k by BIC. A feature failing unimodality
+says two populations exist *before any label is involved*, and the second
+component's mass is a label-free prevalence estimate. Check per-month
+distributional stability — a feature whose own distribution drifts produces V2's
+spurious 13-month climb. **Apply the same test to S15** — a sub's own monthly
+post/comment-count series — not only to account features; a sub whose activity
+clusters into baseline-vs-spike regimes is structure account-level tests alone
+can't surface.
+
+**Stage 2 — bivariate.** Pairwise density grid over the Stage-1 shortlist,
+coloured by seed sets. HDBSCAN on the strongest pairs, looking for a satellite
+cluster detached from the main mass — with membership probabilities instead of a
+hand-drawn line. Interaction screening **requires a stated mechanism in advance**;
+V2's `old_x_msgs_per_day` failed because it had none.
+
+**Stage 2 also runs three explicit cross-level segmentation protocols** — not
+metrics, comparisons:
+1. **Commenter-profile segmentation by P4 (comment:vote ratio) tercile** — do
+   accounts commenting on high-P4 posts look different (age, karma/day,
+   circadian entropy, …) from those on low-P4 posts?
+2. **Same segmentation by P3 (`contested_share`) tercile** — do controversial
+   posts draw a different engager population than lopsided ones?
+3. **Same segmentation by S15 regime** (baseline vs. spike month) — do
+   commenter profiles shift when a sub is in an anomalous month?
+
+None of these are single metrics; they're comparisons of the account-feature
+distributions already in §4.3, conditioned on a post- or sub-level split.
+
+**Stage 3 — account model.** XGBoost per label channel. Expect **0.65–0.80** and
+say so. Feature selection **inside** the CV fold.
+
+**Stage 4 — pair model.** The primary detector. Features from §4.4, target =
+seed-derived same-operator pairs (stylometric + cohort + co-appearance
+agreement), validated on held-out seeds. **This is where 0.90 lives.**
+
+**Stage 5 — prevalence.** ⚠️ **Do not average account probabilities.** Two
+distinct failures 📚: `E[p̂_CC] = p·tpr + (1−p)·fpr` is systematic and does not
+vanish with more data; and the base-rate catastrophe (Botometer flagged ~50% of
+the US Congress as bots). BotPercent's temperature-scaling fix still contains an
+`argmax` — it is calibrated classify-and-count and fixes only half the problem.
+
+**Correct construction: calibrate → then quantify.** Isotonic (>1000 calibration
+points) or Platt, then ACC/PACC/SLD-EM or HDy on top.
+
+**Gate:** Youden's J (`tpr − fpr`) is the ACC denominator. **If J is small,
+refuse to publish a prevalence number.**
+
+---
+
+## 8. Validation
+
+### The four-rung ladder — report all four
+
+1. Random CV (optimistic, for reference only)
+2. Grouped by account
+3. Month-blocked (train early → test late)
+4. **Grouped + blocked + purged** — the number that counts
+
+### Mandatory baselines
+
+- **Volume-only baseline: `log1p(n_posts)`.** If the model does not clearly beat
+  it on rung 4, **it is a big-subreddit detector**, not a bot detector.
+- **Permutation floor.** Every run also executes on volume-preserving permuted
+  data, and **both numbers go in the report**. That permuted result is the
+  false-positive floor and it costs one extra pipeline run. V2 had none, which is
+  why its anomalies were unfalsifiable.
+- **Construct-validity check (free, no labels):** the score must rank
+  `high > medium > low` incentive tier. If r/ISRO and r/IndianDankMemes score like
+  r/IndiaSpeaks, the score is measuring volume or moderation intensity. V2 could
+  never run this test because all 25 of its subs were political.
+
+### Leakage register — verify each before fitting
+
+1. **Removal-derived features cannot be used against removal targets.** Hard
+   partition. Note this includes *any text feature* when the label is a removal,
+   since text is structurally missing for the positive class.
+2. `author == '[deleted]'` ↔ suspension, correlated by construction.
+3. `retrieved_on − created_utc` correlates with removal timing. Never a feature.
+4. **Age at collection vs. age at event** — V2 takes age at collect time, so an
+   account's "age" differs across months for reasons unrelated to the account.
+5. Account aggregates must exclude the target row (leave-one-out aggregation).
+6. Score-derived features against moderation labels — mods act on downvoted
+   content, so score partly *causes* the label.
+7. Sampling-driven volume leakage — check label rate against activity decile.
+
+📚 Ambroise & McLachlan: selection outside the fold produced near-zero apparent
+error where honest error was ~30%. Enforce a **provenance blocklist in CI**.
+
+### Multiple testing
+
+45 subs × 24 months × ~60 metrics ≈ 65,000 tests. At α=0.05 that is ~3,240 false
+positives by construction. **BH-FDR across the whole grid**, not per metric.
+Under strong dependence BY is available but at this scale `Σ1/j ≈ 11`, making it
+~11× more conservative — prefer BH plus effect-size ranking. **At census n,
+p-values stop discriminating: rank by effect size.**
+
+### Interpretation
+
+TreeSHAP with `feature_perturbation="interventional"` and family-level
+aggregation. ⚠️ Path-dependent TreeSHAP assigns non-zero attribution to features
+with **zero** model influence when they are correlated.
+
+---
+
+## 9. What we will not claim
+
+Stated up front, in the UI rather than a methodology footnote.
+
+- **There is no ground truth for coordination.** Seeds are confirmed *automation*
+  (benign) and confirmed *platform action* (heterogeneous). Neither is "confirmed
+  influence campaign."
+- Stage 4 output is "this pair behaves more similarly than the null explains,"
+  not "these accounts are the same operator."
+- Rally detection has **no AUC** and never will.
+- Per-account scores are capped near 0.70 by published evidence. Any 0.90+ we
+  report is a **pair-level** number and will be labelled as such.
+- ⚠️ Expect LLM/perplexity detectors to false-positive on **Hinglish and Indian
+  English**. Botometer's English-vs-German AUC gap (0.90 vs 0.69) is the shape of
+  that risk. Do not deploy a text-perplexity detector without a Hinglish
+  calibration set.
+
+**Two claims deliberately excluded** as unsafe to cite: an arXiv preprint
+reporting AUC 0.977 from account-history features on a 2,432-account balanced
+corpus where `verified` alone has Cohen's d = −1.27; and a circulating
+"Binghamton 2024, 96% accuracy on Reddit posting rhythm" figure that traces only
+to SEO marketing content with no paper behind it.
+
+---
+
+## 10. Sequencing
+
+1. ✅ **Resolve the sub list + sub-month series, done 2026-08-05.** 44/45 resolved
+   cleanly against `/time_series` for the 24-month window 2024-08 → 2026-08:
+   **3,837,898 posts, 52,949,720 comments** across the resolved subs. Two real
+   findings, not artefacts:
+   - **`r/unitedstatesofindia`** is a genuine, active sub — `/posts/search`
+     returns real live posts — but its **`/time_series` index is empty at every
+     precision**, an Arctic Shift indexing gap specific to this sub, not a
+     naming problem. Its sub-month counts must be computed client-side from
+     `/posts/search` + `/comments/search` rather than `/time_series`.
+   - **`r/IndiaTrending` is a ghost sub.** Posts stay healthy (32–700/month
+     across the window) but comments collapsed from ~5,270/month (2023) to
+     single digits by 2026, despite still carrying 450K+ subscribers —
+     subscriber count is a historical residue here, not a current-activity
+     signal. Post-level metrics are unaffected; the first-10/top-10 commenter
+     layer will be **starved in its 2025–2026 months** and needs a per-cell
+     minimum-comment-count flag rather than silently sampling fewer commenters
+     than the design assumes.
+
+   Both noted in `subreddits_v3.csv`. Neither blocks collection.
+2. ✅ **Pilot: 3 subs × 3 months, done 2026-08-05.** r/IndiaSpeaks (high) ×
+   r/IndianStockMarket (medium) × r/ISRO (low), 2026-05/06/07 — 1,051 posts,
+   15,806 commenter rows, 5,996 unique accounts. This was **the decision point**,
+   and the answer was a qualified go:
+   - First pass (engagement-count features: appearance frequency, `pct_toplevel`,
+     `pct_first10`) mostly showed sampling-design artefacts, not real structure —
+     Zipfian discreteness at small per-account n, not population separation.
+   - Second pass, a **450-account behavioral-feature check** (last 50 comments
+     each, `fields`-trimmed, ~110s, not full history), found **3 of 7 real
+     behavioral features show genuine multimodal structure**: `subreddit_entropy`
+     (25% minority), `circadian_dead_hours` (29% minority), `circadian_entropy`
+     (14% minority). `burstiness` was flagged by BIC but the two component means
+     were nearly identical (0.273 vs 0.299) — **not real**, BIC overfitting noise.
+   - The burstiness length-bias risk flagged in A9 was tested directly and did
+     **not** materialise in this sample (Spearman vs. `n_gaps` = 0.056, p=0.23)
+     — doesn't remove the need for the Kim & Jo correction at full scale, but the
+     naive metric wasn't obviously confounded here.
+   - Engagement-count features and real behavioral features are **statistically
+     independent** (all p > 0.2) — confirms the behavioral layer adds genuinely
+     new information rather than restating what appearance counts already showed.
+   - One honest null: tier separation held on *footprint* features (subreddit
+     entropy, active span) but not on *shape* features (timing, circadian) — and
+     with n=1 sub/tier that's still confounded with sub identity, not yet a
+     validated tier effect.
+   - Reference implementation: `scripts/v3_pilot_collect.py` and
+     `scripts/v3_pilot_analyze.py` (post/commenter collection + Stage 1–2
+     analysis); `scripts/v3_pilot_behavioral_check.py` (the 450-account
+     follow-up). Sub-scoped derived-metric definitions live alongside these, not
+     duplicated here.
+3. ✅ **Full collection, done 2026-08-06.** 45 subs × 24 months (2024-08 →
+   2026-07), 1,080/1,080 cells, zero gaps. **128,374 post rows, 2,312,696
+   commenter rows** — both within the §2 budget projections. **178MB**
+   compressed on disk (well under the 400–600MB estimate — either zstd beat
+   its measured 8–10× on this corpus, or the true mix skewed smaller than the
+   ceiling assumption). Total wall clock **~9.4h** across two runs (77min pre-crash
+   + 484min resumed — see below) — much closer to the original guess than the pessimistic
+   30-minute-checkpoint extrapolation suggested; sustained throughput at
+   8 workers held at **~8–10 req/s** for the full run, not just short bursts.
+   Reference implementation: `scripts/v3_collect.py`. Data:
+   `data/v3/raw/{posts,commenters}/{sub}__{YYYY-MM}.ndjson.zst`, one atomic
+   file pair per cell — a cell's existence on disk **is** its checkpoint, so a
+   killed run resumes by skipping every completed cell.
+   - **Bug found and fixed mid-run:** `matched_random_sample`'s target-quantile
+     step divided by `k−1`, which is zero whenever a sub-month has *exactly*
+     101 posts (100 top + a single leftover for the counter sample →
+     `k=min(20,1)=1`). Crashed the whole process after 77 minutes / 102 cells.
+     Checkpointing meant the crash cost only wall-clock time, not re-fetched
+     data — restart skipped the 102 done cells and resumed at cell 103.
+   - **Post-hoc integrity audit (`scripts/v3_data_qc.py`) found a second,
+     quieter defect:** `fetch_all_comments` treats a fully-retry-exhausted
+     page request (`get()` → `None`) identically to "no more pages," so a
+     transient failure mid-pagination silently truncates that post's thread
+     instead of surfacing an error. Detected by comparing
+     `n_comments_observed` against `num_comments_reported` — comments/search
+     returns removed/deleted comments too (with removal metadata), so a large
+     shortfall isn't explained by legitimate removal and is the truncation
+     signature. **645 posts (0.50%) across 218 cells** were flagged
+     (`num_comments_reported ≥ 10` and `n_comments_observed < 50%` of it),
+     scattered across many subs/months with no structural pattern — consistent
+     with transient failures, not a permanent per-sub API gap (manually
+     re-fetching several flagged posts immediately returned full data).
+     Repaired via `scripts/v3_repair_truncated.py`, which re-fetches just the
+     flagged posts' threads and patches the two affected cell files in place,
+     reusing the same derivation code as the collector
+     (`comment_derived_fields_and_rows`, extracted from `process_post` for
+     exactly this reuse). **645/645 improved, 0 unchanged** on the repair
+     pass; re-running the audit afterward found 0 remaining candidates.
+   - **QC also surfaced a real methodological point, not a defect:**
+     `n_comments_observed` summed **14.3% higher** than `num_comments_reported`
+     across the corpus (14.07M vs 12.31M). `num_comments_reported` is
+     Reddit's own T+36h snapshot count (§3) and, like `score`, goes stale —
+     threads keep accumulating comments after that snapshot, and our own
+     `comments/search` scan (run at collection time, months to years later)
+     catches the growth. **`num_comments_reported` should be treated as a
+     T+36h velocity snapshot (feeds P22), not a ground-truth total;
+     `n_comments_observed` is the more complete count for any metric wanting
+     "how big did this thread get."**
+   - Known-edge-case subs behaved exactly as §10.1/§11 predicted:
+     `DesiVideoMemes` shows full months through 2026-03 then hard zeros
+     2026-04 onward (matches the confirmed 2026-03-19 death date);
+     `IndiaTrending` shows post counts declining but nonzero through
+     2026-07 (32–114/month, matching the "posts survive, comments collapse"
+     finding); `unitedstatesofindia` collected cleanly at full volume every
+     month via `/posts/search` (never depended on the broken `/time_series`
+     index).
+   - Everything else audited clean: 0 duplicate `post_id`s within a cell,
+     0 negative arrival gaps, 0 out-of-range `upvote_ratio`, `author_fullname`
+     present on 99.9%/99.2% of posts/commenters (matches the §3 base36
+     viability finding), comment `body` text present on 100% of commenter
+     rows (needed for Stage 4 B3/B4 — see §2). One expected-not-a-bug
+     artefact: ~30% of commenter rows share a `comment_id` with another row
+     in the same cell, because a comment that's simultaneously in a post's
+     first-10-arrivals *and* top-10-by-score is deliberately stored twice
+     (once per `commenter_tag`) — Stage 0 cleaning must `drop_duplicates` on
+     `comment_id` for any analysis that would otherwise double-count a single
+     comment's engagement, while keeping the tag-level rows for role-based
+     features (P8, first-10 arrival gaps).
+4. **Account + pair models**, with the permutation floor from run one. Broken
+   into Stage 0–4 per §7; Stage 0 done, Stages 1–4 not yet started:
+   - ✅ **Stage 0 (clean + analysis layer), done 2026-08-06.** Built
+     `scripts/v3_stage0_build.py`: DuckDB reads the raw `.ndjson.zst` cells
+     directly (`read_json_auto(..., union_by_name=true)`, no separate Parquet
+     conversion step needed) into a persistent `data/v3/analysis/v3.duckdb`
+     (423MB). Adds `is_confirmed_automation_seed` (§6's seed channel:
+     self-declared bot phrases, `AutoModerator`/`*bot` author names,
+     `distinguished == 'moderator'`), `is_deleted_author`, and
+     `account_ordinal` (base36-decoded `author_fullname[3:]`, §3/A1 — a raw
+     monotonic-with-creation-order integer, **not yet calibrated to a real
+     date**, that's the still-optional item 6 below) as columns on `posts`
+     and `commenters`, without dropping any row from the base tables — a
+     `commenters_clean` / `posts_clean` view filters on top, so accounting
+     stays possible. `commenters_dedup` resolves the ~30% intra-cell
+     `comment_id` duplication noted above.
+     - **Bug found and fixed:** the first cut of `is_confirmed_automation_seed`
+       used `distinguished = 'moderator' OR ...` directly — classic SQL
+       three-valued-logic trap, `NULL OR FALSE = NULL` (not `FALSE`), and
+       `distinguished` is `NULL` for the overwhelming majority of rows. `NOT
+       NULL` is `NULL`, and `WHERE` drops `NULL` silently, so
+       `commenters_clean` first came out at **2 rows** instead of ~1.6M.
+       Fixed by wrapping the whole boolean expression in `COALESCE(..., FALSE)`.
+     - Results: posts 128,374 total, 0.24% automation-seed, 0.09%
+       deleted-author, 99.9% `account_ordinal` resolved. Commenters 2,312,696
+       raw → **1,619,492 deduped** (30.0% tag-duplicate, exactly matching the
+       QC finding) → **1,616,023 in `commenters_clean`** (99.8% of deduped),
+       spanning **347,886 distinct accounts**. Tier split (high/medium/low)
+       294K/509K/814K rows — plausible given the control tier includes more,
+       higher-volume subs.
+   - **Not yet built: the account-level feature table (A1–A41, §4.3).**
+     Stage 1's dip test / GMM-BIC sweep operates on *computed features*, and
+     most of the A-family (the timing family especially — A7 interval
+     entropy, A9 Kim–Jo burstiness, A13 session structure) don't exist yet as
+     columns; `commenters_clean` only has the raw per-comment rows they'd be
+     derived from. This is the concrete next task, not yet started.
+   - Stages 1–4 (univariate screening, bivariate/segmentation, account
+     XGBoost, pair model): not yet started.
+5. **Rally + GDELT conditioning.** Not yet started.
+6. *(Optional)* base36 age calibration + t+90d suspension check on the top-risk
+   decile, via `scripts/reddit_auth.py`. Not yet started.
+7. **Dashboard**, leading with the traceable claim: "these N accounts, these M
+   threads — open them." Not yet started.
+
+---
+
+## 11. Monthly tracker operations — two-tier collection
+
+The historical build (§10.1–10.3) is a one-time pass over 2023-07 → now. Going
+forward, the deliverable is a **monthly tracker**, which is a different problem:
+each month, for each sub, decide whether Arctic Shift has actually indexed that
+month yet — not whether the sub has history — and fall back if not.
+
+### Tier 1 (primary) → Tier 2 (fallback)
+
+- **Tier 1 — Arctic Shift**, same pipeline, same schema, near-zero marginal
+  cost. Used whenever the month's data for a sub is present and looks complete.
+- **Tier 2 — live Reddit via `scripts/reddit_auth.py` (OAuth already held)**,
+  triggered per-sub-month when Tier 1 fails its health check. Reduced sample —
+  `/r/{sub}/top.json?t=month` for posts, `/comments.json` for the top/first
+  commenters — same downstream schema, degraded coverage rather than a gap in
+  the tracker.
+
+### The health check, calibrated 2026-08-05 against real data
+
+A naive "is latest month ≥ some fraction of the trailing-6-month average" check
+was tried first and **produced a false positive**: `r/ipl` flagged as a
+"comment cliff" (4,174 vs a 6-month trailing average of 118,014) purely because
+IPL is a cricket league and its 6-month trailing window happened to span the
+season peak. ✅ Confirmed with the full 24-month series: comments run
+**260K–343K/month March–May**, **~10–30K the rest of the year**, identically in
+2025 and 2026. **A trailing-average check will false-flag every seasonal sub
+every off-season, forever, if not fixed.**
+
+**Correct check, two conditions, both required to flag Tier-1 failure:**
+1. Latest month's post count is near zero (< ~5% of that **same calendar
+   month, prior year** — a YoY same-month baseline, not a trailing average).
+2. The zero persists — a direct `/posts/search?subreddit=X&sort=desc&limit=5`
+   probe shows no posts within the last N days, independent of the aggregated
+   `time_series` index (this is what caught `DesiVideoMemes` below; it's also
+   the cross-check that would have caught `unitedstatesofindia`'s indexing gap
+   without needing to know about it in advance).
+
+### First run of the check — findings
+
+Run against all 45 subs, 12 complete months (2025-08 → 2026-07):
+
+| Finding | Detail |
+|---|---|
+| **44/45 actively indexed through 2026-07** | Tier 1 sufficient for the large majority every month |
+| **`r/unitedstatesofindia`** | Confirmed genuinely active — Tier-2-style direct search shows **4,253 posts / 26,946 comments** in the latest month alone — but `time_series` (the cheap aggregate path) has **zero coverage at any precision**. This sub needs the direct-search count path **permanently**, not as a fallback; budget it accordingly, it is not a small sub. |
+| **`r/DesiVideoMemes`** | **Confirmed genuinely dead** — public, unquarantined, subscriber count still shown (480K), but zero posts since **2026-03-19**, verified by direct search agreeing with `time_series`. Real signal, not an indexing artefact. **Exclude from active monthly collection**; retain in the registry for its historical months only, and re-probe monthly in case it revives. |
+| **`r/ipl`** | Seasonal, not stale (see above). Included as a live worked example of why the YoY check exists. |
+
+**Net for the tracker registry:** 43 subs on the standard Tier-1 path, 1
+(`unitedstatesofindia`) permanently on the direct-search path, 1
+(`DesiVideoMemes`) suspended from active collection pending revival. All
+recorded in `subreddits_v3.csv`.
+
+**Operational note:** this health check must run *before* each month's
+collection, not after — it's what decides which tier to use, not a post-hoc
+audit. Implement it as one function shared between the monthly job and any
+future manual re-check, not a one-off script (`tracker_freshness.py` in
+`scripts/` is the reference implementation from this run).
+
+---
+
+## Sources
+
+**Account-level detection**
+- [TROLLMAGNIFIER: Detecting State-Sponsored Troll Accounts on Reddit](https://arxiv.org/abs/2112.00443)
+- [TwiBot-22: Towards Graph-Based Twitter Bot Detection](https://arxiv.org/abs/2206.04564)
+- [BLOC: A general language framework for modeling online behavior](https://arxiv.org/abs/2211.00639)
+- [Pozzana & Ferrara — Measuring bot and human behavioral dynamics](https://arxiv.org/abs/1802.04286)
+- [Kim & Jo — finite-size correction to burstiness](https://arxiv.org/abs/1907.04166)
+- [Machine learning-based social media bot detection: literature review](https://link.springer.com/article/10.1007/s13278-022-01020-5)
+- [La Cava et al. — LLM-generated content engagement on Reddit (2025)](https://arxiv.org/abs/2503.13905)
+
+**Coordination and sockpuppetry**
+- [Kumar et al. — An Army of Me: Sockpuppets in Online Discussion Communities (WWW 2017)](https://arxiv.org/abs/1703.07355)
+- [Kumar et al. — Community Interaction and Conflict on the Web (WWW 2018)](https://arxiv.org/abs/1803.03697)
+- [CooRnet — coordinated link sharing behaviour](https://coornet.org/) · [A-B-C framework](https://coornet.org/abc.html)
+- [CooRTweet — generalised coordinated-action detection](https://github.com/nicolarighetti/CooRTweet)
+- [Tumminello et al. — Statistically Validated Networks](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0017994)
+- [Saracco et al. — Inferring monopartite projections of bipartite networks (BiCM)](https://arxiv.org/abs/1607.02481)
+- [Neal — `backbone` R package (SDSM/FDSM)](https://cran.r-project.org/package=backbone)
+- [Schoch et al. — Coordination patterns reveal online political astroturfing](https://www.nature.com/articles/s41467-022-35576-9)
+- [Luceri et al. — Unmasking coordinated influence operations](https://arxiv.org/abs/2310.09884)
+
+**Prevalence, rally, methodology**
+- [BotPercent: Estimating Bot Populations in Twitter Communities](https://arxiv.org/abs/2302.00381)
+- [Crane & Sornette — Robust dynamic classes revealed by measuring response function](https://www.pnas.org/doi/10.1073/pnas.0803685105)
+- [Kleinberg — Bursty and Hierarchical Structure in Streams](https://www.cs.cornell.edu/home/kleinber/bhs.pdf)
+- [Jain, White & Radivojac — Recovering true classifier performance in PU learning (AAAI 2017)](https://arxiv.org/abs/1702.00518)
+- [Saerens, Latinne & Decaestecker — Adjusting the outputs of a classifier (SLD-EM)](https://doi.org/10.1162/089976602753284446)
+- [Ambroise & McLachlan — Selection bias in gene extraction (PNAS 2002)](https://www.pnas.org/doi/10.1073/pnas.102102699)
+- [Benjamini & Hochberg — Controlling the FDR](https://www.jstor.org/stable/2346101)
+- [Chao & Shen — Nonparametric estimation of Shannon's index](https://doi.org/10.1023/A:1026096204727)
+
+**Data sources**
+- [Arctic Shift](https://github.com/ArthurHeitmann/arctic_shift) · [API reference](https://github.com/ArthurHeitmann/arctic_shift/blob/master/api/README.md)
+- [Academic Torrents — Reddit dumps 2005-06 → 2023-12](https://academictorrents.com/details/9c263fc85366c1ef8f5bb9da0203f4c8c8db75f4)
+- [GDELT DOC 2.0 API](https://api.gdeltproject.org/api/v2/doc/doc)
