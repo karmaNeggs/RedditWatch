@@ -1,0 +1,236 @@
+{
+  "meta": {
+    "n_threads": 122350,
+    "n_edges": 1616023,
+    "n_candidate_pairs": 275643,
+    "n_coappear_min": 2,
+    "n_label_positive": 131,
+    "label_prevalence": 0.0004752524098199483,
+    "b8_coverage": 0.18393719412428394,
+    "arrival_gap_p5_seconds": 98.0,
+    "n_dropped_straddling_split": 117200
+  },
+  "null_sanity_check": {
+    "n_subs_checked": 6,
+    "n_sim_pairs": 1455090,
+    "mean_pvalue": 0.02626277489365114,
+    "median_pvalue": 0.004864489228630994,
+    "frac_below_05": 0.8763739699949832,
+    "per_sub": {
+      "indiasocial": {
+        "n_pairs": 314460,
+        "mean_p": 0.010338850481057423,
+        "median_p": 0.002082609702442978
+      },
+      "RelationshipIndia": {
+        "n_pairs": 243089,
+        "mean_p": 0.018127509324292468,
+        "median_p": 0.0041666616327162955
+      },
+      "SaimanSays": {
+        "n_pairs": 104747,
+        "mean_p": 0.0407769412306199,
+        "median_p": 0.007797994801336799
+      },
+      "personalfinanceindia": {
+        "n_pairs": 258388,
+        "mean_p": 0.024444837105429145,
+        "median_p": 0.004169562195969423
+      },
+      "hyderabad": {
+        "n_pairs": 275719,
+        "mean_p": 0.034391340767206145,
+        "median_p": 0.008311644516205663
+      },
+      "kolkata": {
+        "n_pairs": 258687,
+        "mean_p": 0.040539676000424844,
+        "median_p": 0.010420284821118442
+      }
+    },
+    "note": "EXACT null simulator (uniform-random subset per account, faithful to the model's own assumption) still shows p-values skewed far below uniform[0,1] (expected mean/median ~0.5) -- this is ascertainment bias from only testing pairs that already co-occur, not a fixable calibration error. See the null_sanity_check() docstring for the full diagnosis. B1 is used as a continuous ranking feature only; no binary significance gate is used anywhere in this pipeline."
+  },
+  "label_construction": {
+    "b3_thresh": 0.37624999999999886,
+    "b4_thresh": 0.9300450620198282,
+    "b5_thresh": 0.03858278868604783,
+    "n_signals_dist": {
+      "0": 267498,
+      "1": 8017,
+      "2": 128
+    },
+    "n_from_textdup": 3,
+    "n_from_style_and_cohort": 128
+  },
+  "spot_check_examples": [
+    {
+      "a1": "Fierysword5",
+      "a2": "rohmish",
+      "b3": 0.0,
+      "b4": 0.9325140922260786,
+      "b5": 0.05390909201183847,
+      "text1_sample": "Incompetent implies they try to do something and fail. \n\nThey are actively taking bribes. That\u2019s malice, not incompetence. Companies spending huge amounts of money on buybacks while paying fuckall to ",
+      "text2_sample": "BMC was ahead of us. they're already digging the craters for the astroid to fit inside its actually designed for this and more. That station literally wasn't finished. we usually don't see heavy pour "
+    },
+    {
+      "a1": "M1ghty2",
+      "a2": "jgenius07",
+      "b3": 0.0,
+      "b4": 0.9326175801884452,
+      "b5": 0.038791926251446306,
+      "text1_sample": "Inflation would only cool if cheaper import prices get passed down to petrol pumps. Which won\u2019t be the case. So zero impact on retail inflation. Yeah! This is not a BBMP rule. File an RTI to SPIO of B",
+      "text2_sample": "Case thoko, paise banao You're so gullible. This is a SCAM 1. This is great advise. \n2. If you need a phone to get started or anything happens to your phone try DMing me I can help her you a user phon"
+    },
+    {
+      "a1": "165cm_man",
+      "a2": "SiriusLeeSam",
+      "b3": 0.0,
+      "b4": 0.9371179261210849,
+      "b5": 0.046688600254479254,
+      "text1_sample": "Jai ho modi xi ki, modi xi mujhe bhi bata do koun sa offshore company mein invest karna hai Everyone's saying ranvir.\n\nI thought it was modi and trump Holy shit,  she's a grown ass women.  Let her do ",
+      "text2_sample": "To be honest, doesn't look like a forced situation Many people use twitter only for complaints and not like everyday social media. Nothing wrong in that, it's the only social media suited for complain"
+    },
+    {
+      "a1": "TheRealOriginalSatan",
+      "a2": "giratina143",
+      "b3": 0.0,
+      "b4": 0.9310295227379499,
+      "b5": 0.057931578842224114,
+      "text1_sample": "Because of how GST works, if you earn less you\u2019re actually paying more tax as a percentage of your income Western isn\u2019t elevated it has better drainage Went for a photowalk there today and it is fully",
+      "text2_sample": "India will never develop, and this is me basing this on pure numbers and facts. This is the way Lol\n\nWhere are the godis at? I had this exact same idea lol Someone overlay the data showing what states"
+    },
+    {
+      "a1": "Speedypanda4",
+      "a2": "maalicious",
+      "b3": 0.0,
+      "b4": 0.9384855223382872,
+      "b5": 0.05604328696735207,
+      "text1_sample": "I have seen this happen with flipkart, shame that Amazon is like this too. He played for both teams, maybe that's why he's playing both sides Last season he was completely true. S models are better, e",
+      "text2_sample": "Why are you being downvoted? Even if it is Re.1, it is hard earned money for everyone. So, yes, it is needed. \u0b8e\u0b9f\u0bc1\u0ba4\u0bcd\u0ba4 \u0b89\u0b9f\u0ba9\u0bc7 \u0b87\u0baa\u0bcd\u0baa\u0b9f\u0bbf \u0b9a\u0bca\u0bb2\u0bcd\u0bb1\u0ba4\u0bc1\u0b95\u0bcd\u0b95\u0bc1 \u0b92\u0bb0\u0bc1 \u0ba8\u0bbe\u0bb2\u0bc1 \u0baa\u0bc7\u0bb0\u0bcd \u0b87\u0bb0\u0bc1\u0baa\u0bcd\u0baa\u0bbe\u0b99\u0bcd\u0b95 I don't know about Bengaluru, but "
+    },
+    {
+      "a1": "Narasimha1997",
+      "a2": "PhoenixPrimeKing",
+      "b3": 0.0,
+      "b4": 0.9325480040052905,
+      "b5": 0.041644995763068154,
+      "text1_sample": "Being honest here,\n\nThe gang rape incident of a doctor in kolkata became a nationwide news because she had a community of doctors to stand up and protest for the injustice.\n\nThere are henious crimes h",
+      "text2_sample": "Maids have multiple houses so no problem if they get laid off. So better than SWEs. The scale is not linear. Just because you still have 40L to go for 1Cr goal, doesn't mean you can't make it. Who kno"
+    },
+    {
+      "a1": "MrKtheSurvivor",
+      "a2": "shezadaa",
+      "b3": 0.0,
+      "b4": 0.9363756117602355,
+      "b5": 0.03871399576958255,
+      "text1_sample": "Amul has not been selling \"ALL\" of its products in KA. They hadn't sold fresh milk and curd before 2023. This controversy happend because Amul wanted to acquire milk from KA farmers and distribute acr",
+      "text2_sample": "Thats not a lake, but floodplains for the stream that collects all the water from the KC basin.\n\n\nThis is actually worse than encroaching on lakes because lakes in bangalore are just dams on a stream."
+    },
+    {
+      "a1": "charavaka",
+      "a2": "notenoughroomtofitmy",
+      "b3": 0.0,
+      "b4": 0.9336527445131894,
+      "b5": 0.05695817347766365,
+      "text1_sample": "I'm curious what made you exclude these two vertical paragraphs while pasting others:\n\n\n>Multiple journalists who covered the week-long hijacking back in 1999 have put out social media posts amid the ",
+      "text2_sample": "Peak motherless behavior Can\u2019t forgive him for all the vitriol he has spewed just cuz he has found temporary redemption. I have no faith in him changing for good. I can guarantee tomorrow he will chan"
+    },
+    {
+      "a1": "Monsultant",
+      "a2": "ic_97",
+      "b3": 0.0,
+      "b4": 0.9357716629373407,
+      "b5": 0.060344928528963074,
+      "text1_sample": "I thought there are five people arrested. Why name only two and make it an issue of caste and religion!\n\nThis is a cultural issue more than anything else. Ab apni gaadi chalane ke liye bhi these guys ",
+      "text2_sample": "Some of my far away relative were caught in the chaara scam of lalu yadav, They came to Kapil Sibal at the time and he said that give me 1 cr and your bail will definitely be secured. Should we also s"
+    },
+    {
+      "a1": "JEE_2026Tard",
+      "a2": "No_Sprinkles_2990",
+      "b3": 0.5,
+      "b4": 0.8526129852043707,
+      "b5": 0.03168775593077624,
+      "text1_sample": "![img](emote|t5_311ttu|49429)![img](emote|t5_311ttu|49429) https://preview.redd.it/slecy63irv0e1.jpeg?width=1179&format=pjpg&auto=webp&s=dc29eabca96d956ab88a52a4a65b187da3be5c96\n\nBro was literally fol",
+      "text2_sample": "Sirf adv. Ke liye ho toh thik rahega .. Kon kon 12th me Saleem sir se padh kar ayi ayi tea boombay jayega \ud83d\udc7f\ud83d\udc7f\ud83d\ude08\ud83d\uddff\ud83d\uddff\ud83e\udd75\ud83e\udd75\ud83d\udd25\ud83d\ude0e\ud83e\udd70 Bsdk 7 karor toh competition bhi nhi hai \ud83d\ude2d\ud83d\ude2d https://preview.redd.it/99mh7juhnmyd1.j"
+    },
+    {
+      "a1": "rnjbond",
+      "a2": "s0lja",
+      "b3": 0.0,
+      "b4": 0.9353645365642704,
+      "b5": 0.05272829083565424,
+      "text1_sample": "I refused to even watch it because of how bad her acting in the trailer was. Which is a shame, because this is a story that needs to be told.\u00a0 Amit Trivedi is so talented.\u00a0 Nah man, Rangastalam was le",
+      "text2_sample": "So Gowariker can only work with Aamir, what? This. Men pushing you through the line and grabbing you by the neck to bow down is ok with the society. There is something seriously wrong here. We are at "
+    },
+    {
+      "a1": "No-Belt-7798",
+      "a2": "Nooobmaaaster69420",
+      "b3": 0.0,
+      "b4": 0.9408565116991034,
+      "b5": 0.0419297894730641,
+      "text1_sample": "This should be the norm in society. If you want to ask money , ask it in a civil way not in the hideous way these lot have been doing. To be fair most of comments where funny to , clearly people don\u2019t",
+      "text2_sample": "Bruh, Arshad always had the power to throw far, he\u2019s just wildly inconsistent. Today was one of those days where he was able to hit his mark, no need to bring money and all into this. \n\nNeeraj already"
+    }
+  ],
+  "results": {
+    "view_a_primary": {
+      "auc": 0.6158911383134547,
+      "avg_precision": 0.00034385172732438274,
+      "recall_at_1pct_fpr": 0.0,
+      "n_train": 132949,
+      "n_test": 25494,
+      "n_pos_train": 64,
+      "n_pos_test": 6
+    },
+    "view_b_reverse": {
+      "auc": 0.766592762451241,
+      "avg_precision": 0.025951078956068283,
+      "recall_at_1pct_fpr": 0.03125,
+      "n_train": 132949,
+      "n_test": 25494,
+      "n_pos_train": 1300,
+      "n_pos_test": 224
+    },
+    "combined": {
+      "auc": 1.0,
+      "avg_precision": 1.0,
+      "recall_at_1pct_fpr": 1.0,
+      "n_train": 132949,
+      "n_test": 25494,
+      "n_pos_train": 64,
+      "n_pos_test": 6
+    }
+  },
+  "baseline_raw_coappear_auc": 0.65344802783009,
+  "permutation_floor_auc": 0.5219233260067508,
+  "shap_view_a": [
+    [
+      "b2_median_gap",
+      1.1644479272715487
+    ],
+    [
+      "z",
+      0.9477291316626265
+    ],
+    [
+      "b7_temporal_corr",
+      0.875636908292485
+    ],
+    [
+      "b2_min_gap",
+      0.7113141928464713
+    ],
+    [
+      "n_coappear",
+      0.18071424151568366
+    ],
+    [
+      "b2_tight_frac",
+      0.0455657244170225
+    ]
+  ],
+  "reference_points": {
+    "kumar_2017_pair_auc": 0.91,
+    "schoch_recall_at_1pct_fpr": 0.74
+  }
+}
