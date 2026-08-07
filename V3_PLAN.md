@@ -13,372 +13,130 @@ Status marks: ✅ **measured** in this project · 📚 **published**, cited ·
 
 ## 🚦 START HERE (next session) — as of 2026-08-07
 
-**Done:** full collection (§10.3, 128,374 posts / 2,312,696 commenter rows,
-data committed) → Stage 0 clean + analysis layer (§10.4, `data/v3/analysis/v3.duckdb`,
-gitignored, rebuild with `python3 scripts/v3_stage0_build.py`) → account
-feature table (§10.4, 347,886 accounts × 40+ columns, rebuild with
-`python3 scripts/v3_account_features.py`) → EDA page with risk-colored
-histograms + bot-marker composite (rebuild with `python3 scripts/v3_eda_build.py`
-→ `docs/v3-research/eda/index.html`, published at
-https://claude.ai/code/artifact/26b907c2-1410-4b94-852a-b2cd10febcad) → Stage 1
-fix + Stage 2 bivariate/segmentation (§10.4, `docs/v3-research/eda/stage2.html`,
-linked from the EDA page nav) → feature sanitisation for Stage 3
-(§10.4, `account_features_model` table, 347,886 × 73 cols, rebuild with
-`python3 scripts/v3_feature_sanitise.py`) → **Stage 3 account XGBoost per
-label channel**, leakage-corrected (§10.4, `docs/v3-research/eda/stage3.html`,
-rebuild with `python3 scripts/v3_stage3_account_model.py`; new deps `xgboost`,
-`shap`, `statsmodels`, plus a system `libomp` — all now in `requirements.txt`)
-→ **Stage 4 pair-level model, first pass — inconclusive, not a clean result**
-(§10.4, `docs/v3-research/eda/stage4.html`, rebuild with
-`python3 scripts/v3_stage4_pair_model.py`) → **Stage 3b: post-context feature
-iteration — real, non-leaky gain, all 5 channels back inside 0.65–0.80**
-(§10.4, `data/v3/analysis/v3.duckdb`'s `account_post_context` table, rebuild
-with `python3 scripts/v3_stage3b_feature_iteration.py`; results page not yet
-rendered — data is in `docs/v3-research/eda/stage3b_data.json`).
+**Read this section only.** Everything referenced here has full detail, numbers,
+and the reasoning behind every correction in §10.4 — don't re-derive anything
+below from scratch, and don't re-litigate anything marked resolved.
 
-**Previous open thread #1 resolved, not as originally diagnosed — see §10.4
-for the full before/after.** The plan's "`percent_rank()` doesn't spread ties"
-theory was wrong; `percent_rank()` is correct, the ties are real (small-n rate
-features on a median-2-comments corpus). The actual bug was in the GMM/BIC
-screen itself (only stripped the single largest point-mass, missed secondary
-clumps) plus GMM decorating ordinary skew as false bimodality. Both fixed.
-Stage 1 went from 18/19 "bimodal" (not credible) to 9/36 candidates, only 2
-robust across parameterizations. Bot-marker screen went from "all 7 real" to
-1/7. **Still open:** 3 features (`n_posts_sample`, `n_high_tier`,
-`n_threads_with_repeat`) return a residual DEGENERATE verdict the point-mass
-strip cap doesn't catch, and the 9-candidate count is itself
-threshold-sensitive (3–9 across two reasonable settings) — flagged, not
-resolved.
+### Where things stand, honestly
 
-**Stage 3 headline, corrected 2026-08-06 (same day, second pass): `admin_removal`'s
-0.896 was leakage, not signal — fixed, and the corrected number is 0.743.**
-Root cause **confirmed by direct SQL inspection**, not inferred:
-`v3_account_features.py` aggregates every "behavioral" feature over *all* of
-an account's sampled rows with no exclusion for rows that themselves define
-the label — for a thin-history account (22.9% of `admin_removal` positives
-are singletons; median account-wide is 2 comments) the "behavioral" features
-being fitted on **are substantially the removed row's own metadata**, not
-independent past behavior. Diagnostic sweep: rung-4 AUC restricted to
-`n_comments_sample ≥ 5` → 0.822; `≥ 10` → **0.743**, landing exactly inside
-Kumar's 0.65–0.80. The specific mechanical sub-hypothesis (removed-content
-`score` corrupted by the `_meta` block's +16s/+36h snapshot merge, §3) was
-tested directly and **rejected** — admin-removed comments score *higher*
-(mean 31.5) than the same account's kept comments (mean 19.2), the opposite
-of a depressed-score artefact.
+- **Stage 0–2 (collection, cleaning, account features, EDA, bivariate/segmentation):
+  done and stable.** Rebuild scripts in `scripts/v3_stage0_build.py` →
+  `v3_account_features.py` → `v3_feature_sanitise.py` → `v3_eda_build.py` →
+  `v3_stage2_bivariate.py`. `account_features_model` (347,886 × 73 cols, VIF-pruned,
+  volume-normalized, hurdle-split) is the correct feature source for anything
+  account-level — never hand-select from raw `account_features`.
+- **Stage 3 (account XGBoost per label channel): mature, near its honest
+  ceiling, and this is now a settled, trustworthy result.** Five channels
+  (`admin_removal`, `self_deletion`, `comment_removed_ambiguous`,
+  `automod_filtered`, `moderator_removed`), all landing 0.64–0.80 gated
+  rung-4 AUC — inside Kumar et al. 2017's 0.65–0.80 account-level ceiling,
+  as the plan predicted from the start. One real feature-engineering win
+  (Stage 3b, joining unused post-level data, +0.025 to +0.133) followed by
+  three progressively smaller-to-null laps (Tier 1/2/3), each independently
+  confirmed genuine — not noise — via a reproduce-twice-and-diff discipline
+  that caught and fixed **three separate real bugs** along the way (a
+  feature-set bug that had been silently depressing "base" AUC numbers, and
+  two instances of a `post_edit_rate`/removal-appeal leak). **Do not launch a
+  Tier 4** — four laps in, diminishing-to-zero returns are a measured
+  finding, not a guess. Consolidated writeup, all four laps, as a Claude
+  Artifact: https://claude.ai/code/artifact/3076ef53-7ff4-4cbc-8a3d-e9acd7e78b9a
+  (published before Tier 3 landed — Tier 3's null result isn't on that page).
+  Scripts: `v3_stage3_account_model.py` → `_3b_feature_iteration.py` →
+  `_3c_tier1_features.py` → `_3d_tier2_features.py` → `_3e_tier3_features.py`.
+- **Stage 4 (pair-level model): inconclusive, not tested rigorously enough
+  to count as evidence either way.** Built with a View-A/View-B
+  anti-circularity split (behavioral features predict a label built only
+  from content/identity signals). Primary result (0.616) sits *below* its
+  own mandatory baseline (0.653), but the label had only 131 positives (6 in
+  the test set after the CV split correctly dropped 117,200 straddling
+  pairs) and a manual spot-check found real label-quality problems
+  (topically-unrelated accounts scoring as "stylometrically similar").
+  **The plan's 0.90+ pair-level claim is still untested, not falsified.**
+  If revisited: needs a stronger identity signal than percentile thresholds
+  on char-n-gram cosine (which compresses near-ceiling on Reddit-comment-length
+  text), and/or a lower co-appearance floor to recover the 8.9M
+  single-co-appearance pairs currently excluded entirely.
+- **Cross-sample boundary discovery (unsupervised, no removal/deletion
+  labels used to construct anything): the most open, most promising, and
+  least resolved thread.** User-directed alternative to label-based
+  Stage 3, motivated by Stage 3's own finding that removal-based "labels"
+  don't agree with each other. Two rounds:
+  1. **Univariate** (`scripts/v3_boundary_discovery.py`): 9/64 candidate
+     metrics replicate as genuine bimodal splits across two independent
+     samples. An incremental AND-rule (not a score — an account must fail
+     *every* standout indicator) stabilizes at 5 conditions, flagging a
+     replicating ~0.5% of accounts, validated on a third untouched sample.
+     But this group's `removal_rate` is *below* population baseline
+     (0.84×) — not obviously bot-like by that external check.
+  2. **Multivariate** (`scripts/v3_multivariate_kde.py`): PCA (diffuse
+     space, 12 components only reach 52% variance) + density-mode
+     clustering in the reduced space. Mean-shift and HDBSCAN disagree on
+     cluster count (structure isn't settled). But small clusters, found
+     independently in each half of the split, show **8–12× removal-rate
+     enrichment**, and one specific cluster is **18× concentrated** with
+     the univariate round's flagged group — two independent methods
+     partially agreeing. Likely reading: the univariate group's "not
+     bot-like" verdict may have been diluted by pooling a real enriched
+     subset against a majority that isn't.
+  **Neither round has had a human look at the actual flagged accounts yet**
+  — that's the single most valuable, concrete next action (§ below).
 
-**The literal fix (leave-one-out: rebuild features excluding each channel's
-own label rows) was tried, and made things worse — rejected, not adopted.**
-It turns thin-history accounts' features into `NaN`, which XGBoost's
-missing-value handling then reads as a near-perfect label proxy — a
-*different*, worse leak (`self_deletion` rung-4 collapsed to 0.419;
-`automod_filtered` spiked to 0.989 — that inconsistency is itself the
-tell). **Adopted instead: volume-gating** (`n_comments_sample ≥ 10`, dilutes
-any single row to ≤1/10 of the aggregate — no new leak introduced). Gated
-rung-4, side by side with the original:
+### Next actions, ranked
 
-| channel | original rung4 | **gated rung4 (adopted)** |
-|---|---|---|
-| `admin_removal` | 0.896 | **0.743** ✅ in range |
-| `self_deletion` | 0.778 | **0.695** ✅ in range |
-| `comment_removed_ambiguous` | 0.805 | **0.641** ⚠️ now *below* range, unexplained |
-| `automod_filtered` | 0.653 | 0.725 (barely moves — label is post-level, this leak mechanism doesn't apply) |
-| `moderator_removed` | 0.637 | 0.687 (same — post-level label) |
+1. **Open the accounts.** Pull real threads/comments for (a) the univariate
+   AND-rule's ~550 flagged accounts and (b) the multivariate KDE's
+   cluster-15 accounts (the ones overlapping the AND-rule group at 18×) and
+   actually read them — same "traceable to named accounts and threads a
+   human can open and check" standard as §1's own objective. This is the
+   step that turns "promising lead" into either a validated finding or a
+   documented dead end. Nothing else below matters much until this happens.
+2. **Verify the multivariate clusters are the same phenomenon, not
+   coincidence.** Part1's and Part2's independently-found enriched clusters
+   both run hot on removal_rate — check whether they share the same
+   original-feature profile (not just both being removal-heavy by chance).
+   Flagged by the fork that built it as the natural next statistical check.
+3. **Render the still-orphaned local pages** if a repo-local view is
+   wanted: `stage3e`, `stage4`, `boundary_discovery`, and
+   `multivariate_kde` all have data in their `docs/v3-research/eda/*.json`
+   files but no rendered HTML (`stage3b`–`3d` are covered by the Artifact
+   above; these four aren't).
+4. **If revisiting Stage 4**, don't restart from scratch — the null-model
+   and co-appearance infrastructure is solid (four real bugs already found
+   and fixed there too); the weak link was specifically label
+   construction/power, not the modeling pipeline.
 
-Also surfaced: `admin_removal` ∩ `self_deletion` = 39.9% account overlap,
-`self_deletion` ∩ `comment_removed_ambiguous` = 68.6% — the "5 independent
-channels" framing needs this caveat; self-deletion plausibly often *follows*
-another moderation action rather than being independent of it. Full
-before/after table, the rejected-LOO numbers, and the rest of the §8
-leakage-register walk (items 2/3/4/6) are in §10.4.
+### Standing rules, already paid for, don't rediscover
 
-**Stage 4 headline: the plan's 0.90+ claim is neither confirmed nor
-refuted — the first attempt was underpowered and its label was noisy, not
-wrong on principle.** Built with the anti-circularity design Stage 3's
-correction motivated: an 8-metric pairwise feature set (B1–B8, §4.4) split
-into **View A** (behavioral/structural: co-appearance z-score, co-arrival
-timing, temporal correlation — no text, no identity) and **View B**
-(content/identity: text-template overlap, stylometric similarity,
-registration-cohort adjacency). The "same-operator" label is built **only**
-from View B; the primary model is trained **only** on View A to predict it —
-so the headline number can't just be the model recovering its own labeling
-rule.
-
-**The primary, non-circular result (View A → View-B label) scored AUC
-0.616 — *below* the mandatory raw-co-appearance-count baseline (0.653).**
-That's a real negative signal on its own terms, but three compounding
-problems make it an unreliable read of whether pair-level detection works
-here at all, not evidence against it:
-- **The label is tiny and got much tinier under valid CV discipline.** 131
-  positive pairs total (0.048% prevalence) out of 275,643 candidates: only 6
-  landed in the test split once account-disjoint CV (mandatory — see §10.4)
-  correctly dropped 117,200 pairs that straddled the train/test boundary.
-  Six positives cannot support a trustworthy AUC estimate on their own.
-- **The label itself is noisy on inspection**, not just small. A manual
-  spot-check of 12 sampled positives (reading actual comment text side by
-  side) found stylometric-similarity-only matches between accounts
-  discussing **unrelated topics** (e.g. corporate buybacks vs. asteroid
-  mining) — char n-gram cosine similarity averages **0.76 across every one
-  of the 275,643 candidate pairs**, i.e. it's compressed near ceiling at
-  Reddit-comment-length text and mostly measures "both wrote English
-  Reddit comments," not stylistic fingerprint match.
-- **B6 (reply reciprocity) couldn't be built at all** — `v3_collect.py`
-  computes it at collection time but never persists per-comment `parent_id`,
-  so there's no way to reconstruct who replied to whom after the fact. One
-  of View A's four intended signals is structurally missing, not just weak.
-
-**Do not cite 0.616, or the reverse-check's 0.767, as a measurement of
-whether the plan's pair-level thesis holds.** The honest state is: this
-attempt didn't have the statistical power or label quality to test it
-properly. Full detail — including 4 real null-model bugs found and fixed
-along the way (global-null miscalibration, repeat-comment double-counting
-that corrected the candidate pool from 745,307 to 275,643 pairs, a
-structural ascertainment-bias check, a 17GB memory blowup) — is in §10.4.
-
-**User-directed pivot after Stage 4: pause pair-level, consolidate
-account-level via classic feature engineering → selection → sanitisation →
-XGBoost → SHAP → iterate, scoped explicitly to Stage 3's honest 0.65–0.80
-ceiling (not a stretch toward 0.90 — that claim stays parked on Stage 4).
-First lap of that loop, done 2026-08-07: real, non-leaky gain across all 5
-channels.** Built `account_post_context` — account-level aggregates (mean +
-max) of the ~33 already-computed `posts_clean` columns that had never been
-joined up to account level (`contested_share`, `comment_score_gini`,
-`bot_comment_rate`, `removed_comment_rate`, `tombstone_rate`,
-`reply_reciprocity`, and more — "what kind of threads does this account tend
-to show up in," a genuinely new signal family). Checked for the same class
-of leak Stage 3 already had to fix once (a post's own removal/removal-rate
-stats partly encode the very account's own comment) — **gated on
-`n_distinct_posts_ctx ≥ 5`, and the gain survives a stricter combined gate
-(`n_comments_sample≥10 AND n_distinct_posts_ctx≥10`)**, so this isn't a
-gating artefact:
-
-| channel | base rung4 | expanded rung4 | Δ |
-|---|---|---|---|
-| `admin_removal` | 0.743 | 0.768 | +0.025 |
-| `self_deletion` | 0.695 | 0.755 | +0.060 |
-| `comment_removed_ambiguous` | 0.641 | **0.774** | **+0.133** |
-| `automod_filtered` | 0.725 | 0.798 | +0.073 |
-| `moderator_removed` | 0.687 | 0.712 | +0.025 |
-
-*(Numbers corrected 2026-08-07, see the variance-root-cause entry below —
-the gains are real and slightly larger than first reported, not smaller.)*
-
-**All 5 channels now sit inside 0.65–0.80** — notably `comment_removed_ambiguous`,
-the one channel that landed *below* the Kumar floor after Stage 3's leakage
-correction, is back in range with a real feature, not by loosening that
-correction. Top new feature by SHAP: `pc_removed_comment_rate` (mean removal
-rate of an account's own threads) — dominant for `self_deletion` and
-`comment_removed_ambiguous` (2.5× the next feature). One iteration cycle
-(added max-version companions) gave a small further lift (+0.008/+0.005) —
-diminishing returns past the mean. **One loose end, not fixed:** the results
-page (`stage3b.html`) was never rendered — data exists in `stage3b_data.json`
-but there's no HTML to view it.
-
-**Second lap of the loop (Tier 1 features, done 2026-08-07): small, real,
-mixed-direction effects — "wash, not a win" still the fair read, but for a
-different reason than first reported.** Built all 6 Tier-1 features from
-the deep-dive (§10.4 below has the full list and leakage treatment). Net
-effect vs. Stage 3b: 2 of 5 channels up (+0.002, +0.010), 3 down (−0.011,
-−0.008, −0.002). Individual Tier-1 features do carry real SHAP signal in
-places (`score_per_word` is the #1 feature for `admin_removal`), but two
-(`own_repeat_rate`, `url_rate`) never place in any channel's top 6 despite
-zero leakage risk, and dropping them made two *other* channels worse rather
-than better — most likely small-n CV instability on the post-author-only
-gated population (11,438 accounts), not those features being harmful, but
-unconfirmed.
-
-✅ **The recurring base-number variance flagged after Tier 1 has been
-root-caused and fixed — it was a real code bug, not sampling noise, and
-the true noise floor is much smaller than feared.** Full detail in the
-new §10.4 entry below. Bottom line: **Tier 1's mixed deltas were never
-corrupted by this bug** (Stage 3c built its own base independently and,
-by luck, got it right) — with the true noise floor now confirmed at
-~0.001–0.003 (verified via bit-identical reruns), Tier 1's larger deltas
-(up to ±0.011) are more likely small real effects than noise, so "wash, not
-a win" stands, but now as a genuine reading rather than a noise-confounded
-one.
-
-**Bug fixed, benefits both this stage and Stage 3b retroactively:** the
-family-level SHAP rollup bug flagged above is now fixed (`family_fn`
-override parameter added to `shap_family_importance` in
-`scripts/v3_stage3_account_model.py`, and Stage 3b's call site updated to
-use it) — confirmed working in this run (`post_context` and `tier1` show up
-as distinct, correctly-populated SHAP buckets). Stage 3b's own page, if
-re-rendered, will now get correct family rollups too.
-
-**Third lap of the loop (Tier 2 features, done 2026-08-07): a clean wash —
-small mixed gains, and a real leak caught and fixed before it shipped.**
-Sentiment/toxicity was **skipped, not built** — a VADER spot-check against
-25 real corpus comments first (per the brief's own instruction to verify
-before trusting it) found the corpus heavily Hinglish/code-mixed
-("Bro kitane ka pada ??") and URL-heavy, both of which VADER scores as a
-flat 0.00, indistinguishable from genuine neutrality. Shipping it would
-have silently encoded "is this in plain English" as a sentiment feature —
-correctly not built rather than shipped broken.
-
-⚠️ **Caught mid-build: `post_edit_rate` was a real leak, same red-flag
-pattern as `admin_removal`'s original fake 0.896.** First run of
-`automod_filtered` spiked to gated rung4 **0.880**, with `post_edit_rate` as
-the dominant SHAP feature (0.797, 2× the next). Checked directly: edit rate
-by `meta_removal_type` runs None 6.2%, `automod_filtered` 47.3%, `reddit`
-(admin) 60.2% — people edit posts *to fix or appeal a removal*, not as
-independent behavior; this is leakage register item 1, which the fork's
-own first-pass leakage recheck missed (it had only checked for population
-thinness, not label-derivation). Hard-excluded `post_edit_rate` and its
-hurdle indicator, reran, and **verified the fix via bit-identical base-AUC
-reproduction across both runs** — determinism holds, the fix is real.
-
-**Final results, gated rung4, base → expanded** (`sub_month_spike_share` +
-`coappear_degree`/`coappear_hhi` only — `post_edit_rate` excluded per above):
-
-| channel | base | expanded | Δ |
-|---|---|---|---|
-| `admin_removal` | 0.766 | 0.772 | +0.006 |
-| `self_deletion` | 0.754 | 0.760 | +0.006 |
-| `comment_removed_ambiguous` | 0.774 | 0.772 | −0.002 |
-| `automod_filtered` | 0.793 | 0.799 | +0.006 |
-| `moderator_removed` | 0.718 | 0.718 | ~0.000 |
-
-All 5 stay inside 0.65–0.80. Small, mixed-but-mostly-positive — another
-wash like Tier 1, but a cleaner one: `coappear_degree`/`sub_month_spike_share`
-were directly rechecked against `removal_rate` and confirmed non-leaky
-(near-zero correlation), and neither dominates any channel's SHAP top-5 —
-real but marginal, no standout worth forcing a targeted iteration cycle on.
-
-**Fourth lap (Tier 3, done 2026-08-07): clean null — the "low-confidence"
-label from ideation held up, and it caught the same class of leak a third
-time.** Domain concentration (`domain_hhi`) built but caveated — dominated
-by Reddit's own media hosts / `self.<subreddit>`, so it mostly re-measures
-`subreddit_entropy` under another name. Two stated-mechanism interaction
-terms only, per §7's rule against blanket interaction sweeps
-(`karma_extremeness × reception_spread`, `pc_bot_comment_rate ×
-coappear_degree`) — a third candidate (`removal_rate × n_comments_sample`)
-was considered and explicitly rejected because it would launder a
-hard-excluded removal-derived feature back into the model through a side
-door. **Two features rejected before a full build, the check itself being
-the useful output:** within-thread activity Gini (low correlation with
-existing features, but a near-degenerate distribution — median 0.0, p75
-0.058 — substantively re-deriving `repeat_engagement_rate`, not worth an
-89th column); flair diversity (1,406 distinct free-text values,
-per-subreddit fragmentation of the same category — `Discussion`/`Discuss`/
-`Discussions`/`#Discussion 💬` all in one top-20 — no defensible encoding
-without semantic clustering, out of scope here). ⚠️ **Same-class leak, third
-occurrence:** first run put `admin_removal` at 0.800 gated AUC (at/above the
-Kumar ceiling) because `post_edit_rate`'s *non-hurdle* column had never
-actually made it into the exclusion list built after Tier 2 — only its
-`_nonzero` companion had. Fixed, reran, verified via bit-identical two-run
-reproduction. **Result: all 5 channels' deltas sit inside the established
-±0.003 noise floor** (`admin_removal` −0.004, `self_deletion` +0.002,
-`comment_removed_ambiguous` +0.0004, `automod_filtered` +0.0001,
-`moderator_removed` +0.001) — none of the 3 built features place in any
-channel's SHAP top-5. Null, not noise.
-
-**Four laps in, the account-level feature space looks genuinely close to
-exhausted, not just slow to improve** — one real win from unused
-already-computed data, three progressively smaller/nuller results after
-it, each independently confirmed (not just assumed) via the same
-reproduce-twice-and-diff discipline. This matches what §0's Kumar citation
-predicted from the start: account-level detection has a real ceiling
-regardless of feature richness, and Stage 3's channels are now sitting at
-or near it. Consolidated write-up (all laps, corrected numbers, both
-leak-caught stories) published as a Claude Artifact rather than the
-per-stage local `docs/v3-research/eda/` pages:
-https://claude.ai/code/artifact/3076ef53-7ff4-4cbc-8a3d-e9acd7e78b9a
-(published before Tier 3 landed — Tier 3's null result not yet folded into
-that page). The individual `stage3b`–`stage3e` local pages remain
-unrendered (data exists in each `*_data.json` if wanted later); the "other"
-SHAP bucket still unattributed.
-
-**One open thread remains:** Base36 age calibration is on hold, not
-abandoned — script (`scripts/v3_calibrate_age_sample.py`) works, live Reddit
-access confirmed, just deprioritized in favor of the free
-`days_since_first_seen` proxy.
-
-**Not started: Stage 4 redo with a better label source, Stage 5 (prevalence),
-rally+GDELT, dashboard.** Before spending more effort on Stage 4's model
-architecture, the label needs a stronger source of ground truth than
-View-B-only percentile thresholds on 275,643 candidates — options not yet
-evaluated: lower the co-appearance floor to recover more candidates (current
-n_coappear≥2 restriction dropped 8.9M single-co-appearance pairs entirely),
-find an external or stronger identity signal, or accept the small-n limit
-and report confidence intervals honestly rather than a point AUC.
-
-**Before touching account_features again:** read the docstring at the top of
-`scripts/v3_account_features.py` — it explains the bipartite-sampling
-constraint (median 2 comments/account) and the three different "age-like"
-quantities now in the table, so they don't get re-litigated or conflated.
-**Before building on Stage 3:** the leakage exclusion list (`removal_rate`,
-`deleted_later_rate`, their hurdle indicators, and the 6 reporting-only
-columns) lives in `scripts/v3_stage3_account_model.py` — reuse it rather than
-re-deriving, and note `karma_extremeness`/`karma_per_post_extremeness` are
-documented as reporting-only in `v3_feature_sanitise.py`'s docstring but are
-actually still in the model-ready column set (doc/code mismatch, flagged not
-fixed). **Before touching Stage 4 again:** B1's null-model p-value is a
-continuous ranking feature only — there is no binary-significance gate
-anywhere in the pipeline, and there shouldn't be one added (§10.4 explains
-why: candidate pairs are pre-filtered to already-co-occurring accounts, so
-p-values over that population skew small under the null too).
-
-**User-directed alternative to label-based Stage 3, done 2026-08-07: a
-validated, replicating, held-out-tested behavioral rule — that does not
-point toward moderation-flagged behavior.** Motivated directly by Stage 3's
-own finding that Reddit's moderation "labels" don't agree with each other
-(admin-removal/suspension near-disjoint in V2; `self_deletion`/
-`comment_removed_ambiguous` overlap 68.6% in Stage 3) — user's method:
-discover behavioral structure with **no removal/deletion signal in the
-candidate pool at all**, require it to **replicate independently across a
-3-way stratified split** (not just appear once), build a **conjunctive
-(AND) rule** from what replicates rather than a compensatory score or a
-supervised prediction, and check removal actions only *after* the rule is
-finalized, as an outside plausibility read — never as a tuning target.
-Full detail in §10.4 ("Cross-sample boundary discovery").
-
-- **Screen: 64 candidate behavioral features → 9 replicate as genuine,
-  KDE-valley-confirmed bimodal splits, independently confirmed in two
-  separate random samples** (not just once): `low_tier_share`,
-  `subreddit_entropy`, `reception_spread`, `account_ordinal`,
-  `n_own_posts_with_comments`, `karma_extremeness`,
-  `outsider_influx_share`, `coappear_hhi`, `domain_hhi`. 6 of 9 hold up
-  across all 5 month/tier robustness slices.
-- **The literal "require ALL 9" rule the user's own framing started from
-  is empirically not viable — it flags zero accounts**, in either sample.
-  The incremental curve (add one condition at a time, watch the flagged
-  count) makes this visible rather than hiding it: 31% → 4.5% → 2.4% →
-  0.53% → 0.46% → **0%** at the 6th condition, staying at 0 for the rest.
-  This is exactly why the curve was built instead of just reporting a
-  single "require everything" number.
-- **Chosen cutoff (top 5 conditions, the last point before collapse),
-  validated on a third sample never touched during discovery:** a stable
-  ~0.46–0.53% of the population in all three parts (550 / 510 / 530
-  accounts). This part of the construction is genuinely solid — it
-  replicates and survives a real held-out test.
-- ⚠️ **The plausibility check, done strictly after the rule was finalized:
-  the flagged group's `removal_rate` is *lower* than the population
-  average (0.0583 vs 0.0696, 0.84×), not higher.** This behavior-only
-  group does not look like what Reddit's own moderation flags. Read
-  honestly, not reframed: either this is a real bot/inauthentic pattern
-  that moderation systematically misses (plausible — that's the whole
-  premise for not trusting removal-as-ground-truth), or it's a real but
-  different phenomenon (the fork's working guess: narrow-focus, prolific
-  post-authoring power users) that isn't bot behavior at all. **Not
-  resolved — needs a human look at actual flagged accounts before this
-  goes any further**, the same "open the accounts and check" standard the
-  whole plan holds every other claim to (§1).
-
-**Follow-up, multivariate KDE (§10.4): messier structurally, more
-promising substantively.** PCA on the same 64 features compresses poorly
-(12 components, only 52.4% variance — this space is genuinely diffuse).
-Mean-shift and HDBSCAN disagree on cluster count in the same reduced
-space — a real, reported disagreement, not resolved. But small clusters
-found independently in each half of the split showed **8–12× removal-rate
-enrichment** (vs. the univariate AND-rule's pooled 0.84×), and the
-*previous* round's 550-account group is **18× concentrated** in one of
-this round's clusters — two independent methods partially agreeing on the
-same region. Read together: the earlier "not bot-like" verdict may have
-been an artefact of pooling too broad a group, with a smaller, more
-enriched sub-slice hiding inside it — **not confirmed, the natural next
-check is whether the independently-found enriched clusters in each half
-of the split actually share the same feature profile**, not just
-coincidentally both running hot on removal rate.
+- **Leakage:** `removal_rate`, `deleted_later_rate`, `post_edit_rate` (and
+  every `_nonzero`/`_pctl`/`_max` variant) are either hard-excluded from
+  model inputs (Stage 3+) or excluded from construction entirely (boundary
+  discovery) — reuse the exclusion list in `v3_stage3_account_model.py`
+  rather than re-deriving it. `pc_removed_comment_rate`/`pc_tombstone_rate`/
+  `pc_bot_comment_rate` are thread-context signals, not the account's own
+  record — kept, flagged as a judgment call.
+- **Volume-gating, not leave-one-out.** Leave-one-out feature exclusion was
+  tried once (Stage 3) and made things worse (turns thin-history accounts'
+  features to `NaN`, which XGBoost's missing-value handling then reads as a
+  near-perfect label proxy). `n_comments_sample ≥ 10` (and the analogous
+  `n_distinct_posts_ctx` gate for post-context features) is the adopted,
+  correct fix.
+- **Reproduce-twice-and-diff before trusting any new AUC delta.** The true
+  noise floor between "identical" reruns is ~0.001–0.003 once the
+  feature-set bug above was fixed — verified, not assumed. Any delta near
+  that size needs this check before being reported as real.
+- **B1's pair-level null-model p-value is a continuous ranking feature
+  only** — no binary-significance gate, and none should be added (candidate
+  pairs are pre-filtered to already-co-occurring accounts, so p-values skew
+  small under the null too, independent of real coordination).
+- **`karma_extremeness`/`karma_per_post_extremeness` doc/code mismatch,
+  still unfixed:** documented as reporting-only in `v3_feature_sanitise.py`'s
+  docstring but actually still in the model-ready column set.
+- **Three features still return a residual DEGENERATE Stage-1 verdict**
+  (`n_posts_sample`, `n_high_tier`, `n_threads_with_repeat`) — the
+  point-mass strip cap doesn't fully catch them, flagged not fixed.
+- **Base36 age calibration:** on hold by choice (not abandoned), using the
+  free `days_since_first_seen` proxy instead. Script
+  (`v3_calibrate_age_sample.py`) works if ever wanted.
 
 ---
 
