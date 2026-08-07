@@ -439,8 +439,16 @@ def construct_validity(cv_frames):
     return out
 
 
-def shap_family_importance(model, X, max_rows=5000, seed=RNG):
+def shap_family_importance(model, X, max_rows=5000, seed=RNG, family_fn=None):
+    # family_fn: pass a caller-local family_of override (e.g. stage3b/3c's
+    # extended version) -- without this, `family_of(f)` below resolves via
+    # THIS module's globals regardless of which script imported and called
+    # this function, silently bucketing any caller-added feature family
+    # under "other". Found in Stage 3b (post_context family mislabeled),
+    # fixed here rather than left for a third repeat.
     import shap
+    if family_fn is None:
+        family_fn = family_of
     X = X.astype('float64')  # mixed bool/float columns produce an object-dtype
     # array inside shap's internal cast otherwise (booleans don't coerce cleanly)
     if len(X) > max_rows:
@@ -453,7 +461,7 @@ def shap_family_importance(model, X, max_rows=5000, seed=RNG):
     mean_abs = np.abs(sv).mean(axis=0)
     fam_imp = {}
     for f, v in zip(X.columns, mean_abs):
-        fam = family_of(f)
+        fam = family_fn(f)
         fam_imp[fam] = fam_imp.get(fam, 0.0) + float(v)
     top_feats = sorted(zip(X.columns, mean_abs), key=lambda kv: -kv[1])[:10]
     return dict(family=dict(sorted(fam_imp.items(), key=lambda kv: -kv[1])),

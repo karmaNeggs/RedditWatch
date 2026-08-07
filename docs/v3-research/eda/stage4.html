@@ -1,0 +1,117 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>V3 Stage 4 — Pair-Level Model</title>
+<style>
+body { font-family: -apple-system, sans-serif; max-width: 1100px; margin: 2rem auto; padding: 0 1rem; color: #222; }
+table { border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: 0.85rem; }
+th, td { border: 1px solid #ccc; padding: 4px 8px; text-align: right; }
+th { background: #f0f0f0; }
+td:first-child, th:first-child { text-align: left; }
+.muted { color: #666; font-size: 0.9rem; }
+.mono { font-family: monospace; font-size: 0.75rem; max-width: 260px; text-align: left; }
+h2 { border-bottom: 2px solid #ddd; padding-bottom: 4px; margin-top: 2.5rem; }
+.callout { background: #fff8e1; border-left: 4px solid #f5a623; padding: 0.8rem 1rem; margin: 1rem 0; }
+</style></head><body>
+<p><a href="index.html">&larr; EDA</a> | <a href="stage2.html">Stage 2</a> | <a href="stage3.html">Stage 3</a> | Stage 4</p>
+<h1>V3 Stage 4 — Pair-Level Model (the primary detector)</h1>
+<p class="muted">V3_PLAN.md &sect;7: "Features from &sect;4.4, target = seed-derived same-operator pairs
+... This is where 0.90 lives." Kumar et al. 2017: 0.68 AUC per-account vs. <b>0.91 AUC per-pair</b>, same
+features — this stage is the actual point of the V3 pivot away from account-level modeling (Stage 3).</p>
+
+<div class="callout"><b>Anti-circularity design.</b> Stage 3 needed a same-day correction because
+account-level labels and features were aggregated over the same rows (see V3_PLAN.md &sect;10.4). Here, the
+8 pairwise metrics (B1&ndash;B8) are split into two <b>structurally independent views</b>: View A
+(behavioral/structural — co-appearance, arrival timing, activity correlation) and View B
+(content/identity — text-template sharing, stylometric similarity, registration-cohort adjacency, shared
+domains). The "same-operator" label is built <b>only from View B</b>. The primary model is trained
+<b>only on View A</b> to predict that label — a non-circular test of whether behavioral pattern alone,
+with zero access to text or identity information, predicts identity-confirmed same-operator status.</p>
+<p><b>B6 (reply reciprocity) was dropped, not approximated</b> — the raw per-comment <code>parent_id</code>
+needed to know which specific comment a reply targets was never persisted past collection time (only the
+derived <code>parent_is_post</code> boolean survives in every table checked). View A is B1+B2+B7.</div>
+
+<h2>Scale</h2>
+<table>
+<tr><th>quantity</th><th>value</th></tr>
+<tr><td>threads (T)</td><td>122,350</td></tr>
+<tr><td>commenter-thread edges</td><td>1,616,023</td></tr>
+<tr><td>candidate pairs (n_coappear&ge;2)</td><td>275,643</td></tr>
+<tr><td>same-operator label positives</td><td>131 (0.048%)</td></tr>
+<tr><td>B8 domain-share feature coverage</td><td>18.39% of candidate pool</td></tr>
+<tr><td>B2 corpus-derived "tight" arrival gap (p5)</td><td>98s</td></tr>
+<tr><td>pairs dropped by account-disjoint split (straddling accounts)</td><td>117,200</td></tr>
+</table>
+
+<h2>Null model: an ascertainment-bias finding, not a calibration pass/fail</h2>
+<div class="callout">EXACT null simulator (uniform-random subset per account, faithful to the model's own assumption) still shows p-values skewed far below uniform[0,1] (expected mean/median ~0.5) -- this is ascertainment bias from only testing pairs that already co-occur, not a fixable calibration error. See the null_sanity_check() docstring for the full diagnosis. B1 is used as a continuous ranking feature only; no binary significance gate is used anywhere in this pipeline.</div>
+<p><b>Exact-simulator result</b> (6 subs, 1,455,090 simulated
+co-occurring pairs, data generated under the TRUE null by construction): mean p-value =
+0.0263, median =
+0.0049
+(a true null should show ~0.5 / ~0.5). 87.6%
+of even these null-generated pairs would cross a naive p&lt;0.05 threshold. <b>Because of this, B1's
+z-score/p-value is used only as a continuous ranking feature throughout this pipeline — no binary
+significance gate is computed or used anywhere.</b> Where a binary "unusually high co-appearance" split was
+needed (the View-B reverse-check target below), a top-percentile-of-z cutoff <em>within</em> the
+already-co-occurring candidate pool is used instead — a relative comparison, not a contaminated absolute
+claim.</p>
+
+<h2>Label construction (View B only)</h2>
+<p class="muted">Thresholds are this pool's own percentiles, not imported constants. <b>Combination rule is
+OR, not AND</b> — first cut required text-template overlap as a mandatory gate and produced ZERO label
+positives (direct text overlap exists in only 300/275,643 = 0.11% of pairs — rare, as expected — gating
+everything behind it was too strict; see construct_label()'s docstring). Corrected: text-template overlap
+&ge; 0.38 (3 pairs) <b>OR</b> (stylometric similarity
+&ge; p99 <b>AND</b> cohort adjacency &ge; p98 both independently, 128
+pairs). Stylometric similarity (char n-gram TF-IDF cosine) has weak absolute discrimination here — mean
+0.76 across ALL candidate pairs, common short-comment n-grams dominate at max_features=1200 — so it is used
+only as a relative top-percentile rank, never an absolute similarity claim. Signal-count distribution:
+{0: 267498, 1: 8017, 2: 128}.</p>
+<h3>Spot-check: sampled labeled-positive pairs</h3>
+<table>
+<tr><th>account 1</th><th>account 2</th><th>B3</th><th>B4</th><th>B5</th><th>text sample 1</th><th>text sample 2</th></tr>
+<tr><td>Fierysword5</td><td>rohmish</td><td>0.00</td><td>0.93</td><td>0.05</td><td class='mono'>Incompetent implies they try to do something and fail. 
+
+They are actively taking bribes. That’s malice, not incompetence. Companies spending huge amounts of money on buybacks while paying fuckall to </td><td class='mono'>BMC was ahead of us. they're already digging the craters for the astroid to fit inside its actually designed for this and more. That station literally wasn't finished. we usually don't see heavy pour </td></tr><tr><td>M1ghty2</td><td>jgenius07</td><td>0.00</td><td>0.93</td><td>0.04</td><td class='mono'>Inflation would only cool if cheaper import prices get passed down to petrol pumps. Which won’t be the case. So zero impact on retail inflation. Yeah! This is not a BBMP rule. File an RTI to SPIO of B</td><td class='mono'>Case thoko, paise banao You're so gullible. This is a SCAM 1. This is great advise. 
+2. If you need a phone to get started or anything happens to your phone try DMing me I can help her you a user phon</td></tr><tr><td>165cm_man</td><td>SiriusLeeSam</td><td>0.00</td><td>0.94</td><td>0.05</td><td class='mono'>Jai ho modi xi ki, modi xi mujhe bhi bata do koun sa offshore company mein invest karna hai Everyone's saying ranvir.
+
+I thought it was modi and trump Holy shit,  she's a grown ass women.  Let her do </td><td class='mono'>To be honest, doesn't look like a forced situation Many people use twitter only for complaints and not like everyday social media. Nothing wrong in that, it's the only social media suited for complain</td></tr><tr><td>TheRealOriginalSatan</td><td>giratina143</td><td>0.00</td><td>0.93</td><td>0.06</td><td class='mono'>Because of how GST works, if you earn less you’re actually paying more tax as a percentage of your income Western isn’t elevated it has better drainage Went for a photowalk there today and it is fully</td><td class='mono'>India will never develop, and this is me basing this on pure numbers and facts. This is the way Lol
+
+Where are the godis at? I had this exact same idea lol Someone overlay the data showing what states</td></tr><tr><td>Speedypanda4</td><td>maalicious</td><td>0.00</td><td>0.94</td><td>0.06</td><td class='mono'>I have seen this happen with flipkart, shame that Amazon is like this too. He played for both teams, maybe that's why he's playing both sides Last season he was completely true. S models are better, e</td><td class='mono'>Why are you being downvoted? Even if it is Re.1, it is hard earned money for everyone. So, yes, it is needed. எடுத்த உடனே இப்படி சொல்றதுக்கு ஒரு நாலு பேர் இருப்பாங்க I don't know about Bengaluru, but </td></tr><tr><td>Narasimha1997</td><td>PhoenixPrimeKing</td><td>0.00</td><td>0.93</td><td>0.04</td><td class='mono'>Being honest here,
+
+The gang rape incident of a doctor in kolkata became a nationwide news because she had a community of doctors to stand up and protest for the injustice.
+
+There are henious crimes h</td><td class='mono'>Maids have multiple houses so no problem if they get laid off. So better than SWEs. The scale is not linear. Just because you still have 40L to go for 1Cr goal, doesn't mean you can't make it. Who kno</td></tr><tr><td>MrKtheSurvivor</td><td>shezadaa</td><td>0.00</td><td>0.94</td><td>0.04</td><td class='mono'>Amul has not been selling "ALL" of its products in KA. They hadn't sold fresh milk and curd before 2023. This controversy happend because Amul wanted to acquire milk from KA farmers and distribute acr</td><td class='mono'>Thats not a lake, but floodplains for the stream that collects all the water from the KC basin.
+
+
+This is actually worse than encroaching on lakes because lakes in bangalore are just dams on a stream.</td></tr><tr><td>charavaka</td><td>notenoughroomtofitmy</td><td>0.00</td><td>0.93</td><td>0.06</td><td class='mono'>I'm curious what made you exclude these two vertical paragraphs while pasting others:
+
+
+>Multiple journalists who covered the week-long hijacking back in 1999 have put out social media posts amid the </td><td class='mono'>Peak motherless behavior Can’t forgive him for all the vitriol he has spewed just cuz he has found temporary redemption. I have no faith in him changing for good. I can guarantee tomorrow he will chan</td></tr><tr><td>Monsultant</td><td>ic_97</td><td>0.00</td><td>0.94</td><td>0.06</td><td class='mono'>I thought there are five people arrested. Why name only two and make it an issue of caste and religion!
+
+This is a cultural issue more than anything else. Ab apni gaadi chalane ke liye bhi these guys </td><td class='mono'>Some of my far away relative were caught in the chaara scam of lalu yadav, They came to Kapil Sibal at the time and he said that give me 1 cr and your bail will definitely be secured. Should we also s</td></tr><tr><td>JEE_2026Tard</td><td>No_Sprinkles_2990</td><td>0.50</td><td>0.85</td><td>0.03</td><td class='mono'>![img](emote|t5_311ttu|49429)![img](emote|t5_311ttu|49429) https://preview.redd.it/slecy63irv0e1.jpeg?width=1179&format=pjpg&auto=webp&s=dc29eabca96d956ab88a52a4a65b187da3be5c96
+
+Bro was literally fol</td><td class='mono'>Sirf adv. Ke liye ho toh thik rahega .. Kon kon 12th me Saleem sir se padh kar ayi ayi tea boombay jayega 👿👿😈🗿🗿🥵🥵🔥😎🥰 Bsdk 7 karor toh competition bhi nhi hai 😭😭 https://preview.redd.it/99mh7juhnmyd1.j</td></tr><tr><td>rnjbond</td><td>s0lja</td><td>0.00</td><td>0.94</td><td>0.05</td><td class='mono'>I refused to even watch it because of how bad her acting in the trailer was. Which is a shame, because this is a story that needs to be told.  Amit Trivedi is so talented.  Nah man, Rangastalam was le</td><td class='mono'>So Gowariker can only work with Aamir, what? This. Men pushing you through the line and grabbing you by the neck to bow down is ok with the society. There is something seriously wrong here. We are at </td></tr><tr><td>No-Belt-7798</td><td>Nooobmaaaster69420</td><td>0.00</td><td>0.94</td><td>0.04</td><td class='mono'>This should be the norm in society. If you want to ask money , ask it in a civil way not in the hideous way these lot have been doing. To be fair most of comments where funny to , clearly people don’t</td><td class='mono'>Bruh, Arshad always had the power to throw far, he’s just wildly inconsistent. Today was one of those days where he was able to hit his mark, no need to bring money and all into this. 
+
+Neeraj already</td></tr>
+</table>
+
+<h2>Primary result: View A &rarr; View-B label (account-disjoint holdout)</h2>
+<table>
+<tr><th>model</th><th>AUC</th><th>avg precision</th><th>recall@1%FPR</th><th>pos/total (test)</th></tr>
+<tr><td><b>View A only (primary, non-circular)</b></td><td>0.616</td><td>0.000</td><td>0.000</td><td>6/25,494</td></tr>
+<tr><td>View B only (reverse check, predicting View-A-derived null-significance label)</td><td>0.767</td><td>0.026</td><td>0.031</td><td>224/25,494</td></tr>
+<tr><td>Combined A+B (context only — most circular, do not cite as primary)</td><td>1.000</td><td>1.000</td><td>1.000</td><td>6/25,494</td></tr>
+</table>
+<p class="muted">Mandatory baseline (raw co-appearance count alone, no null-adjustment, no other features):
+AUC = 0.653. Permutation floor (View-A model,
+label shuffled): AUC = 0.522. The primary View-A number
+must clearly beat both to mean anything beyond "these accounts are simply active in the same threads a
+lot."</p>
+<p class="muted">Reference points: Kumar et al. 2017 pair-level AUC = 0.91; Schoch et al. recall at
+1% FPR (&ge;10-repetition coordination) = 74%. Compared honestly, not
+force-fit — see the primary AUC/recall above.</p>
+
+<h2>TreeSHAP — View A primary model (top features)</h2>
+<table><tr><th>feature</th><th>mean |SHAP|</th></tr><tr><td>b2_median_gap</td><td>1.1644</td></tr><tr><td>z</td><td>0.9477</td></tr><tr><td>b7_temporal_corr</td><td>0.8756</td></tr><tr><td>b2_min_gap</td><td>0.7113</td></tr><tr><td>n_coappear</td><td>0.1807</td></tr><tr><td>b2_tight_frac</td><td>0.0456</td></tr></table>
+
+</body></html>

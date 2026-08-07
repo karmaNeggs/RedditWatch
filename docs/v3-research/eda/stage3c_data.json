@@ -1,0 +1,381 @@
+{
+  "channels": {
+    "admin_removal": {
+      "n_population": 347886,
+      "n_positives": 3204,
+      "positive_rate": 0.009209913592383712,
+      "rung1_base": 0.9327214444476536,
+      "rung1_expanded": 0.9312094775215594,
+      "rung4_base": 0.9129125107826117,
+      "rung4_expanded": 0.9118168073780459,
+      "gated_n_population": 34301,
+      "gated_n_positives": 1000,
+      "rung1_gated_base": 0.810182471997838,
+      "rung1_gated_expanded": 0.8110318308759497,
+      "rung4_gated_base": 0.7667645713796915,
+      "rung4_gated_expanded": 0.7562213770595356,
+      "shap": {
+        "family": {
+          "post_context": 1.1799006648448354,
+          "tier1": 0.7599577613040025,
+          "timing_tier2": 0.4807791490723738,
+          "reception": 0.4734764841554093,
+          "footprint": 0.3295950830007597,
+          "provenance_age": 0.2893728817880175,
+          "score": 0.1243372457372296,
+          "other": 0.11641092630296025,
+          "bot_marker_extremeness": 0.0691309398847242,
+          "engagement_pattern": 0.06781693067198935
+        },
+        "top_features": [
+          [
+            "score_per_word",
+            0.36266409178102194
+          ],
+          [
+            "mean_post_score",
+            0.352045072243925
+          ],
+          [
+            "pc_num_crossposts",
+            0.33065574988323093
+          ],
+          [
+            "burstiness_kimjo",
+            0.29598320167429204
+          ],
+          [
+            "pc_comment_score_gini",
+            0.25240025550688044
+          ],
+          [
+            "pc_log_subscribers",
+            0.2141725860656223
+          ],
+          [
+            "medium_tier_share",
+            0.2125338682069143
+          ],
+          [
+            "posts_per_day_since_first_seen",
+            0.19370441178789782
+          ],
+          [
+            "pc_n_unique_commenters",
+            0.18510177660860797
+          ],
+          [
+            "interval_quantization_rate",
+            0.18479594739808175
+          ]
+        ]
+      },
+      "within_kumar_gated_expanded": true
+    },
+    "self_deletion": {
+      "n_population": 347886,
+      "n_positives": 47730,
+      "positive_rate": 0.13720011727979856,
+      "rung1_base": 0.8556020902303509,
+      "rung1_expanded": 0.8544119395019136,
+      "rung4_base": 0.8453650818273656,
+      "rung4_expanded": 0.8450395678024321,
+      "gated_n_population": 34301,
+      "gated_n_positives": 14537,
+      "rung1_gated_base": 0.7730231574012433,
+      "rung1_gated_expanded": 0.7734008584087861,
+      "rung4_gated_base": 0.7543006827259012,
+      "rung4_gated_expanded": 0.75172039531542,
+      "shap": {
+        "family": {
+          "provenance_age": 0.7555102557567711,
+          "post_context": 0.4553715658224228,
+          "other": 0.4069141836687145,
+          "tier1": 0.3434627418601482,
+          "reception": 0.2904497815362926,
+          "engagement_pattern": 0.14151839130779148,
+          "footprint": 0.07819537446455857,
+          "score": 0.03844129816850272,
+          "bot_marker_extremeness": 0.022966974687081518
+        },
+        "top_features": [
+          [
+            "pc_removed_comment_rate",
+            0.32604375000616664
+          ],
+          [
+            "pc_removed_comment_rate_max",
+            0.29295694851256604
+          ],
+          [
+            "account_ordinal",
+            0.23952030991089168
+          ],
+          [
+            "posts_per_day_since_first_seen",
+            0.203184978150336
+          ],
+          [
+            "vs_mode_comments",
+            0.17147642289091078
+          ],
+          [
+            "comments_per_day_observed",
+            0.14406906862238014
+          ],
+          [
+            "pc_tombstone_rate",
+            0.12932781581625616
+          ],
+          [
+            "worst_sub_mean_score",
+            0.09265117096213102
+          ],
+          [
+            "outsider_influx_share",
+            0.09092098435574661
+          ],
+          [
+            "own_post_reply_rate",
+            0.08019850711026436
+          ]
+        ]
+      },
+      "within_kumar_gated_expanded": true
+    },
+    "comment_removed_ambiguous": {
+      "n_population": 347886,
+      "n_positives": 27118,
+      "positive_rate": 0.0779508229707433,
+      "rung1_base": 0.8963781738388307,
+      "rung1_expanded": 0.8964312916061156,
+      "rung4_base": 0.8845618531215591,
+      "rung4_expanded": 0.8834948762729393,
+      "gated_n_population": 34301,
+      "gated_n_positives": 8740,
+      "rung1_gated_base": 0.8011503956479752,
+      "rung1_gated_expanded": 0.8008163940757502,
+      "rung4_gated_base": 0.772445890581938,
+      "rung4_gated_expanded": 0.7746147048160958,
+      "shap": {
+        "family": {
+          "post_context": 0.9221325249039115,
+          "other": 0.5857620684349703,
+          "provenance_age": 0.47267320514749034,
+          "footprint": 0.3616687577242252,
+          "reception": 0.2770770239226023,
+          "tier1": 0.15782533602920937,
+          "timing_tier2": 0.05349105265205844,
+          "score": 0.03051489074723893
+        },
+        "top_features": [
+          [
+            "pc_removed_comment_rate_max",
+            0.45682457768090945
+          ],
+          [
+            "pc_removed_comment_rate",
+            0.3830128925674428
+          ],
+          [
+            "pc_tombstone_rate",
+            0.2539786590234855
+          ],
+          [
+            "account_ordinal",
+            0.17229265577538516
+          ],
+          [
+            "medium_tier_share",
+            0.1534635704778851
+          ],
+          [
+            "vs_mode_comments",
+            0.13173932083861833
+          ],
+          [
+            "comments_per_day_since_first_seen",
+            0.11203174422634234
+          ],
+          [
+            "controversiality_rate",
+            0.09669900396394047
+          ],
+          [
+            "n_comments_sample",
+            0.09461859183623848
+          ],
+          [
+            "comments_per_day_observed",
+            0.09190977453157823
+          ]
+        ]
+      },
+      "within_kumar_gated_expanded": true
+    },
+    "automod_filtered": {
+      "n_population": 45861,
+      "n_positives": 4395,
+      "positive_rate": 0.0958330607705894,
+      "rung1_base": 0.8090959590397593,
+      "rung1_expanded": 0.8111570332962454,
+      "rung4_base": 0.7745359014422195,
+      "rung4_expanded": 0.7664010573868961,
+      "gated_n_population": 11438,
+      "gated_n_positives": 1516,
+      "rung1_gated_base": 0.8060649450941619,
+      "rung1_gated_expanded": 0.8090585125987982,
+      "rung4_gated_base": 0.8013113910355892,
+      "rung4_gated_expanded": 0.7925919798748481,
+      "shap": {
+        "family": {
+          "post_context": 1.7766381902995891,
+          "provenance_age": 0.6152311628723541,
+          "footprint": 0.4873160217831638,
+          "tier1": 0.46216105831377197,
+          "reception": 0.4311713657106001,
+          "bot_marker_extremeness": 0.3036649726694496,
+          "engagement_pattern": 0.18229484683933464
+        },
+        "top_features": [
+          [
+            "mean_post_score",
+            0.35433151806665525
+          ],
+          [
+            "observed_span_days",
+            0.3525101233881035
+          ],
+          [
+            "pc_removed_comment_rate",
+            0.26826524451002365
+          ],
+          [
+            "high_tier_share",
+            0.2637607093615633
+          ],
+          [
+            "karma_extremeness",
+            0.2362666288767227
+          ],
+          [
+            "posts_per_day_since_first_seen",
+            0.23031014492035662
+          ],
+          [
+            "pc_log_subscribers",
+            0.1862996973107404
+          ],
+          [
+            "pc_bot_comment_rate",
+            0.18418863027361299
+          ],
+          [
+            "n_own_posts_with_comments",
+            0.18229484683933464
+          ],
+          [
+            "vs_mode_posts",
+            0.1802589418879678
+          ]
+        ]
+      },
+      "within_kumar_gated_expanded": true
+    },
+    "moderator_removed": {
+      "n_population": 45861,
+      "n_positives": 4970,
+      "positive_rate": 0.10837094699199756,
+      "rung1_base": 0.7299065873069727,
+      "rung1_expanded": 0.7302568166328435,
+      "rung4_base": 0.6770758296641531,
+      "rung4_expanded": 0.6677135548991644,
+      "gated_n_population": 11438,
+      "gated_n_positives": 1784,
+      "rung1_gated_base": 0.7437444898417999,
+      "rung1_gated_expanded": 0.7425907823240163,
+      "rung4_gated_base": 0.7112509876907552,
+      "rung4_gated_expanded": 0.7206846243919156,
+      "shap": {
+        "family": {
+          "post_context": 1.2568443698769398,
+          "provenance_age": 0.5886743402945899,
+          "engagement_pattern": 0.39984110546264756,
+          "tier1": 0.37835360613276736,
+          "reception": 0.25154304583058595,
+          "footprint": 0.2292616995759043,
+          "other": 0.21938516690649382,
+          "bot_marker_extremeness": 0.08602501676360429
+        },
+        "top_features": [
+          [
+            "posts_per_day_since_first_seen",
+            0.47256180948156656
+          ],
+          [
+            "pc_contested_share",
+            0.2430804939891302
+          ],
+          [
+            "pc_log_subscribers",
+            0.20415029434732757
+          ],
+          [
+            "pc_tombstone_rate",
+            0.19364727436185927
+          ],
+          [
+            "own_post_reply_rate",
+            0.18562649433301104
+          ],
+          [
+            "vs_mode_posts",
+            0.17366115807360463
+          ],
+          [
+            "outsider_influx_share",
+            0.16367660156609448
+          ],
+          [
+            "pc_num_crossposts",
+            0.16342485624107128
+          ],
+          [
+            "pc_n_unique_commenters",
+            0.154885957812343
+          ],
+          [
+            "repeat_engagement_rate",
+            0.13047358319076108
+          ]
+        ]
+      },
+      "within_kumar_gated_expanded": true
+    }
+  },
+  "meta": {
+    "n_accounts": 347886,
+    "n_post_authors": 55688,
+    "post_ctx_gate_reused": 5,
+    "n_own_repeat_positive": 1238,
+    "n_url_rate_nonzero": 41516,
+    "n_outsider_influx_defined": 18265
+  },
+  "iteration_trimmed": {
+    "admin_removal": {
+      "rung4_gated_trimmed": 0.7657199985524029
+    },
+    "self_deletion": {
+      "rung4_gated_trimmed": 0.7540522166406973
+    },
+    "comment_removed_ambiguous": {
+      "rung4_gated_trimmed": 0.771287799341262
+    },
+    "automod_filtered": {
+      "rung4_gated_trimmed": 0.7864794638894796
+    },
+    "moderator_removed": {
+      "rung4_gated_trimmed": 0.7018227059394724
+    }
+  }
+}

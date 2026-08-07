@@ -1,0 +1,377 @@
+{
+  "split_balance": {
+    "part1": {
+      "n": 115950,
+      "high_tier_share_mean": 0.16822363750315814,
+      "medium_tier_share_mean": 0.326674604739136,
+      "account_ordinal_mean": 77226068600700.23,
+      "days_since_first_seen_mean": 406.2591340817666
+    },
+    "part2": {
+      "n": 115950,
+      "high_tier_share_mean": 0.16788392175605552,
+      "medium_tier_share_mean": 0.32717835760151504,
+      "account_ordinal_mean": 77179281001760.27,
+      "days_since_first_seen_mean": 405.3900737065251
+    },
+    "part3": {
+      "n": 115986,
+      "high_tier_share_mean": 0.16763619483727463,
+      "medium_tier_share_mean": 0.3264985897217616,
+      "account_ordinal_mean": 77109165272974.95,
+      "days_since_first_seen_mean": 406.33590910292173
+    }
+  },
+  "n_candidates_tested": 64,
+  "n_standout": 9,
+  "standout_features": [
+    {
+      "feature": "low_tier_share",
+      "transform": "none",
+      "direction_hint": null,
+      "boundary1": 0.19265793784153562,
+      "boundary2": 0.19381100638658197,
+      "sep1": 3.201495584142008,
+      "sep2": 3.2236313201909783,
+      "minority_high1": true,
+      "minority_high2": true
+    },
+    {
+      "feature": "subreddit_entropy",
+      "transform": "none",
+      "direction_hint": null,
+      "boundary1": 0.7889567150252543,
+      "boundary2": 0.7923896611362632,
+      "sep1": 3.553027668915913,
+      "sep2": 3.531813300622227,
+      "minority_high1": true,
+      "minority_high2": true
+    },
+    {
+      "feature": "reception_spread",
+      "transform": "log1p",
+      "direction_hint": "high",
+      "boundary1": 9.821193127425202,
+      "boundary2": 9.804154946713135,
+      "sep1": 7.94513061431103,
+      "sep2": 7.927839612995914,
+      "minority_high1": true,
+      "minority_high2": true
+    },
+    {
+      "feature": "account_ordinal",
+      "transform": "log1p",
+      "direction_hint": "high",
+      "boundary1": 10051102030350.21,
+      "boundary2": 9886121161829.883,
+      "sep1": 5.9580385825218265,
+      "sep2": 6.225461036436213,
+      "minority_high1": false,
+      "minority_high2": false
+    },
+    {
+      "feature": "n_own_posts_with_comments",
+      "transform": "log1p",
+      "direction_hint": null,
+      "boundary1": 1.593259917941441,
+      "boundary2": 1.62569672635157,
+      "sep1": 4.244029691173481,
+      "sep2": 4.011632834785254,
+      "minority_high1": true,
+      "minority_high2": true
+    },
+    {
+      "feature": "karma_extremeness",
+      "transform": "log1p",
+      "direction_hint": "high",
+      "boundary1": 42.073687961010634,
+      "boundary2": 42.65952338980508,
+      "sep1": 3.288057394188866,
+      "sep2": 3.25414709036314,
+      "minority_high1": false,
+      "minority_high2": false
+    },
+    {
+      "feature": "outsider_influx_share",
+      "transform": "none",
+      "direction_hint": null,
+      "boundary1": 0.4576723396520871,
+      "boundary2": 0.45674344021931085,
+      "sep1": 1.8336084865068851,
+      "sep2": 1.8940983924677943,
+      "minority_high1": true,
+      "minority_high2": true
+    },
+    {
+      "feature": "coappear_hhi",
+      "transform": "none",
+      "direction_hint": "high",
+      "boundary1": 0.0744634675561697,
+      "boundary2": 0.07574904972298412,
+      "sep1": 3.1895102563054847,
+      "sep2": 3.8308251037563874,
+      "minority_high1": true,
+      "minority_high2": true
+    },
+    {
+      "feature": "domain_hhi",
+      "transform": "none",
+      "direction_hint": "high",
+      "boundary1": 0.748817671767404,
+      "boundary2": 0.7656569487146767,
+      "sep1": 5.799756312132139,
+      "sep2": 7.076553704414419,
+      "minority_high1": false,
+      "minority_high2": false
+    }
+  ],
+  "robustness": {
+    "low_tier_share": {
+      "slices": {
+        "tier=high": "REAL CANDIDATE",
+        "tier=medium": "REAL CANDIDATE",
+        "tier=low_or_mixed": "REAL CANDIDATE",
+        "era=older_half": "REAL CANDIDATE",
+        "era=newer_half": "REAL CANDIDATE"
+      },
+      "n_real_of_5": 5
+    },
+    "subreddit_entropy": {
+      "slices": {
+        "tier=high": "REAL CANDIDATE",
+        "tier=medium": "REAL CANDIDATE",
+        "tier=low_or_mixed": "REAL CANDIDATE",
+        "era=older_half": "REAL CANDIDATE",
+        "era=newer_half": "REAL CANDIDATE"
+      },
+      "n_real_of_5": 5
+    },
+    "reception_spread": {
+      "slices": {
+        "tier=high": "REAL CANDIDATE",
+        "tier=medium": "REAL CANDIDATE",
+        "tier=low_or_mixed": "REAL CANDIDATE",
+        "era=older_half": "REAL CANDIDATE",
+        "era=newer_half": "REAL CANDIDATE"
+      },
+      "n_real_of_5": 5
+    },
+    "account_ordinal": {
+      "slices": {
+        "tier=high": "REAL CANDIDATE",
+        "tier=medium": "REAL CANDIDATE",
+        "tier=low_or_mixed": "REAL CANDIDATE",
+        "era=older_half": "REAL CANDIDATE",
+        "era=newer_half": "dip not significant"
+      },
+      "n_real_of_5": 4
+    },
+    "n_own_posts_with_comments": {
+      "slices": {
+        "tier=high": "no KDE valley (ratio=1.0)",
+        "tier=medium": "REAL CANDIDATE",
+        "tier=low_or_mixed": "REAL CANDIDATE",
+        "era=older_half": "REAL CANDIDATE",
+        "era=newer_half": "REAL CANDIDATE"
+      },
+      "n_real_of_5": 4
+    },
+    "karma_extremeness": {
+      "slices": {
+        "tier=high": "REAL CANDIDATE",
+        "tier=medium": "REAL CANDIDATE",
+        "tier=low_or_mixed": "REAL CANDIDATE",
+        "era=older_half": "REAL CANDIDATE",
+        "era=newer_half": "REAL CANDIDATE"
+      },
+      "n_real_of_5": 5
+    },
+    "outsider_influx_share": {
+      "slices": {
+        "tier=high": "no KDE valley (ratio=1.0)",
+        "tier=medium": "REAL CANDIDATE",
+        "tier=low_or_mixed": "REAL CANDIDATE",
+        "era=older_half": "no KDE valley (ratio=0.9844868874302823)",
+        "era=newer_half": "REAL CANDIDATE"
+      },
+      "n_real_of_5": 3
+    },
+    "coappear_hhi": {
+      "slices": {
+        "tier=high": "REAL CANDIDATE",
+        "tier=medium": "REAL CANDIDATE",
+        "tier=low_or_mixed": "REAL CANDIDATE",
+        "era=older_half": "REAL CANDIDATE",
+        "era=newer_half": "REAL CANDIDATE"
+      },
+      "n_real_of_5": 5
+    },
+    "domain_hhi": {
+      "slices": {
+        "tier=high": "REAL CANDIDATE",
+        "tier=medium": "REAL CANDIDATE",
+        "tier=low_or_mixed": "REAL CANDIDATE",
+        "era=older_half": "REAL CANDIDATE",
+        "era=newer_half": "REAL CANDIDATE"
+      },
+      "n_real_of_5": 5
+    }
+  },
+  "and_rule_curve": [
+    {
+      "added_feature": "reception_spread",
+      "direction": "high",
+      "n_flagged_part1": 35960,
+      "n_flagged_part2": 36115,
+      "pct_part1": 31.01336783096162,
+      "pct_part2": 31.147046140577835
+    },
+    {
+      "added_feature": "domain_hhi",
+      "direction": "high",
+      "n_flagged_part1": 5263,
+      "n_flagged_part2": 5163,
+      "pct_part1": 4.539025442000862,
+      "pct_part2": 4.452781371280724
+    },
+    {
+      "added_feature": "account_ordinal",
+      "direction": "high",
+      "n_flagged_part1": 2756,
+      "n_flagged_part2": 2726,
+      "pct_part1": 2.376886589047003,
+      "pct_part2": 2.3510133678309617
+    },
+    {
+      "added_feature": "n_own_posts_with_comments",
+      "direction": "minority-default",
+      "n_flagged_part1": 638,
+      "n_flagged_part2": 579,
+      "pct_part1": 0.5502371711944803,
+      "pct_part2": 0.49935316946959896
+    },
+    {
+      "added_feature": "subreddit_entropy",
+      "direction": "minority-default",
+      "n_flagged_part1": 550,
+      "n_flagged_part2": 497,
+      "pct_part1": 0.4743423889607589,
+      "pct_part2": 0.4286330314790858
+    },
+    {
+      "added_feature": "coappear_hhi",
+      "direction": "high",
+      "n_flagged_part1": 0,
+      "n_flagged_part2": 0,
+      "pct_part1": 0.0,
+      "pct_part2": 0.0
+    },
+    {
+      "added_feature": "karma_extremeness",
+      "direction": "high",
+      "n_flagged_part1": 0,
+      "n_flagged_part2": 0,
+      "pct_part1": 0.0,
+      "pct_part2": 0.0
+    },
+    {
+      "added_feature": "low_tier_share",
+      "direction": "minority-default",
+      "n_flagged_part1": 0,
+      "n_flagged_part2": 0,
+      "pct_part1": 0.0,
+      "pct_part2": 0.0
+    },
+    {
+      "added_feature": "outsider_influx_share",
+      "direction": "minority-default",
+      "n_flagged_part1": 0,
+      "n_flagged_part2": 0,
+      "pct_part1": 0.0,
+      "pct_part2": 0.0
+    }
+  ],
+  "part3_prefix_validation": [
+    {
+      "k": 1,
+      "added_feature": "reception_spread",
+      "n_flagged_part1_using_part1_thresholds": 35960,
+      "n_flagged_part3_using_part1_thresholds": 36275,
+      "pct_part3": 31.275326332488405
+    },
+    {
+      "k": 2,
+      "added_feature": "domain_hhi",
+      "n_flagged_part1_using_part1_thresholds": 5263,
+      "n_flagged_part3_using_part1_thresholds": 5308,
+      "pct_part3": 4.576414394840756
+    },
+    {
+      "k": 3,
+      "added_feature": "account_ordinal",
+      "n_flagged_part1_using_part1_thresholds": 2756,
+      "n_flagged_part3_using_part1_thresholds": 2817,
+      "pct_part3": 2.4287413998241165
+    },
+    {
+      "k": 4,
+      "added_feature": "n_own_posts_with_comments",
+      "n_flagged_part1_using_part1_thresholds": 638,
+      "n_flagged_part3_using_part1_thresholds": 613,
+      "pct_part3": 0.5285120618005621
+    },
+    {
+      "k": 5,
+      "added_feature": "subreddit_entropy",
+      "n_flagged_part1_using_part1_thresholds": 550,
+      "n_flagged_part3_using_part1_thresholds": 530,
+      "pct_part3": 0.4569517010673702
+    },
+    {
+      "k": 6,
+      "added_feature": "coappear_hhi",
+      "n_flagged_part1_using_part1_thresholds": 0,
+      "n_flagged_part3_using_part1_thresholds": 0,
+      "pct_part3": 0.0
+    },
+    {
+      "k": 7,
+      "added_feature": "karma_extremeness",
+      "n_flagged_part1_using_part1_thresholds": 0,
+      "n_flagged_part3_using_part1_thresholds": 0,
+      "pct_part3": 0.0
+    },
+    {
+      "k": 8,
+      "added_feature": "low_tier_share",
+      "n_flagged_part1_using_part1_thresholds": 0,
+      "n_flagged_part3_using_part1_thresholds": 0,
+      "pct_part3": 0.0
+    },
+    {
+      "k": 9,
+      "added_feature": "outsider_influx_share",
+      "n_flagged_part1_using_part1_thresholds": 0,
+      "n_flagged_part3_using_part1_thresholds": 0,
+      "pct_part3": 0.0
+    }
+  ],
+  "plausibility_check": {
+    "chosen_k": 5,
+    "chosen_features": [
+      "reception_spread",
+      "domain_hhi",
+      "account_ordinal",
+      "n_own_posts_with_comments",
+      "subreddit_entropy"
+    ],
+    "n_flagged_total": 1590,
+    "n_flagged_part1": 550,
+    "n_flagged_part2": 510,
+    "n_flagged_part3": 530,
+    "removal_rate_flagged": 0.058291038331493565,
+    "removal_rate_population": 0.06958858695364865,
+    "deleted_later_rate_flagged": 0.05253495620631311,
+    "deleted_later_rate_population": 0.05482727819148808
+  }
+}

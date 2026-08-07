@@ -1,0 +1,406 @@
+{
+  "channels": {
+    "admin_removal": {
+      "n_population": 347886,
+      "n_positives": 3204,
+      "positive_rate": 0.009209913592383712,
+      "rung1_base": 0.9325504424128916,
+      "rung1_expanded": 0.9307085584960938,
+      "gated_n_population": 34301,
+      "gated_n_positives": 1000,
+      "rung4_gated_base": 0.7699531916223614,
+      "rung4_gated_expanded": 0.7661078064957625,
+      "leakage_recheck_correlations": {
+        "domain_hhi_vs_removal_rate": 0.007570648979544495,
+        "karma_extremeness_x_reception_spread_vs_removal_rate": -0.032451223082923156,
+        "bot_rate_x_coappear_degree_vs_removal_rate": -0.004050379006900693
+      },
+      "shap": {
+        "family": {
+          "post_context": 1.5052964881849153,
+          "reception": 0.8132833461168072,
+          "tier1": 0.7951210393125336,
+          "footprint": 0.32554286593414383,
+          "provenance_age": 0.24424724516407548,
+          "tier2": 0.15912530634250793,
+          "bot_marker_extremeness": 0.10297562122423867,
+          "engagement_pattern": 0.06148858779191835
+        },
+        "top_features": [
+          [
+            "mean_post_score",
+            0.3969350889057809
+          ],
+          [
+            "score_per_word",
+            0.37928268392827535
+          ],
+          [
+            "pc_num_crossposts",
+            0.31993788680282226
+          ],
+          [
+            "pc_comment_score_gini",
+            0.23621880116378402
+          ],
+          [
+            "medium_tier_share",
+            0.22836256138742542
+          ],
+          [
+            "pc_log_subscribers",
+            0.19514388087376489
+          ],
+          [
+            "posts_per_day_since_first_seen",
+            0.18936378911266005
+          ],
+          [
+            "mean_depth",
+            0.18142410006850232
+          ],
+          [
+            "coappear_degree",
+            0.15912530634250793
+          ],
+          [
+            "score_stddev",
+            0.14909053663116398
+          ]
+        ]
+      },
+      "within_kumar_gated_expanded": true
+    },
+    "self_deletion": {
+      "n_population": 347886,
+      "n_positives": 47730,
+      "positive_rate": 0.13720011727979856,
+      "rung1_base": 0.8542736481548067,
+      "rung1_expanded": 0.8540638351261479,
+      "gated_n_population": 34301,
+      "gated_n_positives": 14537,
+      "rung4_gated_base": 0.7555738022264284,
+      "rung4_gated_expanded": 0.7571888996830646,
+      "leakage_recheck_correlations": {
+        "domain_hhi_vs_removal_rate": 0.007570648979544495,
+        "karma_extremeness_x_reception_spread_vs_removal_rate": -0.032451223082923156,
+        "bot_rate_x_coappear_degree_vs_removal_rate": -0.004050379006900693
+      },
+      "shap": {
+        "family": {
+          "post_context": 0.7991885702919579,
+          "provenance_age": 0.7152976880809895,
+          "tier1": 0.2553179067295634,
+          "reception": 0.22656072663550264,
+          "tier2": 0.20021588091026396,
+          "engagement_pattern": 0.1188966125107879,
+          "other": 0.07834233951686063,
+          "bot_marker_extremeness": 0.055728031040722055,
+          "score": 0.04630441775732974,
+          "tier3": 0.02220923177339138,
+          "footprint": 0.017409236447724255
+        },
+        "top_features": [
+          [
+            "pc_removed_comment_rate",
+            0.3308173549154399
+          ],
+          [
+            "pc_removed_comment_rate_max",
+            0.2839366493002916
+          ],
+          [
+            "posts_per_day_since_first_seen",
+            0.2526546210929904
+          ],
+          [
+            "account_ordinal",
+            0.21047559573145985
+          ],
+          [
+            "coappear_hhi",
+            0.14688651502325192
+          ],
+          [
+            "pc_tombstone_rate",
+            0.14614688740862986
+          ],
+          [
+            "comments_per_day_observed",
+            0.14106877562313094
+          ],
+          [
+            "vs_mode_comments",
+            0.1065697470436663
+          ],
+          [
+            "outsider_influx_share",
+            0.09341295741475125
+          ],
+          [
+            "worst_sub_mean_score",
+            0.08918942986401637
+          ]
+        ]
+      },
+      "within_kumar_gated_expanded": true
+    },
+    "comment_removed_ambiguous": {
+      "n_population": 347886,
+      "n_positives": 27118,
+      "positive_rate": 0.0779508229707433,
+      "rung1_base": 0.8965448857499357,
+      "rung1_expanded": 0.8965537550069006,
+      "gated_n_population": 34301,
+      "gated_n_positives": 8740,
+      "rung4_gated_base": 0.7728278615521443,
+      "rung4_gated_expanded": 0.7731780800094332,
+      "leakage_recheck_correlations": {
+        "domain_hhi_vs_removal_rate": 0.007570648979544495,
+        "karma_extremeness_x_reception_spread_vs_removal_rate": -0.032451223082923156,
+        "bot_rate_x_coappear_degree_vs_removal_rate": -0.004050379006900693
+      },
+      "shap": {
+        "family": {
+          "post_context": 1.272334066037623,
+          "provenance_age": 0.36023898195800697,
+          "reception": 0.2691359042962326,
+          "tier2": 0.21630032710432207,
+          "footprint": 0.21618873280609685,
+          "tier1": 0.09522583482966027,
+          "bot_marker_extremeness": 0.06597180757725864,
+          "timing_tier2": 0.03496456922730226,
+          "score": 0.02526908246312803,
+          "tier3": 0.02310620195868125,
+          "other": 0.02155724231682975,
+          "username_morphology": 0.02080418029114343,
+          "engagement_pattern": 0.0191179418528904
+        },
+        "top_features": [
+          [
+            "pc_removed_comment_rate",
+            0.39419151649715106
+          ],
+          [
+            "pc_removed_comment_rate_max",
+            0.38381215053317297
+          ],
+          [
+            "pc_tombstone_rate",
+            0.25762616657054804
+          ],
+          [
+            "account_ordinal",
+            0.15385040374454612
+          ],
+          [
+            "medium_tier_share",
+            0.1490659208492734
+          ],
+          [
+            "coappear_degree",
+            0.12549478307196815
+          ],
+          [
+            "pc_pct_toplevel",
+            0.09272104707551435
+          ],
+          [
+            "coappear_hhi",
+            0.0908055440323539
+          ],
+          [
+            "controversiality_rate",
+            0.08361054963252768
+          ],
+          [
+            "comments_per_day_observed",
+            0.08141099962098444
+          ]
+        ]
+      },
+      "within_kumar_gated_expanded": true
+    },
+    "automod_filtered": {
+      "n_population": 45861,
+      "n_positives": 4395,
+      "positive_rate": 0.0958330607705894,
+      "rung1_base": 0.8128232338272177,
+      "rung1_expanded": 0.8112653145055119,
+      "gated_n_population": 11438,
+      "gated_n_positives": 1516,
+      "rung4_gated_base": 0.7852899161539533,
+      "rung4_gated_expanded": 0.7853805108490429,
+      "leakage_recheck_correlations": {
+        "domain_hhi_vs_removal_rate": 0.007570648979544495,
+        "karma_extremeness_x_reception_spread_vs_removal_rate": -0.019479743386354813,
+        "bot_rate_x_coappear_degree_vs_removal_rate": -0.022704858030126614
+      },
+      "shap": {
+        "family": {
+          "post_context": 1.4028469336577838,
+          "provenance_age": 0.6007348578751945,
+          "reception": 0.48328595969032595,
+          "tier1": 0.4754147048200361,
+          "footprint": 0.4646636471405299,
+          "bot_marker_extremeness": 0.2965247389558661,
+          "engagement_pattern": 0.23976522710976816,
+          "tier3": 0.14294341008928996,
+          "timing_tier2": 0.084345664860242,
+          "tier2": 0.013647170018482948
+        },
+        "top_features": [
+          [
+            "mean_post_score",
+            0.37173291266204517
+          ],
+          [
+            "observed_span_days",
+            0.34240154291052655
+          ],
+          [
+            "pc_removed_comment_rate",
+            0.2902806209859476
+          ],
+          [
+            "high_tier_share",
+            0.28130975688878745
+          ],
+          [
+            "karma_extremeness",
+            0.23153341084450155
+          ],
+          [
+            "posts_per_day_since_first_seen",
+            0.2120022239670013
+          ],
+          [
+            "pc_log_subscribers",
+            0.19319020073333834
+          ],
+          [
+            "comment_post_ratio",
+            0.18785014162088204
+          ],
+          [
+            "pc_reply_reciprocity",
+            0.17166215935337462
+          ],
+          [
+            "low_tier_share",
+            0.16206567248324757
+          ]
+        ]
+      },
+      "within_kumar_gated_expanded": true
+    },
+    "moderator_removed": {
+      "n_population": 45861,
+      "n_positives": 4970,
+      "positive_rate": 0.10837094699199756,
+      "rung1_base": 0.7316636017223391,
+      "rung1_expanded": 0.7322649968924106,
+      "gated_n_population": 11438,
+      "gated_n_positives": 1784,
+      "rung4_gated_base": 0.7183016716963528,
+      "rung4_gated_expanded": 0.7197986776843769,
+      "leakage_recheck_correlations": {
+        "domain_hhi_vs_removal_rate": 0.007570648979544495,
+        "karma_extremeness_x_reception_spread_vs_removal_rate": -0.019479743386354813,
+        "bot_rate_x_coappear_degree_vs_removal_rate": -0.022704858030126614
+      },
+      "shap": {
+        "family": {
+          "post_context": 1.3279697192453563,
+          "provenance_age": 0.6236862988611396,
+          "tier1": 0.4494814173735089,
+          "engagement_pattern": 0.3134490279907689,
+          "footprint": 0.25180191598764207,
+          "reception": 0.1418618899273809,
+          "bot_marker_extremeness": 0.09344247723702241,
+          "other": 0.08552712920473304,
+          "tier3": 0.05197284881010922
+        },
+        "top_features": [
+          [
+            "posts_per_day_since_first_seen",
+            0.4387455150300128
+          ],
+          [
+            "pc_contested_share",
+            0.24522571558797707
+          ],
+          [
+            "own_post_reply_rate",
+            0.2304014475255201
+          ],
+          [
+            "vs_mode_posts",
+            0.18300421902333977
+          ],
+          [
+            "pc_num_crossposts",
+            0.18286669712101314
+          ],
+          [
+            "pc_tombstone_rate",
+            0.17394304726125123
+          ],
+          [
+            "sample_score_per_day_observed",
+            0.1393066233262676
+          ],
+          [
+            "outsider_influx_share",
+            0.13682236176960874
+          ],
+          [
+            "pc_n_unique_commenters",
+            0.13409271615789092
+          ],
+          [
+            "pc_removed_comment_rate_max",
+            0.12969440958258546
+          ]
+        ]
+      },
+      "within_kumar_gated_expanded": true
+    }
+  },
+  "meta": {
+    "n_accounts": 347886,
+    "n_post_authors": 55688,
+    "n_domain_hhi_defined": 45861,
+    "activity_gini_redundancy_check": {
+      "n_posts": 120594,
+      "median": 0.0,
+      "p75": 0.058333333333333334,
+      "max": 0.17156862745098037,
+      "corr_vs_contested_share": 0.047362066083679585,
+      "corr_vs_n_unique_commenters": -0.05014265974252945,
+      "verdict": "rejected: near-degenerate distribution (median 0), substantively redundant with existing repeat_engagement_rate; not correlation-redundant with contested_share/n_unique_commenters but not worth a 89th candidate column for this little variance"
+    },
+    "flair_diversity_feasibility_check": {
+      "n_distinct_flairs": 1406,
+      "coverage": "120532/127961",
+      "top10_sample": [
+        "Discussion",
+        "Discuss",
+        "News",
+        "General",
+        "Non-Political",
+        "Meme",
+        "Rant",
+        "Relationships",
+        "Politics",
+        "Trending"
+      ],
+      "verdict": "rejected: 1,406 distinct free-text values, heavy per-subreddit string fragmentation of the same semantic categories (Discussion/Discuss/Discussions all separately present in the top 10) -- no defensible entropy encoding without semantic clustering, which is out of scope for this tier"
+    },
+    "interactions_built": [
+      "karma_extremeness_x_reception_spread",
+      "bot_rate_x_coappear_degree"
+    ],
+    "interaction_rejected": "removal_rate x n_comments_sample -- would reintroduce a hard-excluded removal-derived feature via the back door; an interaction term does not launder Sec 8 item 1's exclusion"
+  }
+}
