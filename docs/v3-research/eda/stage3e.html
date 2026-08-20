@@ -1,0 +1,127 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>V3 Stage 3e — Tier 3 feature lap</title>
+<style>
+  body { font-family: -apple-system, Helvetica, Arial, sans-serif; max-width: 1100px; margin: 2rem auto; padding: 0 1rem; color: #1a1a1a; line-height: 1.5; }
+  h1 { font-size: 1.5rem; }
+  h2 { font-size: 1.15rem; margin-top: 2.5rem; border-bottom: 1px solid #ddd; padding-bottom: .3rem; }
+  h4 { margin-bottom: .3rem; }
+  table { border-collapse: collapse; width: 100%; font-size: .85rem; margin: 1rem 0; }
+  th, td { border: 1px solid #ddd; padding: .4rem .5rem; text-align: left; vertical-align: top; }
+  th { background: #f5f5f5; }
+  code { background: #f0f0f0; padding: .1rem .3rem; border-radius: 3px; font-size: .85em; }
+  .ok { color: #0a7a2a; font-weight: 600; }
+  .warn { color: #b34700; font-weight: 600; }
+  .pop { font-size: .75rem; color: #666; font-weight: normal; }
+  .muted { color: #888; }
+  .shap-block { margin-bottom: 1.5rem; }
+  .shap-cols { display: flex; gap: 2rem; }
+  .shap-cols > div { flex: 1; }
+  .shap-cols ul { font-size: .8rem; margin: .2rem 0; padding-left: 1.2rem; }
+  .note { background: #fff8e6; border: 1px solid #f0d878; border-radius: 4px; padding: .8rem 1rem; font-size: .9rem; }
+  .resolved { background: #eafaf0; border: 1px solid #8ecfa4; border-radius: 4px; padding: .8rem 1rem; font-size: .9rem; }
+  a { color: #1a5fb4; }
+  img { max-width: 100%; border: 1px solid #ddd; border-radius: 4px; }
+</style></head>
+<body>
+<h1>V3 Stage 3e — Tier 3 feature lap (null result)</h1>
+<p><a href="index.html">EDA</a> &middot; <a href="stage2.html">Stage 2</a> &middot; <a href="stage3.html">Stage 3</a> &middot; Stage 3e &middot; <a href="stage4.html">Stage 4</a> &middot; <a href="boundary_discovery.html">Boundary Discovery</a> &middot; <a href="multivariate_kde.html">Multivariate KDE</a></p>
+
+<div class="note">
+<strong>Tier 3 feature lap</strong> (<code>scripts/v3_stage3e_tier3_features.py</code>), following Stage 3b
+(real win, +0.025 to +0.133) and Tier 1/Tier 2 (both washes) in the progressively-smaller-to-null iteration
+series &mdash; see <code>V3_PLAN.md</code>'s START HERE for the full lap-by-lap narrative. "base" = the
+volume-gated (n&ge;10) rung-4 model without Tier 3 features; "expanded" = with two engineered interaction
+terms added. On the volume-gated population only (per the adopted volume-gating discipline, not
+leave-one-out).
+</div>
+
+<h2>Candidate features considered and rejected before build</h2>
+<table>
+<tr><th>candidate</th><th>verdict</th><th>detail</th></tr>
+<tr><td>activity_gini</td><td class="warn">rejected</td><td>n_posts=120,594, median=0.0,
+p75=0.0583, max=0.1716 &mdash; rejected: near-degenerate distribution (median 0), substantively redundant with existing repeat_engagement_rate; not correlation-redundant with contested_share/n_unique_commenters but not worth a 89th candidate column for this little variance</td></tr>
+<tr><td>flair_diversity</td><td class="warn">rejected</td><td>1,406 distinct values,
+coverage 120532/127961 &mdash; rejected: 1,406 distinct free-text values, heavy per-subreddit string fragmentation of the same semantic categories (Discussion/Discuss/Discussions all separately present in the top 10) -- no defensible entropy encoding without semantic clustering, which is out of scope for this tier</td></tr>
+</table>
+<p class="muted">Interaction terms built: <code>karma_extremeness_x_reception_spread</code>, <code>bot_rate_x_coappear_degree</code>.
+Rejected: removal_rate x n_comments_sample -- would reintroduce a hard-excluded removal-derived feature via the back door; an interaction term does not launder Sec 8 item 1's exclusion</p>
+
+<h2>Rung-4 (gated) AUC: base vs. Tier 3 expanded &mdash; 347,886 accounts, 55,688 post authors</h2>
+<table>
+<tr><th>channel</th><th>base</th><th>expanded</th><th>&Delta;</th><th>within Kumar ceiling</th>
+<th>interaction-feature vs. removal_rate correlation (leakage recheck)</th></tr>
+<tr>
+  <td><code>admin_removal</code><div class="pop">n=34,301, pos=1,000</div></td>
+  <td>0.770</td>
+  <td>0.766</td>
+  <td>-0.004</td>
+  <td><span class="ok">within 0.65-0.80</span></td>
+  <td><ul style="margin:0;padding-left:1.1rem;font-size:.78rem"><li><code>domain_hhi_vs_removal_rate</code>: +0.0076</li><li><code>karma_extremeness_x_reception_spread_vs_removal_rate</code>: -0.0325</li><li><code>bot_rate_x_coappear_degree_vs_removal_rate</code>: -0.0041</li></ul></td>
+</tr><tr>
+  <td><code>self_deletion</code><div class="pop">n=34,301, pos=14,537</div></td>
+  <td>0.756</td>
+  <td>0.757</td>
+  <td>+0.002</td>
+  <td><span class="ok">within 0.65-0.80</span></td>
+  <td><ul style="margin:0;padding-left:1.1rem;font-size:.78rem"><li><code>domain_hhi_vs_removal_rate</code>: +0.0076</li><li><code>karma_extremeness_x_reception_spread_vs_removal_rate</code>: -0.0325</li><li><code>bot_rate_x_coappear_degree_vs_removal_rate</code>: -0.0041</li></ul></td>
+</tr><tr>
+  <td><code>comment_removed_ambiguous</code><div class="pop">n=34,301, pos=8,740</div></td>
+  <td>0.773</td>
+  <td>0.773</td>
+  <td>+0.000</td>
+  <td><span class="ok">within 0.65-0.80</span></td>
+  <td><ul style="margin:0;padding-left:1.1rem;font-size:.78rem"><li><code>domain_hhi_vs_removal_rate</code>: +0.0076</li><li><code>karma_extremeness_x_reception_spread_vs_removal_rate</code>: -0.0325</li><li><code>bot_rate_x_coappear_degree_vs_removal_rate</code>: -0.0041</li></ul></td>
+</tr><tr>
+  <td><code>automod_filtered</code><div class="pop">n=11,438, pos=1,516</div></td>
+  <td>0.785</td>
+  <td>0.785</td>
+  <td>+0.000</td>
+  <td><span class="ok">within 0.65-0.80</span></td>
+  <td><ul style="margin:0;padding-left:1.1rem;font-size:.78rem"><li><code>domain_hhi_vs_removal_rate</code>: +0.0076</li><li><code>karma_extremeness_x_reception_spread_vs_removal_rate</code>: -0.0195</li><li><code>bot_rate_x_coappear_degree_vs_removal_rate</code>: -0.0227</li></ul></td>
+</tr><tr>
+  <td><code>moderator_removed</code><div class="pop">n=11,438, pos=1,784</div></td>
+  <td>0.718</td>
+  <td>0.720</td>
+  <td>+0.001</td>
+  <td><span class="ok">within 0.65-0.80</span></td>
+  <td><ul style="margin:0;padding-left:1.1rem;font-size:.78rem"><li><code>domain_hhi_vs_removal_rate</code>: +0.0076</li><li><code>karma_extremeness_x_reception_spread_vs_removal_rate</code>: -0.0195</li><li><code>bot_rate_x_coappear_degree_vs_removal_rate</code>: -0.0227</li></ul></td>
+</tr>
+</table>
+<p class="muted">All deltas fall inside the ~0.001&ndash;0.003 noise floor established via
+reproduce-twice-and-diff &mdash; consistent with the START HERE verdict that Tier 3 is a null result, and
+why a Tier 4 was not launched.</p>
+
+<h2>TreeSHAP (rung-4 gated-expanded models, family-level)</h2>
+<div class="shap-block">
+  <h4>admin_removal</h4>
+  <div class="shap-cols">
+    <div><strong>By family (mean |SHAP|)</strong><ul><li><code>post_context</code>: 1.5053</li><li><code>reception</code>: 0.8133</li><li><code>tier1</code>: 0.7951</li><li><code>footprint</code>: 0.3255</li><li><code>provenance_age</code>: 0.2442</li><li><code>tier2</code>: 0.1591</li><li><code>bot_marker_extremeness</code>: 0.1030</li><li><code>engagement_pattern</code>: 0.0615</li></ul></div>
+    <div><strong>Top individual features</strong><ul><li><code>mean_post_score</code>: 0.3969</li><li><code>score_per_word</code>: 0.3793</li><li><code>pc_num_crossposts</code>: 0.3199</li><li><code>pc_comment_score_gini</code>: 0.2362</li><li><code>medium_tier_share</code>: 0.2284</li><li><code>pc_log_subscribers</code>: 0.1951</li><li><code>posts_per_day_since_first_seen</code>: 0.1894</li><li><code>mean_depth</code>: 0.1814</li><li><code>coappear_degree</code>: 0.1591</li><li><code>score_stddev</code>: 0.1491</li></ul></div>
+  </div>
+</div><div class="shap-block">
+  <h4>self_deletion</h4>
+  <div class="shap-cols">
+    <div><strong>By family (mean |SHAP|)</strong><ul><li><code>post_context</code>: 0.7992</li><li><code>provenance_age</code>: 0.7153</li><li><code>tier1</code>: 0.2553</li><li><code>reception</code>: 0.2266</li><li><code>tier2</code>: 0.2002</li><li><code>engagement_pattern</code>: 0.1189</li><li><code>other</code>: 0.0783</li><li><code>bot_marker_extremeness</code>: 0.0557</li><li><code>score</code>: 0.0463</li><li><code>tier3</code>: 0.0222</li><li><code>footprint</code>: 0.0174</li></ul></div>
+    <div><strong>Top individual features</strong><ul><li><code>pc_removed_comment_rate</code>: 0.3308</li><li><code>pc_removed_comment_rate_max</code>: 0.2839</li><li><code>posts_per_day_since_first_seen</code>: 0.2527</li><li><code>account_ordinal</code>: 0.2105</li><li><code>coappear_hhi</code>: 0.1469</li><li><code>pc_tombstone_rate</code>: 0.1461</li><li><code>comments_per_day_observed</code>: 0.1411</li><li><code>vs_mode_comments</code>: 0.1066</li><li><code>outsider_influx_share</code>: 0.0934</li><li><code>worst_sub_mean_score</code>: 0.0892</li></ul></div>
+  </div>
+</div><div class="shap-block">
+  <h4>comment_removed_ambiguous</h4>
+  <div class="shap-cols">
+    <div><strong>By family (mean |SHAP|)</strong><ul><li><code>post_context</code>: 1.2723</li><li><code>provenance_age</code>: 0.3602</li><li><code>reception</code>: 0.2691</li><li><code>tier2</code>: 0.2163</li><li><code>footprint</code>: 0.2162</li><li><code>tier1</code>: 0.0952</li><li><code>bot_marker_extremeness</code>: 0.0660</li><li><code>timing_tier2</code>: 0.0350</li><li><code>score</code>: 0.0253</li><li><code>tier3</code>: 0.0231</li><li><code>other</code>: 0.0216</li><li><code>username_morphology</code>: 0.0208</li><li><code>engagement_pattern</code>: 0.0191</li></ul></div>
+    <div><strong>Top individual features</strong><ul><li><code>pc_removed_comment_rate</code>: 0.3942</li><li><code>pc_removed_comment_rate_max</code>: 0.3838</li><li><code>pc_tombstone_rate</code>: 0.2576</li><li><code>account_ordinal</code>: 0.1539</li><li><code>medium_tier_share</code>: 0.1491</li><li><code>coappear_degree</code>: 0.1255</li><li><code>pc_pct_toplevel</code>: 0.0927</li><li><code>coappear_hhi</code>: 0.0908</li><li><code>controversiality_rate</code>: 0.0836</li><li><code>comments_per_day_observed</code>: 0.0814</li></ul></div>
+  </div>
+</div><div class="shap-block">
+  <h4>automod_filtered</h4>
+  <div class="shap-cols">
+    <div><strong>By family (mean |SHAP|)</strong><ul><li><code>post_context</code>: 1.4028</li><li><code>provenance_age</code>: 0.6007</li><li><code>reception</code>: 0.4833</li><li><code>tier1</code>: 0.4754</li><li><code>footprint</code>: 0.4647</li><li><code>bot_marker_extremeness</code>: 0.2965</li><li><code>engagement_pattern</code>: 0.2398</li><li><code>tier3</code>: 0.1429</li><li><code>timing_tier2</code>: 0.0843</li><li><code>tier2</code>: 0.0136</li></ul></div>
+    <div><strong>Top individual features</strong><ul><li><code>mean_post_score</code>: 0.3717</li><li><code>observed_span_days</code>: 0.3424</li><li><code>pc_removed_comment_rate</code>: 0.2903</li><li><code>high_tier_share</code>: 0.2813</li><li><code>karma_extremeness</code>: 0.2315</li><li><code>posts_per_day_since_first_seen</code>: 0.2120</li><li><code>pc_log_subscribers</code>: 0.1932</li><li><code>comment_post_ratio</code>: 0.1879</li><li><code>pc_reply_reciprocity</code>: 0.1717</li><li><code>low_tier_share</code>: 0.1621</li></ul></div>
+  </div>
+</div><div class="shap-block">
+  <h4>moderator_removed</h4>
+  <div class="shap-cols">
+    <div><strong>By family (mean |SHAP|)</strong><ul><li><code>post_context</code>: 1.3280</li><li><code>provenance_age</code>: 0.6237</li><li><code>tier1</code>: 0.4495</li><li><code>engagement_pattern</code>: 0.3134</li><li><code>footprint</code>: 0.2518</li><li><code>reception</code>: 0.1419</li><li><code>bot_marker_extremeness</code>: 0.0934</li><li><code>other</code>: 0.0855</li><li><code>tier3</code>: 0.0520</li></ul></div>
+    <div><strong>Top individual features</strong><ul><li><code>posts_per_day_since_first_seen</code>: 0.4387</li><li><code>pc_contested_share</code>: 0.2452</li><li><code>own_post_reply_rate</code>: 0.2304</li><li><code>vs_mode_posts</code>: 0.1830</li><li><code>pc_num_crossposts</code>: 0.1829</li><li><code>pc_tombstone_rate</code>: 0.1739</li><li><code>sample_score_per_day_observed</code>: 0.1393</li><li><code>outsider_influx_share</code>: 0.1368</li><li><code>pc_n_unique_commenters</code>: 0.1341</li><li><code>pc_removed_comment_rate_max</code>: 0.1297</li></ul></div>
+  </div>
+</div>
+
+</body></html>

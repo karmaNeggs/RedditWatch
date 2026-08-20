@@ -1,0 +1,85 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>V3 Boundary Discovery — univariate AND-rule</title>
+<style>
+  body { font-family: -apple-system, Helvetica, Arial, sans-serif; max-width: 1100px; margin: 2rem auto; padding: 0 1rem; color: #1a1a1a; line-height: 1.5; }
+  h1 { font-size: 1.5rem; }
+  h2 { font-size: 1.15rem; margin-top: 2.5rem; border-bottom: 1px solid #ddd; padding-bottom: .3rem; }
+  h4 { margin-bottom: .3rem; }
+  table { border-collapse: collapse; width: 100%; font-size: .85rem; margin: 1rem 0; }
+  th, td { border: 1px solid #ddd; padding: .4rem .5rem; text-align: left; vertical-align: top; }
+  th { background: #f5f5f5; }
+  code { background: #f0f0f0; padding: .1rem .3rem; border-radius: 3px; font-size: .85em; }
+  .ok { color: #0a7a2a; font-weight: 600; }
+  .warn { color: #b34700; font-weight: 600; }
+  .pop { font-size: .75rem; color: #666; font-weight: normal; }
+  .muted { color: #888; }
+  .shap-block { margin-bottom: 1.5rem; }
+  .shap-cols { display: flex; gap: 2rem; }
+  .shap-cols > div { flex: 1; }
+  .shap-cols ul { font-size: .8rem; margin: .2rem 0; padding-left: 1.2rem; }
+  .note { background: #fff8e6; border: 1px solid #f0d878; border-radius: 4px; padding: .8rem 1rem; font-size: .9rem; }
+  .resolved { background: #eafaf0; border: 1px solid #8ecfa4; border-radius: 4px; padding: .8rem 1rem; font-size: .9rem; }
+  a { color: #1a5fb4; }
+  img { max-width: 100%; border: 1px solid #ddd; border-radius: 4px; }
+</style></head>
+<body>
+<h1>V3 Cross-Sample Boundary Discovery — univariate AND-rule</h1>
+<p><a href="index.html">EDA</a> &middot; <a href="stage2.html">Stage 2</a> &middot; <a href="stage3.html">Stage 3</a> &middot; <a href="stage3e.html">Stage 3e</a> &middot; <a href="stage4.html">Stage 4</a> &middot; Boundary Discovery &middot; <a href="multivariate_kde.html">Multivariate KDE</a></p>
+
+<div class="note">
+<strong>User-directed alternative to Stage 3.</strong> Stage 3's own finding was that removal-based
+"labels" don't agree with each other (e.g. <code>admin_removal</code>&harr;<code>self_deletion</code>
+account overlap only 39.9%), so treating any single moderation action as ground truth for "bot behavior"
+is shaky. Instead: screen every candidate metric for a REPLICATING bimodal split across two independent
+samples (not just once, on the whole corpus), then build a conjunctive AND-rule &mdash; an account is
+flagged only if it lands on the "bot side" of <em>every</em> standout metric simultaneously. Removal/
+deletion/edit-derived columns are excluded from the candidate pool entirely, not just leakage-checked;
+<code>removal_rate</code> is checked against the finalized rule only as an external plausibility read,
+strictly after the rule is fixed.
+</div>
+<div class="resolved">
+<strong>Manually verified 2026-08-20 &mdash; documented dead end.</strong> Real, live comment history
+(25 most recent comments each) was pulled for a 36-account seeded sample spanning the AND-rule &cap;
+cluster-15 overlap and each method's exclusive flags. Zero of 900 comments showed cross-account
+templating, spam/promo content, or coordination &mdash; the group reads as casual, low-effort/reactive
+human Redditors (gif reactions, one-word replies, meme-subreddit banter), not bots. Full writeup in
+<code>V3_PLAN.md</code>'s START HERE section; reproducible via <code>output/v3/flagged_accounts_part1.csv</code>.
+</div>
+
+<h2>3-way stratified split balance (64 candidates tested, 9 standout)</h2>
+<table>
+<tr><th>part</th><th>n</th><th>high_tier_share mean</th><th>medium_tier_share mean</th><th>days_since_first_seen mean</th></tr>
+<tr><td>part1</td><td>115,950</td><td>0.1682</td><td>0.3267</td><td>406.3</td></tr><tr><td>part2</td><td>115,950</td><td>0.1679</td><td>0.3272</td><td>405.4</td></tr><tr><td>part3</td><td>115,986</td><td>0.1676</td><td>0.3265</td><td>406.3</td></tr>
+</table>
+
+<h2>Standout metrics (REAL CANDIDATE in both Part1 and Part2 independently)</h2>
+<table>
+<tr><th>feature</th><th>transform</th><th>direction</th><th>boundary (Part1)</th><th>separation (P1/P2)</th><th>tier/era robustness</th></tr>
+<tr><td><code>low_tier_share</code></td><td>none</td><td>minority-default</td><td>0.1927</td><td>3.20 / 3.22</td><td>5/5</td></tr><tr><td><code>subreddit_entropy</code></td><td>none</td><td>minority-default</td><td>0.789</td><td>3.55 / 3.53</td><td>5/5</td></tr><tr><td><code>reception_spread</code></td><td>log1p</td><td>high</td><td>9.821</td><td>7.95 / 7.93</td><td>5/5</td></tr><tr><td><code>account_ordinal</code></td><td>log1p</td><td>high</td><td>1.005e+13</td><td>5.96 / 6.23</td><td>4/5</td></tr><tr><td><code>n_own_posts_with_comments</code></td><td>log1p</td><td>minority-default</td><td>1.593</td><td>4.24 / 4.01</td><td>4/5</td></tr><tr><td><code>karma_extremeness</code></td><td>log1p</td><td>high</td><td>42.07</td><td>3.29 / 3.25</td><td>5/5</td></tr><tr><td><code>outsider_influx_share</code></td><td>none</td><td>minority-default</td><td>0.4577</td><td>1.83 / 1.89</td><td>3/5</td></tr><tr><td><code>coappear_hhi</code></td><td>none</td><td>high</td><td>0.07446</td><td>3.19 / 3.83</td><td>5/5</td></tr><tr><td><code>domain_hhi</code></td><td>none</td><td>high</td><td>0.7488</td><td>5.80 / 7.08</td><td>5/5</td></tr>
+</table>
+<p class="muted">Robustness = how many of 5 slices (high/medium/low-tier, older/newer half) independently
+replicate the same bimodal verdict.</p>
+
+<h2>Incremental AND-rule: Part1-fit thresholds validated on held-out Part3</h2>
+<table>
+<tr><th>k</th><th>+feature</th><th>Part1 (own threshold)</th><th>Part3 (holdout, Part1 threshold)</th></tr>
+<tr><td>1</td><td><code>reception_spread</code></td><td>35,960</td><td>36,275 (31.2753%)</td></tr><tr><td>2</td><td><code>domain_hhi</code></td><td>5,263</td><td>5,308 (4.5764%)</td></tr><tr><td>3</td><td><code>account_ordinal</code></td><td>2,756</td><td>2,817 (2.4287%)</td></tr><tr><td>4</td><td><code>n_own_posts_with_comments</code></td><td>638</td><td>613 (0.5285%)</td></tr><tr><td>5</td><td><code>subreddit_entropy</code></td><td>550</td><td>530 (0.4570%)</td></tr><tr><td>6</td><td><code>coappear_hhi</code></td><td>0</td><td>0 (0.0000%)</td></tr><tr><td>7</td><td><code>karma_extremeness</code></td><td>0</td><td>0 (0.0000%)</td></tr><tr><td>8</td><td><code>low_tier_share</code></td><td>0</td><td>0 (0.0000%)</td></tr><tr><td>9</td><td><code>outsider_influx_share</code></td><td>0</td><td>0 (0.0000%)</td></tr>
+</table>
+<p class="muted">The rule collapses to 0 by k=6 &mdash; the chosen cutoff (k=5) is the last
+non-collapsed prefix, not the full 9-condition AND. Chosen features:
+<code>reception_spread</code>, <code>domain_hhi</code>, <code>account_ordinal</code>, <code>n_own_posts_with_comments</code>, <code>subreddit_entropy</code>.</p>
+
+<h2>External plausibility check (removal_rate) &mdash; computed strictly after the rule was fixed</h2>
+<table>
+<tr><th>quantity</th><th>flagged</th><th>population</th><th>ratio</th></tr>
+<tr><td>removal_rate</td><td>0.0583</td><td>0.0696</td>
+<td>0.84&times;</td></tr>
+<tr><td>deleted_later_rate</td><td>0.0525</td><td>0.0548</td>
+<td>0.96&times;</td></tr>
+</table>
+<p class="muted">n_flagged: part1=550, part2=510,
+part3=530, total=1,590. The flagged group's removal_rate sits
+<em>below</em> population baseline &mdash; not obviously bot-like by this external check alone, which is
+exactly why the manual read above was the necessary next step.</p>
+
+</body></html>
