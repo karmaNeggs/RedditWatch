@@ -33,3 +33,6 @@ Thumbs.db
 # V3 analysis layer: fully rebuilt from data/v3/raw/ via scripts/v3_stage0_build.py
 # in ~6s -- committing it would bloat git history on every rebuild for no benefit.
 data/v3/analysis/
+
+# Session-local lock file, not project state -- accidentally committed once (May 2026).
+.claude/scheduled_tasks.lock
