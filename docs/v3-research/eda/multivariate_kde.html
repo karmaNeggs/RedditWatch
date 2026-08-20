@@ -1,0 +1,79 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>V3 Multivariate KDE — joint-density clustering</title>
+<style>
+  body { font-family: -apple-system, Helvetica, Arial, sans-serif; max-width: 1100px; margin: 2rem auto; padding: 0 1rem; color: #1a1a1a; line-height: 1.5; }
+  h1 { font-size: 1.5rem; }
+  h2 { font-size: 1.15rem; margin-top: 2.5rem; border-bottom: 1px solid #ddd; padding-bottom: .3rem; }
+  h4 { margin-bottom: .3rem; }
+  table { border-collapse: collapse; width: 100%; font-size: .85rem; margin: 1rem 0; }
+  th, td { border: 1px solid #ddd; padding: .4rem .5rem; text-align: left; vertical-align: top; }
+  th { background: #f5f5f5; }
+  code { background: #f0f0f0; padding: .1rem .3rem; border-radius: 3px; font-size: .85em; }
+  .ok { color: #0a7a2a; font-weight: 600; }
+  .warn { color: #b34700; font-weight: 600; }
+  .pop { font-size: .75rem; color: #666; font-weight: normal; }
+  .muted { color: #888; }
+  .shap-block { margin-bottom: 1.5rem; }
+  .shap-cols { display: flex; gap: 2rem; }
+  .shap-cols > div { flex: 1; }
+  .shap-cols ul { font-size: .8rem; margin: .2rem 0; padding-left: 1.2rem; }
+  .note { background: #fff8e6; border: 1px solid #f0d878; border-radius: 4px; padding: .8rem 1rem; font-size: .9rem; }
+  .resolved { background: #eafaf0; border: 1px solid #8ecfa4; border-radius: 4px; padding: .8rem 1rem; font-size: .9rem; }
+  a { color: #1a5fb4; }
+  img { max-width: 100%; border: 1px solid #ddd; border-radius: 4px; }
+</style></head>
+<body>
+<h1>V3 Multivariate KDE — joint-density clustering + dye overlay</h1>
+<p><a href="index.html">EDA</a> &middot; <a href="stage2.html">Stage 2</a> &middot; <a href="stage3.html">Stage 3</a> &middot; <a href="stage3e.html">Stage 3e</a> &middot; <a href="stage4.html">Stage 4</a> &middot; <a href="boundary_discovery.html">Boundary Discovery</a> &middot; Multivariate KDE</p>
+
+<div class="note">
+<strong>Follow-up to boundary discovery.</strong> Per-metric bimodality (boundary_discovery.html) only
+tests ONE feature at a time. This round finds the real, joint shape of the data in higher dimensions:
+PCA reduces the 64-feature candidate space to 12
+components (52.4% cumulative variance &mdash; a diffuse space, structure isn't
+fully settled), then mean-shift (KDE-mode-climbing) clusters in that reduced space, cross-checked against
+HDBSCAN. Discovered clusters are "dyed" with suspected-bot markers (including <code>removal_rate</code>,
+excluded from construction throughout) to see where those markers concentrate.
+</div>
+<div class="resolved">
+<strong>Manually verified 2026-08-20 &mdash; documented dead end.</strong> Real, live comment history
+(25 most recent comments each) was pulled for a 36-account seeded sample spanning the AND-rule &cap;
+cluster-15 overlap and each method's exclusive flags. Zero of 900 comments showed cross-account
+templating, spam/promo content, or coordination &mdash; the group reads as casual, low-effort/reactive
+human Redditors (gif reactions, one-word replies, meme-subreddit banter), not bots. Full writeup in
+<code>V3_PLAN.md</code>'s START HERE section; reproducible via <code>output/v3/flagged_accounts_part1.csv</code>.
+</div>
+
+<h2>PCA top loadings (PC1&ndash;PC5)</h2>
+<div class="shap-cols"><div><strong>PC1</strong> (var=0.135)<ul><li><code>coappear_degree</code>: +0.32</li><li><code>n_comments_sample</code>: +0.32</li><li><code>n_distinct_posts_ctx</code>: +0.32</li><li><code>observed_span_days</code>: +0.29</li><li><code>subreddit_entropy</code>: +0.28</li><li><code>reception_spread</code>: +0.28</li></ul></div><div><strong>PC2</strong> (var=0.061)<ul><li><code>pc_n_comments_observed</code>: +0.37</li><li><code>pc_n_unique_commenters</code>: +0.34</li><li><code>low_tier_share</code>: -0.28</li><li><code>n_low_tier_subs</code>: -0.22</li><li><code>pc_log_subscribers</code>: +0.22</li><li><code>high_tier_share</code>: +0.21</li></ul></div><div><strong>PC3</strong> (var=0.057)<ul><li><code>n_posts_sample</code>: +0.39</li><li><code>is_submitter_rate</code>: +0.35</li><li><code>n_own_posts_with_comments</code>: +0.32</li><li><code>n_threads_with_repeat</code>: +0.28</li><li><code>domain_hhi</code>: -0.27</li><li><code>repeat_engagement_rate</code>: +0.27</li></ul></div><div><strong>PC4</strong> (var=0.047)<ul><li><code>sample_score_per_day_observed</code>: +0.29</li><li><code>pc_upvote_ratio</code>: +0.29</li><li><code>pc_contested_share</code>: -0.29</li><li><code>score_per_word</code>: +0.24</li><li><code>pc_is_self_rate</code>: -0.24</li><li><code>mean_post_score</code>: +0.23</li></ul></div><div><strong>PC5</strong> (var=0.036)<ul><li><code>low_tier_share</code>: +0.42</li><li><code>medium_tier_share</code>: -0.39</li><li><code>pc_tombstone_rate</code>: -0.35</li><li><code>n_low_tier_subs</code>: +0.33</li><li><code>pc_tombstone_rate_max</code>: -0.27</li><li><code>pc_bot_comment_rate</code>: -0.25</li></ul></div></div>
+
+<h2>Clustering shape</h2>
+<p>mean-shift (bin_seeding, auto bandwidth) in retained PCA space, capped fit sample 40000, full-part nearest-center assignment. Part1: 28 modes.
+Part2 (independent refit): 32 modes. Mean-shift and
+HDBSCAN disagree on exact cluster count &mdash; the joint-density structure is real but not fully settled.</p>
+
+<h2>Dye overlay: removal-rate-enriched Part1 clusters (n&ge;20)</h2>
+<table>
+<tr><th>cluster</th><th>n</th><th>% of Part1</th><th>removal_rate ratio</th>
+<th>reception_spread ratio</th><th>botmarker_composite ratio</th></tr>
+<tr><td>24</td><td>57</td><td>0.0492%</td><td>12.46&times;</td><td>0.02&times;</td><td>1.97&times;</td></tr><tr><td>21</td><td>208</td><td>0.1794%</td><td>12.32&times;</td><td>0.08&times;</td><td>1.79&times;</td></tr><tr><td>27</td><td>51</td><td>0.0440%</td><td>7.89&times;</td><td>0.00&times;</td><td>1.22&times;</td></tr><tr><td>20</td><td>133</td><td>0.1147%</td><td>3.91&times;</td><td>1.27&times;</td><td>1.60&times;</td></tr><tr><td>22</td><td>289</td><td>0.2492%</td><td>2.80&times;</td><td>0.46&times;</td><td>1.23&times;</td></tr><tr><td>26</td><td>40</td><td>0.0345%</td><td>1.80&times;</td><td>0.00&times;</td><td>0.88&times;</td></tr><tr><td>19</td><td>36</td><td>0.0310%</td><td>1.72&times;</td><td>1.45&times;</td><td>1.51&times;</td></tr><tr><td>17</td><td>92</td><td>0.0793%</td><td>1.09&times;</td><td>1.25&times;</td><td>1.45&times;</td></tr><tr><td>15 &larr; overlaps AND-rule at 18&times;</td><td>1,116</td><td>0.9625%</td><td>0.71&times;</td><td>4.26&times;</td><td>1.77&times;</td></tr>
+</table>
+<p class="muted">Population baseline removal_rate = 0.0696.
+Top-5 enriched clusters replicate independently in Part2 too (see script log / JSON for the full Part2 table).</p>
+
+<h2>Overlap with the univariate round's ~550-account AND-rule group</h2>
+<p>Re-derived Part1 AND-rule flagged count: 550
+(reported: 550 &mdash; exact match, split is fully reproducible).</p>
+<table>
+<tr><th>cluster</th><th>share of AND-rule-flagged accounts</th><th>share of overall Part1</th></tr>
+<tr><td>0</td><td>74.00%</td><td>97.21%</td></tr><tr><td>15</td><td>17.45%</td><td>0.96%</td></tr><tr><td>3</td><td>1.82%</td><td>0.07%</td></tr><tr><td>20</td><td>1.27%</td><td>0.11%</td></tr><tr><td>23</td><td>1.09%</td><td>0.57%</td></tr><tr><td>17</td><td>1.09%</td><td>0.08%</td></tr><tr><td>8</td><td>0.91%</td><td>0.06%</td></tr><tr><td>1</td><td>0.91%</td><td>0.09%</td></tr><tr><td>22</td><td>0.55%</td><td>0.25%</td></tr><tr><td>11</td><td>0.36%</td><td>0.04%</td></tr><tr><td>10</td><td>0.18%</td><td>0.02%</td></tr><tr><td>13</td><td>0.18%</td><td>0.00%</td></tr><tr><td>4</td><td>0.18%</td><td>0.02%</td></tr>
+</table>
+<p class="muted">Cluster 15 holds 17.45% of the AND-rule-flagged group vs. 0.96% of the overall population
+&mdash; an 18&times; concentration. Two independently-built methods partially agree on the same subset of
+accounts, which is exactly why that overlap group was prioritized in the manual verification above.</p>
+
+<h2>Visual sanity checks</h2>
+<p><img src="multivariate_kde_clusters.png" alt="PC1 vs PC2 scatter, colored by cluster, Part1/Part2/Part3"></p>
+<p><img src="multivariate_kde_density.png" alt="KDE density contours, Part1 vs Part2"></p>
+
+</body></html>

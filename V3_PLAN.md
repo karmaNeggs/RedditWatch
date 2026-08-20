@@ -119,11 +119,12 @@ below from scratch, and don't re-litigate anything marked resolved.
    both run hot on removal_rate — check whether they share the same
    original-feature profile (not just both being removal-heavy by chance).
    Flagged by the fork that built it as the natural next statistical check.
-3. **Render the still-orphaned local pages** if a repo-local view is
-   wanted: `stage3e`, `stage4`, `boundary_discovery`, and
-   `multivariate_kde` all have data in their `docs/v3-research/eda/*.json`
-   files but no rendered HTML (`stage3b`–`3d` are covered by the Artifact
-   above; these four aren't).
+3. ~~**Render the still-orphaned local pages.**~~ **Done 2026-08-20.**
+   `stage4.html` already existed (this note was stale); added
+   `stage3e.html`, `boundary_discovery.html`, and `multivariate_kde.html`
+   in the same house style, linked from `index.html` and every other
+   page's nav. (`stage3b`–`3d` remain Artifact-only by design, not local
+   pages.)
 4. **If revisiting Stage 4**, don't restart from scratch — the null-model
    and co-appearance infrastructure is solid (four real bugs already found
    and fixed there too); the weak link was specifically label
