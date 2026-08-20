@@ -36,3 +36,9 @@ data/v3/analysis/
 
 # Session-local lock file, not project state -- accidentally committed once (May 2026).
 .claude/scheduled_tasks.lock
+
+# Raw scraped comment text tied to real usernames (manual-verification pulls) --
+# account-identifier CSVs like flagged_accounts_part1.csv are fine to commit
+# (matches existing output/v2/weak_label_sample.csv precedent), full comment
+# bodies are not.
+output/v3/flagged_account_samples.json

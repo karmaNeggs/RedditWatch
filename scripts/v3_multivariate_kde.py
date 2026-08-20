@@ -341,6 +341,23 @@ def main():
     overall_dist = pd.Series(labels1, index=idx1).value_counts(normalize=True).round(4).to_dict()
     log(f'  (for comparison, overall Part1 cluster shares: {overall_dist})')
 
+    # account-level export for manual verification (not previously persisted --
+    # everything above was aggregate-only). Cluster 15 is the ~18x-enriched
+    # cluster that overlaps the AND-rule group; dump author identities so a
+    # human can pull real threads/comments for both groups and the overlap.
+    out_dir = os.path.join(ROOT, 'output', 'v3')
+    os.makedirs(out_dir, exist_ok=True)
+    part1_export = pd.DataFrame({
+        'author': d.loc[idx1, 'author'].to_numpy(),
+        'cluster': labels1,
+        'and_rule_flagged': pd.Series(idx1, index=idx1).isin(prev_flagged_idx).to_numpy(),
+    })
+    export_path = os.path.join(out_dir, 'flagged_accounts_part1.csv')
+    part1_export.to_csv(export_path, index=False)
+    log(f'  wrote {export_path} (n={len(part1_export)}, cluster15={int((part1_export.cluster==15).sum())}, '
+        f'and_rule_flagged={int(part1_export.and_rule_flagged.sum())}, '
+        f'overlap={int(((part1_export.cluster==15)&part1_export.and_rule_flagged).sum())})')
+
     # ---- Step 4: visual output data ----
     log('=== Step 4: writing scatter/contour data + PNG sanity plots ===')
     rng = np.random.RandomState(2)

@@ -73,23 +73,47 @@ below from scratch, and don't re-litigate anything marked resolved.
      clustering in the reduced space. Mean-shift and HDBSCAN disagree on
      cluster count (structure isn't settled). But small clusters, found
      independently in each half of the split, show **8–12× removal-rate
-     enrichment**, and one specific cluster is **18× concentrated** with
-     the univariate round's flagged group — two independent methods
-     partially agreeing. Likely reading: the univariate group's "not
-     bot-like" verdict may have been diluted by pooling a real enriched
-     subset against a majority that isn't.
-  **Neither round has had a human look at the actual flagged accounts yet**
-  — that's the single most valuable, concrete next action (§ below).
+     enrichment**, and one specific cluster (cluster 15, n=1,116 in Part1)
+     is **18× concentrated** with the univariate round's flagged group —
+     two independent methods partially agreeing.
+
+  **RESOLVED 2026-08-20, documented dead end — manual read confirms the
+  group is not bot-like.** Pulled real, live comment history (25 most
+  recent comments each, via the Arctic Shift API — same source
+  `scripts/v3_collect.py` uses) for a seeded random sample of 36 accounts:
+  20 from the AND-rule ∩ cluster-15 overlap (the strongest-signal group,
+  96 accounts total), 8 AND-rule-only, 8 cluster-15-only. Zero of 900
+  comments read as bot-like on any axis checked: no cross-account
+  templating (checked every body for exact duplicates across all 36
+  accounts — none), no spam/promo/scam links or phrasing (regex swept for
+  discount/coupon/DM-me/telegram/bit.ly-style phrasing — the 3 hits were
+  all incidental human usage, e.g. "bought virtus with great discounts"),
+  no self-templating beyond one account copy-pasting the same 3-sentence
+  political opinion into 3 different comments on one thread (a known
+  manual troll pattern, not evidence of automation). What the accounts
+  actually look like, read directly: young/casual India-focused Redditors
+  — heavy giphy-gif reactions, one-word replies, Hinglish slang, genuine
+  community-specific banter (exam-prep subs, cricket, Bollywood gossip,
+  gaming, fashion) — i.e. the AND-rule + PCA cluster is most likely
+  picking up a **low-effort/reactive commenting style**, not coordinated
+  or automated behavior. This lines up with the univariate round's own
+  external check above (removal_rate 0.84× population, not enriched).
+  Reproduction: account-level export added to `v3_multivariate_kde.py`
+  (writes `output/v3/flagged_accounts_part1.csv`, all 115,950 Part1
+  accounts with `cluster` + `and_rule_flagged` columns — regenerating it
+  reproduces the exact same 550/1,116/96 counts, confirmed bit-identical
+  against the already-committed `docs/v3-research/eda/*.json` on rerun);
+  fetch script and raw pulled comments: `output/v3/flagged_account_samples.json`
+  (not committed — real usernames + comment text, kept local).
+  **Conclusion: this thread is closed as a negative result, not reopened
+  without a new signal — don't re-run this verification on the same
+  AND-rule/cluster-15 output expecting a different answer.**
 
 ### Next actions, ranked
 
-1. **Open the accounts.** Pull real threads/comments for (a) the univariate
-   AND-rule's ~550 flagged accounts and (b) the multivariate KDE's
-   cluster-15 accounts (the ones overlapping the AND-rule group at 18×) and
-   actually read them — same "traceable to named accounts and threads a
-   human can open and check" standard as §1's own objective. This is the
-   step that turns "promising lead" into either a validated finding or a
-   documented dead end. Nothing else below matters much until this happens.
+1. ~~**Open the accounts.**~~ **Done 2026-08-20 — documented dead end, see
+   the RESOLVED note above.** 36-account manual read found no bot-like
+   behavior; don't redo this on the same output.
 2. **Verify the multivariate clusters are the same phenomenon, not
    coincidence.** Part1's and Part2's independently-found enriched clusters
    both run hot on removal_rate — check whether they share the same
