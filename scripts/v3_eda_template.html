@@ -102,9 +102,25 @@
   .marker-table tr.hi-row td { font-weight: 650; color: var(--critical); }
   .corr-legend { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--muted); margin-bottom: 12px; }
   .corr-legend .bar { width: 140px; height: 10px; border-radius: 2px; background: linear-gradient(90deg, var(--neg), var(--divzero), var(--pos)); }
+  .ranked-head { font-size: 13px; font-weight: 650; margin: 26px 0 4px; }
+  .ranked-pairs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 8px; }
+  @media (max-width: 760px) { .ranked-pairs-grid { grid-template-columns: 1fr; } }
+  .rp-head { font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 650; margin-bottom: 6px; }
+  .rp-head.rp-pos { color: var(--pos); }
+  .rp-head.rp-neg { color: var(--neg); }
+  .rp-pair-table td.rp-rho { font-weight: 650; }
+  .rp-pair-table tr.rp-trivial td { opacity: 0.55; }
+  .rp-trivial-flag { font-size: 9.5px; color: var(--warning); margin-left: 4px; }
   .risk-legend { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--muted); margin-bottom: 14px; }
   .risk-legend .bar { width: 120px; height: 10px; border-radius: 2px; background: linear-gradient(90deg, var(--pos), var(--divzero), var(--critical)); }
   .risk-legend .swatch-gray { display: inline-block; width: 10px; height: 10px; border-radius: 2px; background: var(--muted); opacity: 0.35; vertical-align: -1px; }
+  .metric-picker { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+  .metric-picker .mp-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+  .metric-tabs { display: flex; border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
+  .metric-tabs button { font: inherit; font-size: 11.5px; padding: 5px 11px; border: none; border-right: 1px solid var(--border); background: var(--surface); color: var(--ink-2); cursor: pointer; }
+  .metric-tabs button:last-child { border-right: none; }
+  .metric-tabs button.active { background: var(--accent); color: #fff; font-weight: 600; }
+  .metric-tabs button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 
   /* ---- density panels ---- */
   .density-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 18px; }
@@ -141,13 +157,14 @@
 <header class="page-head">
   <div class="eyebrow">V3 · Exposure-Weighted Inauthenticity Scoring</div>
   <h1>Account Feature Survey</h1>
-  <p class="subtitle">Univariate, bivariate, and transform views over the Stage-0/account-feature layer, for eyeballing distribution shape before it's trusted in a model — this is the check that caught three separate screening bugs (see the log below). Data is a bipartite sample: an account appears only when it's in a sampled post's first-10-arrivals or top-10-by-score, not a census of any account's full history. <a href="stage2.html">Stage 2 — bivariate density, HDBSCAN, and post/sub-level segmentation →</a> · <a href="stage3.html">Stage 3 — account XGBoost per label channel →</a></p>
+  <p class="subtitle">Univariate, bivariate, and transform views over the Stage-0/account-feature layer, for eyeballing distribution shape before it's trusted in a model — this is the check that caught three separate screening bugs (see the log below). Data is a bipartite sample: an account appears only when it's in a sampled post's first-10-arrivals or top-10-by-score, not a census of any account's full history. <a href="stage2.html">Stage 2 — bivariate density, HDBSCAN, and post/sub-level segmentation →</a> · <a href="stage3.html">Stage 3 — account XGBoost per label channel →</a> · <a href="stage3e.html">Stage 3e — Tier 3 feature lab →</a> · <a href="stage4.html">Stage 4 — pair-level model →</a> · <a href="boundary_discovery.html">Boundary Discovery — univariate AND-rule →</a> · <a href="multivariate_kde.html">Multivariate KDE — joint-density clustering →</a> · <a href="../whitepaper.md">Whitepaper — bot-score methodology →</a> · <a href="../bot-score-dashboard.html">Bot-Score Dashboard (MoM) →</a></p>
   <div class="vitals mono" id="vitals"></div>
 </header>
 
 <section id="sec-univariate">
   <div class="section-head"><h2>Univariate — distribution shape per feature</h2></div>
   <p class="section-note">Raw vs. transformed view, toggle per tile. Amber dot = point-mass ≥20% of accounts sit on one value (usually 0) — real, not noise, but it means a plain bell-curve fit on the raw values will find a fake "second population" at that spike. <span class="mono">n</span> is accounts with a non-null value; timing features are gated to accounts with ≥5 sampled comments (21% of the population) since a rate computed from 1–2 points isn't a rate.</p>
+  <div class="metric-picker"><span class="mp-label">Shade by:</span><div class="metric-tabs" id="metric-tabs"></div></div>
   <div class="risk-legend mono" id="risk-legend"></div>
   <div class="hist-grid" id="hist-grid"></div>
 </section>
@@ -157,6 +174,19 @@
   <p class="section-note">Rank correlation, not Pearson — invariant to the raw/log/signed-log choice above, so it sidesteps re-litigating a transform per pair. Diverging scale, gray at ρ=0.</p>
   <div class="corr-legend"><span>−1</span><span class="bar"></span><span>+1</span></div>
   <div class="corr-wrap" id="corr-wrap"></div>
+
+  <h3 class="ranked-head">Top 15 pairs by |ρ|, each direction</h3>
+  <p class="section-note">Same matrix, sorted — an easier way to scan for the strongest relationships than reading the heatmap tile by tile. A ρ near ±1 between two differently-named columns is usually one feature being a near-deterministic transform of the other (flagged below), not two independent signals agreeing.</p>
+  <div class="ranked-pairs-grid">
+    <div>
+      <div class="rp-head rp-pos">Strongest positive</div>
+      <table class="marker-table" id="rp-positive"></table>
+    </div>
+    <div>
+      <div class="rp-head rp-neg">Strongest negative</div>
+      <table class="marker-table" id="rp-negative"></table>
+    </div>
+  </div>
 </section>
 
 <section id="sec-density">
@@ -244,23 +274,29 @@
     h = h.replace('#', '');
     return [parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)];
   }
-  const RISK_SCALE_MAX = DATA.meta.risk_scale_max || 0.3;
-  const RISK_POP_MEAN = DATA.meta.risk_pop_mean || 0.07;
-  function riskColor(meanRisk, binN) {
+  const SHADE_META = DATA.meta.shade_metrics;
+  const SHADE_METRIC_KEYS = Object.keys(SHADE_META);
+  let currentMetric = DATA.meta.default_shade_metric;
+  function fmtMetricVal(v, m) {
+    return SHADE_META[m].is_pctl ? v.toFixed(1) : (100 * v).toFixed(1) + '%';
+  }
+  function riskColor(meanRisk, binN, metric) {
     if (meanRisk === null || binN < 20) return null; // too few accounts in this bin to trust the estimate
     // Diverging, centered on the population mean -- blue = safer than typical,
     // red = riskier than typical, not an absolute 0%-is-white scale. Asymmetric
-    // by construction: removal_rate has a hard floor at 0%, so "below average"
-    // only has RISK_POP_MEAN of room while "above average" has much more --
-    // that asymmetry is real (you can't have negative removal rate), not a bug.
+    // by construction: a rate metric has a hard floor at 0, so "below average"
+    // only has popMean of room while "above average" has much more -- that
+    // asymmetry is real, not a bug.
+    const meta = SHADE_META[metric];
+    const popMean = meta.pop_mean, scaleMax = meta.scale_max;
     const neutral = isDark() ? '#383835' : '#f0efec';
     const blue = isDark() ? '#3987e5' : '#2a78d6';
     const red = '#d03b3b'; // status critical -- fixed across themes per palette spec
-    if (meanRisk <= RISK_POP_MEAN) {
-      const t = RISK_POP_MEAN > 0 ? Math.min(1, (RISK_POP_MEAN - meanRisk) / RISK_POP_MEAN) : 0;
+    if (meanRisk <= popMean) {
+      const t = popMean > 0 ? Math.min(1, (popMean - meanRisk) / popMean) : 0;
       return mixHex(neutral, blue, t);
     }
-    const t = Math.min(1, (meanRisk - RISK_POP_MEAN) / Math.max(1e-9, RISK_SCALE_MAX - RISK_POP_MEAN));
+    const t = Math.min(1, (meanRisk - popMean) / Math.max(1e-9, scaleMax - popMean));
     return mixHex(neutral, red, t);
   }
 
@@ -290,18 +326,23 @@
     vitals.appendChild(d);
   });
 
-  document.getElementById('risk-legend').innerHTML =
-    `bar color = mean <b>${DATA.meta.risk_metric}</b> within that bin, relative to the population average (${(100*RISK_POP_MEAN).toFixed(1)}%) ` +
-    `<span class="bar"></span> 0% (safer) ← ${(100*RISK_POP_MEAN).toFixed(1)}% avg → ${(100*RISK_SCALE_MAX).toFixed(0)}%+ (riskier) ` +
-    `&nbsp;·&nbsp; <span class="swatch-gray"></span> bin has &lt;20 accounts, too small to color`;
+  function updateRiskLegend() {
+    const meta = SHADE_META[currentMetric];
+    document.getElementById('risk-legend').innerHTML =
+      `bar color = mean <b>${meta.label}</b> within that bin, relative to the population average (${fmtMetricVal(meta.pop_mean, currentMetric)}) ` +
+      `<span class="bar"></span> ${meta.is_pctl ? '0' : '0%'} (safer) ← ${fmtMetricVal(meta.pop_mean, currentMetric)} avg → ${fmtMetricVal(meta.scale_max, currentMetric)}+ (riskier) ` +
+      `&nbsp;·&nbsp; <span class="swatch-gray"></span> bin has &lt;20 accounts, too small to color`;
+  }
 
   // ---------------- histograms ----------------
   const W = 244, H = 92, PAD_L = 4, PAD_B = 14;
 
-  function drawHist(svg, bins) {
+  function drawHist(svg, bins, metric) {
     svg.innerHTML = '';
     const counts = bins.counts, edges = bins.edges;
-    const riskMean = bins.risk_mean || [], riskN = bins.risk_n || [];
+    const risk = bins.risk[metric];
+    const riskMean = risk.mean, riskN = risk.n;
+    const meta = SHADE_META[metric];
     const maxC = Math.max(...counts);
     const n = counts.length;
     const barW = (W - PAD_L) / n;
@@ -311,14 +352,14 @@
       const x = PAD_L + i * barW;
       const y = plotH - h;
       const rMean = riskMean[i], rN = riskN[i] || 0;
-      const colored = riskColor(rMean, rN);
+      const colored = riskColor(rMean, rN, metric);
       const rect = svgEl('rect', {
         x: x + 0.5, y: y, width: Math.max(0.5, barW - 1), height: h,
         fill: colored || 'var(--muted)', 'fill-opacity': colored ? 1 : 0.35, rx: 1, tabindex: '-1',
       });
       rect.addEventListener('mousemove', (e) => {
         const riskLine = rMean !== null && rMean !== undefined
-          ? `<br>${DATA.meta.risk_metric} ≈ ${(rMean*100).toFixed(1)}%${rN < 20 ? ' (n too small, shown gray)' : ''}`
+          ? `<br>${meta.label} ≈ ${fmtMetricVal(rMean, metric)}${rN < 20 ? ' (n too small, shown gray)' : ''}`
           : '';
         showTip(e, `${fmtNum(edges[i])} – ${fmtNum(edges[i+1])}<br>n = ${c.toLocaleString()}${riskLine}`);
       });
@@ -330,6 +371,7 @@
     }));
   }
 
+  const histCards = []; // {h, svg, mode} -- kept so a metric-tab click can redraw every card
   const histGrid = document.getElementById('hist-grid');
   DATA.histograms.forEach((h) => {
     const card = document.createElement('div');
@@ -357,16 +399,39 @@
     `;
     histGrid.appendChild(card);
     const svg = card.querySelector('svg');
-    drawHist(svg, h.raw);
+    const state = { h, svg, mode: 'raw' };
+    histCards.push(state);
     if (hasTx) {
       const btns = card.querySelectorAll('.toggle button');
       btns.forEach((b) => b.addEventListener('click', () => {
         btns.forEach((x) => x.classList.remove('active'));
         b.classList.add('active');
-        drawHist(svg, b.dataset.mode === 'raw' ? h.raw : h.transformed);
+        state.mode = b.dataset.mode;
+        drawHist(svg, state.mode === 'raw' ? h.raw : h.transformed, currentMetric);
       }));
     }
   });
+
+  function redrawAllHists() {
+    updateRiskLegend();
+    histCards.forEach((state) => drawHist(state.svg, state.mode === 'raw' ? state.h.raw : state.h.transformed, currentMetric));
+  }
+
+  const metricTabs = document.getElementById('metric-tabs');
+  SHADE_METRIC_KEYS.forEach((m) => {
+    const btn = document.createElement('button');
+    btn.textContent = SHADE_META[m].label;
+    btn.className = m === currentMetric ? 'active' : '';
+    btn.addEventListener('click', () => {
+      currentMetric = m;
+      metricTabs.querySelectorAll('button').forEach((b) => b.classList.remove('active'));
+      btn.classList.add('active');
+      redrawAllHists();
+    });
+    metricTabs.appendChild(btn);
+  });
+
+  redrawAllHists();
 
   // ---------------- correlation heatmap ----------------
   const feats = DATA.corr_features;
@@ -400,6 +465,21 @@
     });
   });
   document.getElementById('corr-wrap').appendChild(corrSvg);
+
+  // ---------------- ranked pairs ----------------
+  function renderRankedTable(elId, pairs) {
+    const tbl = document.getElementById(elId);
+    let rows = '<thead><tr><th>#</th><th>feature A</th><th>feature B</th><th>ρ</th></tr></thead><tbody>';
+    pairs.forEach((p, i) => {
+      const trivial = Math.abs(p.rho) >= 0.98;
+      rows += `<tr class="${trivial ? 'rp-trivial' : ''}"><td>${i + 1}</td><td>${p.a}</td><td>${p.b}</td>` +
+              `<td class="rp-rho">${p.rho.toFixed(3)}${trivial ? '<span class="rp-trivial-flag" title="near-1.0 -- likely a near-deterministic transform of the same underlying quantity, not two independent signals">⚑ near-duplicate</span>' : ''}</td></tr>`;
+    });
+    rows += '</tbody>';
+    tbl.innerHTML = rows;
+  }
+  renderRankedTable('rp-positive', DATA.ranked_pairs.top_positive);
+  renderRankedTable('rp-negative', DATA.ranked_pairs.top_negative);
 
   // ---------------- density panels ----------------
   const densityGrid = document.getElementById('density-grid');

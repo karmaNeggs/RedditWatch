@@ -11,11 +11,50 @@ Status marks: ✅ **measured** in this project · 📚 **published**, cited ·
 
 ---
 
-## 🚦 START HERE (next session) — as of 2026-08-07
+## 🚦 START HERE (next session) — as of 2026-08-21
 
 **Read this section only.** Everything referenced here has full detail, numbers,
 and the reasoning behind every correction in §10.4 — don't re-derive anything
 below from scratch, and don't re-litigate anything marked resolved.
+
+### Newest thread: hand-labeled bot-detection methodology (Stage 5-7) — milestone frozen 2026-08-21
+
+**Full writeup, all stats/citations/limitations: `docs/v3-research/whitepaper.md`.** Short version:
+
+- **Ground truth built with zero new API calls.** `commenters_dedup` already holds full comment
+  `body` text for all 1.6M collected comments (this was missed for a while — don't re-assume "we need
+  to fetch more" before checking that table first). A SQL screen for cross-post duplicate text
+  (`scripts/v3_stage5_bot_candidates.py`) plus parallel LLM batch review produced **76 confirmed bots,
+  58 suspicious, 516 clean** (`output/v3/{confirmed_bots,suspicious_accounts,clean_accounts}.json`) —
+  16.1% hit rate on screened candidates vs. 5.6% on unscreened accounts, so the screen is doing real
+  work. Concrete example: `CritFin` → `Critifin` → `criti_fin`, a ban-evasion sockpuppet chain,
+  independently reconfirmed by two separate review batches.
+- **Method 1 (hand-built composite via bivariate pruning) failed cleanly: AUC 0.474 vs. the labeled
+  set — worse than random**, despite every included metric passing an independence check
+  (`scripts/v3_stage5_method1_composite.py`). Averaging in ~15 individually-weak metrics dilutes the
+  1-2 that actually carry signal.
+- **Method 2 (XGBoost) is the one that works: 5-fold CV AUC 0.792**, right at the >0.80 target, not
+  cleanly over it — n=76 is small, fold AUCs range 0.72-0.87
+  (`scripts/v3_stage6_method2_xgboost.py`). Top features: `median_comment_score`, `score_stddev`,
+  `subreddit_entropy`, `karma_per_day_since_first_seen` — notably, `comments_per_day`/`posts_per_day`/
+  `removal_rate` (this session's early hypotheses) rank near the *bottom* of 25 features.
+- **A simple 4-leaf decision tree is the interpretable version** (0.733 CV AUC): low `score_stddev`
+  alone predicts bot; among high-`score_stddev` accounts, only unusually long comments do. This
+  *inverts* the "high-variance power users are bots" hypothesis that motivated adding those features —
+  most confirmed bots are low-effort templated spam with small, consistent scores, not wild swings.
+- **Dormancy-reactivation (a tip from external Reddit mod discussions) tested and found no signal**
+  in this corpus (mean percentile 27.4 vs. ~25 baseline) — real negative result, don't rebuild it.
+- **Outputs shipped this milestone:** `docs/v3-research/whitepaper.md` (methodology + all stats),
+  `docs/v3-research/bot-score-dashboard.html` + `bot-score-mom.json` (MoM dashboard, driven by
+  `scripts/v3_stage7_monthly_score.py` — re-run that one script monthly, it retrains Method 2 on
+  whatever's in the label-set files and rescoring the full population).
+- **Explicit next step, not yet done:** scale the labeled set 76 → ~300 confirmed bots (same
+  duplicate-text screen, larger/relaxed candidate pool) and re-check whether Method 2's AUC holds.
+  **Important caveat already on record, don't skip it:** an *earlier, separate* verification round in
+  this project manually read real subreddit-ranked samples and found the ranking mostly tracked
+  meme-culture-vs-discussion-culture, not bot density — that finding predates Method 1/2 above and
+  hasn't been re-tested against the new model. Don't present a subreddit ranking from this methodology
+  as validated until it is.
 
 ### Where things stand, honestly
 

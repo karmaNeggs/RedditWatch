@@ -77,12 +77,27 @@ def transform(x, kind):
     return x
 
 
-RISK_METRIC = 'removal_rate'  # strongest single account-level signal found so far (Sec 10.4)
+RISK_METRIC = 'removal_rate'  # default shade metric on load; strongest single account-level signal found so far (Sec 10.4)
 RISK_MIN_BIN_N = 20  # below this, a bin's mean risk is too noisy to color by -- render neutral
+
+# Shade-metric picker (user-requested, 2026-08-20): removal_rate alone was the
+# only coloring option -- now the univariate grid can be re-colored by any of
+# these four without rebuilding. deleted_later_rate is removal_rate's
+# companion (alive at capture, gone later); karma_extremeness is the one
+# botmarker that passed the real-bimodality check on its own; botmarker_composite
+# is the unweighted 6-marker heuristic (see its own section below) -- included
+# so its 0.81 correlation with removal_rate_pctl is directly checkable here,
+# not just asserted.
+SHADE_METRICS = [
+    ('removal_rate', 'Removal rate', False),
+    ('deleted_later_rate', 'Deleted-later rate', False),
+    ('karma_extremeness', 'Karma extremeness (pctl)', True),
+    ('botmarker_composite', 'Botmarker composite (pctl)', True),
+]
 
 
 def risk_by_bin(values, risk, edges):
-    """Per-bin mean of RISK_METRIC, None where the bin has < RISK_MIN_BIN_N
+    """Per-bin mean of a shade metric, None where the bin has < RISK_MIN_BIN_N
     accounts (a 2-account bin at 100% removal_rate would paint bright red
     for no statistical reason otherwise)."""
     idx = np.clip(np.digitize(values, edges[1:-1]), 0, len(edges) - 2)
@@ -96,36 +111,42 @@ def risk_by_bin(values, risk, edges):
 
 def histogram(con, feature, family, kind, gate_timing):
     where = 'WHERE has_timing_features' if gate_timing else 'WHERE 1=1'
+    shade_cols = ', '.join(f'"{m}" AS shade_{m}' for m, _, _ in SHADE_METRICS)
     df = con.execute(
-        f'SELECT "{feature}" AS val, "{RISK_METRIC}" AS risk FROM account_features {where} AND "{feature}" IS NOT NULL'
+        f'SELECT "{feature}" AS val, {shade_cols} FROM account_features {where} AND "{feature}" IS NOT NULL'
     ).fetchdf()
     raw = df['val'].values.astype(float)
-    risk = df['risk'].values.astype(float)
     n = len(raw)
     lo_r, hi_r = np.percentile(raw, [0.5, 99.5])
     clip_mask = (raw >= lo_r) & (raw <= hi_r)
-    raw_clip, risk_clip = raw[clip_mask], risk[clip_mask]
+    raw_clip = raw[clip_mask]
     hc, he = np.histogram(raw_clip, bins=28)
-    risk_means, risk_ns = risk_by_bin(raw_clip, risk_clip, he)
 
     out = {
         'feature': feature, 'family': family, 'transform': kind, 'n': int(n),
-        'raw': {'counts': hc.tolist(), 'edges': he.tolist(), 'risk_mean': risk_means, 'risk_n': risk_ns},
+        'raw': {'counts': hc.tolist(), 'edges': he.tolist(), 'risk': {}},
         'stats': {
             'min': float(raw.min()), 'p10': float(np.percentile(raw, 10)),
             'median': float(np.median(raw)), 'p90': float(np.percentile(raw, 90)),
             'max': float(raw.max()), 'mean': float(raw.mean()),
         },
     }
+    for m, _, _ in SHADE_METRICS:
+        risk = df[f'shade_{m}'].values.astype(float)
+        means, counts = risk_by_bin(raw_clip, risk[clip_mask], he)
+        out['raw']['risk'][m] = {'mean': means, 'n': counts}
+
     if kind != 'none':
         tx = transform(raw, kind)
         lo_t, hi_t = np.percentile(tx, [0.5, 99.5])
         tmask = (tx >= lo_t) & (tx <= hi_t)
-        tx_clip, trisk_clip = tx[tmask], risk[tmask]
+        tx_clip = tx[tmask]
         tc, te = np.histogram(tx_clip, bins=28)
-        trisk_means, trisk_ns = risk_by_bin(tx_clip, trisk_clip, te)
-        out['transformed'] = {'counts': tc.tolist(), 'edges': te.tolist(), 'label': kind,
-                               'risk_mean': trisk_means, 'risk_n': trisk_ns}
+        out['transformed'] = {'counts': tc.tolist(), 'edges': te.tolist(), 'label': kind, 'risk': {}}
+        for m, _, _ in SHADE_METRICS:
+            risk = df[f'shade_{m}'].values.astype(float)
+            tmeans, tcounts = risk_by_bin(tx_clip, risk[tmask], te)
+            out['transformed']['risk'][m] = {'mean': tmeans, 'n': tcounts}
 
     vals, counts = np.unique(raw, return_counts=True)
     mode_i = np.argmax(counts)
@@ -178,13 +199,26 @@ def build_data(con):
     # than bin averages ever reach, so an account-percentile-based max compressed every
     # real per-bin difference into "barely distinguishable pale pink" (found by checking
     # actual bin means after the first version rendered suspiciously flat).
-    all_bin_means = []
-    for h in hists:
-        all_bin_means.extend(m for m in h['raw'].get('risk_mean', []) if m is not None)
-        if 'transformed' in h:
-            all_bin_means.extend(m for m in h['transformed'].get('risk_mean', []) if m is not None)
-    risk_p95 = float(np.percentile(all_bin_means, 95)) if all_bin_means else 0.3
-    risk_pop_mean = float(con.execute(f'SELECT avg("{RISK_METRIC}") FROM account_features').fetchone()[0])
+    shade_meta = {}
+    for m, label, is_pctl in SHADE_METRICS:
+        bin_means = []
+        for h in hists:
+            bin_means.extend(v for v in h['raw']['risk'][m]['mean'] if v is not None)
+            if 'transformed' in h:
+                bin_means.extend(v for v in h['transformed']['risk'][m]['mean'] if v is not None)
+        scale_max = float(np.percentile(bin_means, 95)) if bin_means else 0.3
+        pop_mean = float(con.execute(f'SELECT avg("{m}") FROM account_features').fetchone()[0])
+        shade_meta[m] = {'label': label, 'is_pctl': is_pctl, 'pop_mean': pop_mean, 'scale_max': scale_max}
+    risk_pop_mean = shade_meta[RISK_METRIC]['pop_mean']  # kept for the marker-comparison section below
+
+    print('Ranking bivariate pairs by |rho|...')
+    n_feat_r = len(corr_features)
+    ranked_pairs = []
+    for i in range(n_feat_r):
+        for j in range(i + 1, n_feat_r):
+            ranked_pairs.append({'a': corr_features[i], 'b': corr_features[j], 'rho': float(corr[i, j])})
+    top_positive = sorted([p for p in ranked_pairs if p['rho'] > 0], key=lambda p: -p['rho'])[:15]
+    top_negative = sorted([p for p in ranked_pairs if p['rho'] < 0], key=lambda p: p['rho'])[:15]
 
     print('Building bot-marker top-1% comparison...')
     marker_rows = []
@@ -207,13 +241,13 @@ def build_data(con):
         'meta': {
             'n_accounts': int(con.execute('SELECT count(*) FROM account_features').fetchone()[0]),
             'n_timing': int(con.execute('SELECT count(*) FROM account_features WHERE has_timing_features').fetchone()[0]),
-            'risk_metric': RISK_METRIC,
-            'risk_scale_max': risk_p95,
-            'risk_pop_mean': risk_pop_mean,
+            'default_shade_metric': RISK_METRIC,
+            'shade_metrics': shade_meta,
         },
         'histograms': hists,
         'corr_features': corr_features,
         'corr_matrix': corr.tolist(),
+        'ranked_pairs': {'top_positive': top_positive, 'top_negative': top_negative},
         'density_panels': density_panels,
         'marker_top1pct': marker_rows,
     }

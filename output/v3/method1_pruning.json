@@ -1,0 +1,140 @@
+{
+  "candidates": [
+    "n_comments_sample",
+    "n_posts_sample",
+    "n_subs_active",
+    "n_threads_active",
+    "removal_rate",
+    "deleted_later_rate",
+    "mean_comment_score",
+    "median_comment_score",
+    "score_stddev",
+    "controversiality_rate",
+    "is_submitter_rate",
+    "mean_depth",
+    "mean_body_len",
+    "n_high_tier",
+    "n_low_tier",
+    "subreddit_entropy",
+    "account_ordinal",
+    "username_char_entropy",
+    "username_digit_suffix_len",
+    "days_since_first_seen",
+    "comments_per_day_since_first_seen",
+    "posts_per_day_since_first_seen",
+    "karma_per_day_since_first_seen",
+    "repeat_engagement_rate",
+    "own_post_reply_rate",
+    "reception_spread",
+    "n_subs_rejected_but_returned",
+    "thin_history_score",
+    "karma_extremeness",
+    "karma_per_post_extremeness",
+    "botmarker_composite"
+  ],
+  "pruning_log": [
+    {
+      "a": "n_comments_sample",
+      "b": "thin_history_score",
+      "rho": -1.0,
+      "dropped": "thin_history_score"
+    },
+    {
+      "a": "n_posts_sample",
+      "b": "posts_per_day_since_first_seen",
+      "rho": 0.9975766452333936,
+      "dropped": "n_posts_sample"
+    },
+    {
+      "a": "n_subs_active",
+      "b": "subreddit_entropy",
+      "rho": 0.9933554688966695,
+      "dropped": "n_subs_active"
+    },
+    {
+      "a": "n_comments_sample",
+      "b": "n_threads_active",
+      "rho": 0.9874029287003965,
+      "dropped": "n_comments_sample"
+    },
+    {
+      "a": "subreddit_entropy",
+      "b": "reception_spread",
+      "rho": 0.9554945093861678,
+      "dropped": "reception_spread"
+    },
+    {
+      "a": "mean_comment_score",
+      "b": "median_comment_score",
+      "rho": 0.9213903694009995,
+      "dropped": "mean_comment_score"
+    },
+    {
+      "a": "removal_rate",
+      "b": "deleted_later_rate",
+      "rho": 0.894577438417725,
+      "dropped": "deleted_later_rate"
+    },
+    {
+      "a": "is_submitter_rate",
+      "b": "posts_per_day_since_first_seen",
+      "rho": 0.8733422044278716,
+      "dropped": "is_submitter_rate"
+    },
+    {
+      "a": "n_threads_active",
+      "b": "subreddit_entropy",
+      "rho": 0.8018654959624693,
+      "dropped": "n_threads_active"
+    },
+    {
+      "a": "score_stddev",
+      "b": "karma_per_day_since_first_seen",
+      "rho": 0.7833367598170561,
+      "dropped": "karma_per_day_since_first_seen"
+    },
+    {
+      "a": "score_stddev",
+      "b": "karma_extremeness",
+      "rho": 0.639917874470051,
+      "dropped": "score_stddev"
+    },
+    {
+      "a": "removal_rate",
+      "b": "botmarker_composite",
+      "rho": 0.5990004011134793,
+      "dropped": "botmarker_composite"
+    },
+    {
+      "a": "username_char_entropy",
+      "b": "username_digit_suffix_len",
+      "rho": 0.5693495360795067,
+      "dropped": "username_digit_suffix_len"
+    },
+    {
+      "a": "n_low_tier",
+      "b": "subreddit_entropy",
+      "rho": 0.5250306608498823,
+      "dropped": "subreddit_entropy"
+    }
+  ],
+  "final_metrics": [
+    "account_ordinal",
+    "comments_per_day_since_first_seen",
+    "controversiality_rate",
+    "days_since_first_seen",
+    "karma_extremeness",
+    "karma_per_post_extremeness",
+    "mean_body_len",
+    "mean_depth",
+    "median_comment_score",
+    "n_high_tier",
+    "n_low_tier",
+    "n_subs_rejected_but_returned",
+    "own_post_reply_rate",
+    "posts_per_day_since_first_seen",
+    "removal_rate",
+    "repeat_engagement_rate",
+    "username_char_entropy"
+  ]
+}

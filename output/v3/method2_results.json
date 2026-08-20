@@ -1,0 +1,144 @@
+{
+  "n_pos": 76,
+  "n_neg": 515,
+  "features": [
+    "account_ordinal",
+    "comments_per_day_since_first_seen",
+    "controversiality_rate",
+    "days_since_first_seen",
+    "karma_extremeness",
+    "karma_per_post_extremeness",
+    "mean_body_len",
+    "mean_depth",
+    "median_comment_score",
+    "n_high_tier",
+    "n_low_tier",
+    "n_subs_rejected_but_returned",
+    "own_post_reply_rate",
+    "posts_per_day_since_first_seen",
+    "removal_rate",
+    "deleted_later_rate",
+    "repeat_engagement_rate",
+    "username_char_entropy",
+    "score_stddev",
+    "reception_spread",
+    "karma_per_day_since_first_seen",
+    "subreddit_entropy",
+    "n_comments_sample",
+    "n_threads_active",
+    "username_digit_suffix_len"
+  ],
+  "train_auc": 0.9999545495864012,
+  "test_auc": 0.7686658506731946,
+  "cv_auc_folds": [
+    0.7178,
+    0.7618,
+    0.7618,
+    0.8673,
+    0.8531
+  ],
+  "cv_auc_mean": 0.7923705501618123,
+  "feature_importances": [
+    {
+      "feature": "median_comment_score",
+      "importance": 0.07245427370071411
+    },
+    {
+      "feature": "score_stddev",
+      "importance": 0.06806640326976776
+    },
+    {
+      "feature": "subreddit_entropy",
+      "importance": 0.06272757053375244
+    },
+    {
+      "feature": "karma_per_day_since_first_seen",
+      "importance": 0.058599554002285004
+    },
+    {
+      "feature": "n_threads_active",
+      "importance": 0.053934697061777115
+    },
+    {
+      "feature": "n_low_tier",
+      "importance": 0.051774341613054276
+    },
+    {
+      "feature": "mean_body_len",
+      "importance": 0.05011593922972679
+    },
+    {
+      "feature": "n_high_tier",
+      "importance": 0.045999832451343536
+    },
+    {
+      "feature": "repeat_engagement_rate",
+      "importance": 0.045930299907922745
+    },
+    {
+      "feature": "n_comments_sample",
+      "importance": 0.043797243386507034
+    },
+    {
+      "feature": "username_char_entropy",
+      "importance": 0.04249652475118637
+    },
+    {
+      "feature": "removal_rate",
+      "importance": 0.04185401275753975
+    },
+    {
+      "feature": "karma_per_post_extremeness",
+      "importance": 0.040225863456726074
+    },
+    {
+      "feature": "mean_depth",
+      "importance": 0.03990646451711655
+    },
+    {
+      "feature": "own_post_reply_rate",
+      "importance": 0.03692875802516937
+    },
+    {
+      "feature": "reception_spread",
+      "importance": 0.03605477511882782
+    },
+    {
+      "feature": "account_ordinal",
+      "importance": 0.035141702741384506
+    },
+    {
+      "feature": "days_since_first_seen",
+      "importance": 0.03471789136528969
+    },
+    {
+      "feature": "deleted_later_rate",
+      "importance": 0.031659018248319626
+    },
+    {
+      "feature": "karma_extremeness",
+      "importance": 0.028935404494404793
+    },
+    {
+      "feature": "comments_per_day_since_first_seen",
+      "importance": 0.02684180997312069
+    },
+    {
+      "feature": "controversiality_rate",
+      "importance": 0.023079155012965202
+    },
+    {
+      "feature": "username_digit_suffix_len",
+      "importance": 0.018860630691051483
+    },
+    {
+      "feature": "posts_per_day_since_first_seen",
+      "importance": 0.00989789143204689
+    },
+    {
+      "feature": "n_subs_rejected_but_returned",
+      "importance": 0.0
+    }
+  ],
+  "target_met": false
+}

@@ -38,7 +38,12 @@ data/v3/analysis/
 .claude/scheduled_tasks.lock
 
 # Raw scraped comment text tied to real usernames (manual-verification pulls) --
-# account-identifier CSVs like flagged_accounts_part1.csv are fine to commit
-# (matches existing output/v2/weak_label_sample.csv precedent), full comment
-# bodies are not.
+# account-identifier lists (confirmed_bots.json, suspicious_accounts.json,
+# clean_accounts.json, flagged_accounts_part1.csv) are fine to commit (matches
+# existing output/v2/weak_label_sample.csv precedent), full comment bodies are not.
 output/v3/flagged_account_samples.json
+output/v3/top_sub_sample_comments.json
+output/v3/control_sample_comments.json
+output/v3/control_sample10_comments.json
+output/v3/unified_review_pool.json
+output/v3/dup_candidates_comments.json
