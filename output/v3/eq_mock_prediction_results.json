@@ -1,0 +1,112 @@
+{
+  "n_pos": 20,
+  "n_neg": 238,
+  "train_auc": 1.0,
+  "test_auc": 0.5266666666666666,
+  "cv_auc_mean": 0.4704343971631205,
+  "cv_auc_folds": [
+    0.4531,
+    0.3385,
+    0.4062,
+    0.6117,
+    0.5426
+  ],
+  "feature_importances": [
+    {
+      "feature": "mean_body_len",
+      "importance": 0.07825778424739838
+    },
+    {
+      "feature": "mean_depth",
+      "importance": 0.0736967995762825
+    },
+    {
+      "feature": "karma_per_day_since_first_seen",
+      "importance": 0.07116316258907318
+    },
+    {
+      "feature": "score_stddev",
+      "importance": 0.05888064578175545
+    },
+    {
+      "feature": "subreddit_entropy",
+      "importance": 0.05561229959130287
+    },
+    {
+      "feature": "comments_per_day_since_first_seen",
+      "importance": 0.054287634789943695
+    },
+    {
+      "feature": "n_high_tier",
+      "importance": 0.05406207963824272
+    },
+    {
+      "feature": "n_subs_active",
+      "importance": 0.044605523347854614
+    },
+    {
+      "feature": "median_comment_score",
+      "importance": 0.04418015480041504
+    },
+    {
+      "feature": "posts_per_day_since_first_seen",
+      "importance": 0.044049158692359924
+    },
+    {
+      "feature": "removal_rate",
+      "importance": 0.04278380051255226
+    },
+    {
+      "feature": "karma_per_post_extremeness",
+      "importance": 0.04114232212305069
+    },
+    {
+      "feature": "karma_extremeness",
+      "importance": 0.038318149745464325
+    },
+    {
+      "feature": "n_threads_active",
+      "importance": 0.03644813224673271
+    },
+    {
+      "feature": "n_comments_sample",
+      "importance": 0.03641491010785103
+    },
+    {
+      "feature": "repeat_engagement_rate",
+      "importance": 0.03444387763738632
+    },
+    {
+      "feature": "days_since_first_seen",
+      "importance": 0.033221397548913956
+    },
+    {
+      "feature": "reception_spread",
+      "importance": 0.0316007100045681
+    },
+    {
+      "feature": "own_post_reply_rate",
+      "importance": 0.029374143108725548
+    },
+    {
+      "feature": "account_ordinal",
+      "importance": 0.02896934375166893
+    },
+    {
+      "feature": "controversiality_rate",
+      "importance": 0.0256755743175745
+    },
+    {
+      "feature": "deleted_later_rate",
+      "importance": 0.02244325913488865
+    },
+    {
+      "feature": "n_low_tier",
+      "importance": 0.020369119942188263
+    },
+    {
+      "feature": "n_subs_rejected_but_returned",
+      "importance": 0.0
+    }
+  ]
+}

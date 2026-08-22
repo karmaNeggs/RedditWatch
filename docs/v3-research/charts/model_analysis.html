@@ -1,0 +1,293 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Bot/Spam Model — Full Analysis</title>
+<style>
+  :root {
+    color-scheme: light;
+    --page: #f9f9f7; --surface: #fcfcfb; --ink: #0b0b0b; --ink-2: #52514e; --muted: #898781;
+    --grid: #e1e0d9; --baseline: #c3c2b7; --border: rgba(11,11,11,0.10);
+    --accent: #2a78d6; --accent2: #d95926; --divzero: #f0efec;
+    --ok: #2a78d6; --removed: #d03b3b;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      color-scheme: dark;
+      --page: #0d0d0d; --surface: #1a1a19; --ink: #ffffff; --ink-2: #c3c2b7; --muted: #898781;
+      --grid: #2c2c2a; --baseline: #383835; --border: rgba(255,255,255,0.10);
+      --accent: #3987e5; --accent2: #d95926; --divzero: #383835;
+      --ok: #3987e5; --removed: #e35b5b;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { background: var(--page); color: var(--ink); font-family: system-ui, -apple-system, "Segoe UI", sans-serif; margin: 0; padding: 0; }
+  body { padding: 28px 32px 60px; max-width: 900px; margin: 0 auto; }
+  .mono { font-family: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace; font-variant-numeric: tabular-nums; }
+  .eyebrow { font-size: 11px; letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted); font-weight: 600; margin-bottom: 6px; }
+  h1 { font-size: 23px; font-weight: 650; margin: 0 0 6px; letter-spacing: -0.01em; }
+  .subtitle { font-size: 13.5px; color: var(--ink-2); max-width: 84ch; line-height: 1.55; margin: 0 0 20px; }
+  nav.toc { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; margin-bottom: 24px; padding-bottom: 14px; border-bottom: 1px solid var(--grid); }
+  nav.toc a { color: var(--accent); text-decoration: none; }
+  section { margin-top: 38px; scroll-margin-top: 16px; }
+  h2 { font-size: 15px; font-weight: 650; margin: 0 0 4px; border-bottom: 1px solid var(--grid); padding-bottom: 8px; }
+  .note { font-size: 12px; color: var(--muted); margin: 8px 0 16px; max-width: 84ch; line-height: 1.5; }
+  .note b { color: var(--ink-2); }
+  .legend { display: flex; gap: 16px; flex-wrap: wrap; font-size: 11.5px; color: var(--ink-2); margin-bottom: 10px; }
+  .legend .item { display: flex; align-items: center; gap: 6px; }
+  .swatch { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+  .chart-wrap { overflow-x: auto; }
+  table { border-collapse: collapse; font-size: 11.5px; width: 100%; margin-top: 10px; }
+  th, td { padding: 5px 10px; border-bottom: 1px solid var(--grid); text-align: right; }
+  th:first-child, td:first-child { text-align: left; }
+  thead th { color: var(--muted); font-weight: 600; text-transform: uppercase; font-size: 9.5px; letter-spacing: .04em; border-bottom: 1px solid var(--baseline); }
+  .tooltip { position: fixed; pointer-events: none; z-index: 50; background: var(--ink); color: var(--page); font-size: 11px; line-height: 1.4; padding: 6px 9px; border-radius: 3px; opacity: 0; transition: opacity 0.08s; font-family: ui-monospace, monospace; white-space: nowrap; }
+  .tooltip.show { opacity: 1; }
+  footer { margin-top: 40px; padding-top: 14px; border-top: 1px solid var(--grid); font-size: 11px; color: var(--muted); }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="eyebrow">RedditWatch 1.0 · final model analysis</div>
+<h1>Bot/Spam Removal Model — Full Analysis</h1>
+<p class="subtitle">One page, five views of the same model: how far the feature set was cut, which target and feature set work, what drives it, how well it separates removed from active accounts, and how confident to be in any single score. Trained on 584 real, live-verified Reddit accounts (banned/deleted/active — checked directly, not inferred). Methodology: <a href="../whitepaper.md">whitepaper.md</a>.</p>
+
+<nav class="toc">
+  <a href="#elimination">1. Feature-count reduction</a>
+  <a href="#config">2. Target &amp; feature-set comparison</a>
+  <a href="#importance">3. Feature importances</a>
+  <a href="#roc">4. ROC curve</a>
+  <a href="#dist">5. Confirmed rate by score bucket</a>
+</nav>
+
+<section id="elimination">
+  <h2>1. How far could the feature set be cut?</h2>
+  <p class="note">Starting from the 49-feature deduplicated model, features were removed one at a time — drop the single lowest-importance feature, refit, repeat — down to 6. Each point is a 5×5-fold CV refit at that feature count (lighter than the 5×10-fold headline CV, so read this as a scouting curve, not the final number; it also predates the time-denominator fix below, so treat it as directional). AUC <b>holds essentially flat, even ticks up, all the way from 49 down to ~17 features</b> before starting to genuinely erode below ~10 — most of the 49 features were adding redundancy, not signal.</p>
+  <div class="chart-wrap"><svg id="eliminationChart" width="100%" height="300" viewBox="0 0 820 300" preserveAspectRatio="xMidYMid meet"></svg></div>
+  <p class="note">The elimination run landed on 18 features. Before deploying that model, a QC pass on the subreddit-prevalence trend caught a real bug: three of those 18 (<span class="mono">days_since_first_seen</span>, <span class="mono">comments_per_day_since_first_seen</span>, <span class="mono">karma_per_day_since_first_seen</span>) were computed using wall-clock "now" as their time denominator instead of the account's actual last-observed date — meaning the rate mechanically shrank for every account on every refresh, purely from calendar time passing, independent of real behavior. Fixed to use <span class="mono">last_seen_utc</span> (matching the already-correct <span class="mono">comments_per_day_observed</span>/<span class="mono">sample_score_per_day_observed</span> pattern) — which makes all three exact duplicates of already-kept columns, so they were pruned rather than kept, landing at 15 (CV AUC 0.789 ± 0.041). A second backward-elimination pass on that corrected 15-feature set, run to check how far the model could be lightened further, found a real but modest cost below ~12 features (0.789 → ~0.776–0.778, consistent across n=10/11/12, not noise) with clean correlation throughout (max ρ=0.73, well under the 0.85 threshold). <b>Final: 10 features, n=584, CV AUC 0.780 ± 0.043</b> — accepted as the right tradeoff for a simpler model.</p>
+</section>
+
+<section id="config">
+  <h2>2. Which target and feature set actually work</h2>
+  <p class="note">Five configurations, same tuned XGBoost (<span class="mono">max_depth=5, n_estimators=150, lr=0.1, min_child_weight=1, subsample=0.9, colsample_bytree=0.7, reg_lambda=1</span>), same repeated 5×10-fold cross-validation, n=584, final 10-feature set (post time-denominator fix and the 15→10 lightening pass, §1). Error bars = ±1 std across the 50 folds.</p>
+  <div class="chart-wrap"><svg id="configChart" width="100%" height="320" viewBox="0 0 820 320" preserveAspectRatio="xMidYMid meet"></svg></div>
+  <p class="note"><b>Final verdict, n=584:</b> clubbing banned+deleted as one "removed" class clearly outperforms isolating banned alone (0.780 vs 0.643) — consistent across every sample size and feature set checked this project. A standalone <b>deleted-only</b> check (deleted vs. everyone else, 0.757) confirms this isn't a weak signal riding on a strong one: deleted accounts carry real independent signal, noticeably stronger than banned-only alone — clubbing wins because the two share enough common pattern that combining them gives the model more examples of it, not because one masks the other. <span class="mono">account_ordinal</span> (account creation recency) is <b>excluded from the deployed model</b>: it doesn't even help nominally (0.778 with vs. 0.780 without), and multiple independent manually-verified samples (up to 120 accounts, live-checked against Reddit) found the model's tiers separate high from low risk just as well — often better — without it. §3–5 below are the final deployed configuration: <b>clubbed target, account_ordinal excluded, 10 features (see §1), tuned, AUC 0.780 ± 0.043</b>.</p>
+</section>
+
+<section id="importance">
+  <h2>3. Feature importances — final deployed model (clubbed target, no account_ordinal)</h2>
+  <p class="note">All 10 final features (account_ordinal excluded), mean XGBoost gain-based importance across the 50 repeated-CV folds. Five rounds of feature-set reduction went into this 10, cutting from an original ~67-column pool: 8 <b>exact</b>-duplicate columns (the account_features table's <span class="mono">*_1</span> variants, ρ=1.000), 9 more <b>near</b>-duplicates hiding under different names (ρ &gt; 0.85, several exactly 1.000 — e.g. <span class="mono">n_comments_sample</span>/<span class="mono">n_gaps</span>/<span class="mono">n_threads_active</span>/<span class="mono">n_distinct_threads</span> all measure essentially the same thing), backward elimination down to 18 that carried independent weight (§1), a wall-clock time-denominator bug fix (§1) that collapsed 3 of those 18 into duplicates of already-kept columns (landing at 15), then a further backward-elimination pass to 10 requested to keep the model as light as possible, accepted at a small, honest AUC cost (0.789→0.780). Full correlation matrix: <span class="mono">output/v3/final_top20_correlation.csv</span>.</p>
+  <div class="chart-wrap"><svg id="importanceChart" width="100%" height="440" viewBox="0 0 820 440" preserveAspectRatio="xMidYMid meet"></svg></div>
+</section>
+
+<section id="roc">
+  <h2>4. ROC curve — multifold out-of-fold predictions</h2>
+  <p class="note">Each account's score here is the <b>average of its out-of-fold prediction across all 10 repeats</b> of the repeated 5×10-fold CV used for the headline AUC (§2) — 10 independent held-out predictions per account, never using training-fold information, averaged for a smoother per-account estimate than any single fold split. AUC on this averaged score: <span class="mono" id="rocAucLabel"></span> (slightly above the mean-of-folds 0.780 ± 0.043, as expected from averaging down per-account noise across repeats — not a different or better-validated model, just a steadier score for the same one).</p>
+  <div class="chart-wrap"><svg id="rocChart" width="480" height="480" viewBox="0 0 480 480" style="max-width:480px"></svg></div>
+</section>
+
+<section id="dist">
+  <h2>5. Confirmed rate by score bucket</h2>
+  <p class="note">All 584 real, live-verified accounts, bucketed by their multifold-averaged out-of-fold score (10 deciles, 0.0–1.0) and stacked to 100% by <b>actual confirmed outcome</b> — not a density curve, the real composition of each bucket. This is the calibration check: does a higher score bucket actually contain more removed accounts? Bar labels show n per bucket (thin buckets on the far right are small samples — read those percentages as noisier).</p>
+  <div class="legend">
+    <span class="item"><span class="swatch" style="background:var(--ok)"></span>confirmed still-active</span>
+    <span class="item"><span class="swatch" style="background:var(--accent2)"></span>confirmed banned</span>
+    <span class="item"><span class="swatch" style="background:var(--removed)"></span>confirmed deleted</span>
+  </div>
+  <div class="chart-wrap"><svg id="bucketChart" width="100%" height="380" viewBox="0 0 820 380" preserveAspectRatio="xMidYMid meet"></svg></div>
+</section>
+
+<footer>Source: <span class="mono">data/v3/analysis/v3.duckdb</span>. Data behind these charts: <span class="mono">output/v3/config_summary.json</span>, <span class="mono">final_importances_chart.json</span>, <span class="mono">final_roc_data.json</span>, <span class="mono">score_bucket_composition.json</span>, <span class="mono">backward_elim_history.json</span>. Model: <span class="mono">output/v3/final_bot_model.json</span> (10 features, no account_ordinal).</footer>
+
+<div class="tooltip mono" id="tooltip"></div>
+
+<script id="config-data" type="application/json">[{"features":"without account_ordinal","target":"clubbed (banned+deleted vs ok)","mean":0.7800332260807228,"std":0.04309135271866401,"min":0.6827922077922078,"max":0.8584415584415584},{"features":"without account_ordinal","target":"banned-only (vs ok+deleted)","mean":0.6426775793650793,"std":0.052502895444547615,"min":0.5347222222222222,"max":0.753968253968254},{"features":"with account_ordinal","target":"clubbed (banned+deleted vs ok)","mean":0.7777943021356052,"std":0.04214517645746038,"min":0.6626623376623377,"max":0.8600770218228498},{"features":"with account_ordinal","target":"banned-only (vs ok+deleted)","mean":0.6272212301587302,"std":0.046539003546867665,"min":0.5243055555555556,"max":0.7331349206349206},{"features":"without account_ordinal","target":"deleted-only (vs ok+banned)","mean":0.7572351091277533,"std":0.04258688580065623,"min":0.6917293233082706,"max":0.845360824742268}]</script>
+<script id="importance-data" type="application/json">{"features":["comments_per_day_observed","n_subs_rejected_but_returned","thin_history_score","n_own_posts_with_comments","n_high_tier","n_medium_tier","sample_score_per_day_observed","mean_body_len","removal_rate_pctl","worst_sub_mean_score"],"importance":[0.1807,0.1177,0.1152,0.1057,0.0868,0.0816,0.0814,0.0806,0.0753,0.0749]}</script>
+<script id="roc-data" type="application/json">{"fpr":[0.0,0.0,0.005235602094240838,0.005235602094240838,0.007853403141361256,0.010471204188481676,0.010471204188481676,0.015706806282722512,0.01832460732984293,0.01832460732984293,0.020942408376963352,0.02356020942408377,0.02356020942408377,0.028795811518324606,0.031413612565445025,0.031413612565445025,0.034031413612565446,0.03664921465968586,0.03664921465968586,0.03926701570680628,0.04450261780104712,0.04450261780104712,0.04712041884816754,0.05759162303664921,0.05759162303664921,0.06544502617801047,0.06806282722513089,0.06806282722513089,0.07068062827225131,0.07329842931937172,0.07329842931937172,0.07853403141361257,0.08115183246073299,0.08115183246073299,0.08376963350785341,0.08638743455497382,0.08638743455497382,0.08900523560209424,0.08900523560209424,0.09162303664921466,0.09424083769633508,0.09424083769633508,0.0968586387434555,0.09947643979057591,0.09947643979057591,0.1099476439790576,0.12041884816753927,0.12041884816753927,0.12827225130890052,0.13089005235602094,0.13089005235602094,0.13350785340314136,0.14136125654450263,0.14136125654450263,0.1518324607329843,0.16230366492146597,0.16230366492146597,0.1649214659685864,0.16753926701570682,0.16753926701570682,0.17539267015706805,0.17801047120418848,0.17801047120418848,0.18586387434554974,0.19895287958115182,0.19895287958115182,0.21204188481675393,0.21465968586387435,0.21465968586387435,0.21727748691099477,0.22251308900523561,0.22251308900523561,0.22774869109947643,0.25654450261780104,0.25654450261780104,0.2617801047120419,0.2617801047120419,0.2670157068062827,0.2696335078534031,0.2696335078534031,0.2774869109947644,0.306282722513089,0.306282722513089,0.31151832460732987,0.337696335078534,0.337696335078534,0.3403141361256545,0.34554973821989526,0.34554973821989526,0.3481675392670157,0.3507853403141361,0.3507853403141361,0.3612565445026178,0.3743455497382199,0.3743455497382199,0.3795811518324607,0.38219895287958117,0.38219895287958117,0.387434554973822,0.3900523560209424,0.3900523560209424,0.39267015706806285,0.39528795811518325,0.39528795811518325,0.4005235602094241,0.40575916230366493,0.40575916230366493,0.4214659685863874,0.42408376963350786,0.42408376963350786,0.43717277486910994,0.450261780104712,0.450261780104712,0.4607329842931937,0.4607329842931937,0.46335078534031415,0.4869109947643979,0.4869109947643979,0.49476439790575916,0.5,0.5,0.5052356020942408,0.5157068062827225,0.5157068062827225,0.518324607329843,0.5287958115183246,0.5287958115183246,0.5706806282722513,0.5759162303664922,0.5759162303664922,0.5785340314136126,0.581151832460733,0.581151832460733,0.5837696335078534,0.6151832460732984,0.6151832460732984,0.6308900523560209,0.6335078534031413,0.6335078534031413,0.6518324607329843,0.6989528795811518,0.6989528795811518,0.7146596858638743,0.7225130890052356,0.7225130890052356,0.7539267015706806,0.7774869109947644,0.7774869109947644,0.8952879581151832,1.0],"tpr":[0.0,0.0049504950495049506,0.0049504950495049506,0.054455445544554455,0.06930693069306931,0.06930693069306931,0.0891089108910891,0.09405940594059406,0.09405940594059406,0.12376237623762376,0.15841584158415842,0.15841584158415842,0.18316831683168316,0.18811881188118812,0.18811881188118812,0.21287128712871287,0.22772277227722773,0.22772277227722773,0.23267326732673269,0.23267326732673269,0.24257425742574257,0.26732673267326734,0.26732673267326734,0.2722772277227723,0.297029702970297,0.297029702970297,0.32673267326732675,0.36633663366336633,0.36633663366336633,0.3712871287128713,0.3811881188118812,0.3811881188118812,0.3910891089108911,0.39603960396039606,0.39603960396039606,0.400990099009901,0.41089108910891087,0.41089108910891087,0.4207920792079208,0.42574257425742573,0.42574257425742573,0.4306930693069307,0.4405940594059406,0.4405940594059406,0.4504950495049505,0.4752475247524752,0.4752475247524752,0.504950495049505,0.5148514851485149,0.5148514851485149,0.5198019801980198,0.5297029702970297,0.5297029702970297,0.5346534653465347,0.5594059405940595,0.5594059405940595,0.5643564356435643,0.5643564356435643,0.5742574257425742,0.5792079207920792,0.5792079207920792,0.5891089108910891,0.594059405940594,0.594059405940594,0.599009900990099,0.6138613861386139,0.6138613861386139,0.6287128712871287,0.6386138613861386,0.6386138613861386,0.6584158415841584,0.6683168316831684,0.6683168316831684,0.6732673267326733,0.6881188118811881,0.6881188118811881,0.693069306930693,0.698019801980198,0.698019801980198,0.7128712871287128,0.7178217821782178,0.7178217821782178,0.7277227722772277,0.7376237623762376,0.7376237623762376,0.7425742574257426,0.7475247524752475,0.7475247524752475,0.7623762376237624,0.7722772277227723,0.7722772277227723,0.7772277227722773,0.7821782178217822,0.7821782178217822,0.7871287128712872,0.7871287128712872,0.7920792079207921,0.7970297029702971,0.7970297029702971,0.801980198019802,0.806930693069307,0.806930693069307,0.8118811881188119,0.8168316831683168,0.8168316831683168,0.8217821782178217,0.8267326732673267,0.8267326732673267,0.8366336633663366,0.8415841584158416,0.8415841584158416,0.8465346534653465,0.8514851485148515,0.8514851485148515,0.8564356435643564,0.8613861386138614,0.8613861386138614,0.8712871287128713,0.8762376237623762,0.8762376237623762,0.8910891089108911,0.8960396039603961,0.8960396039603961,0.900990099009901,0.905940594059406,0.905940594059406,0.9108910891089109,0.9158415841584159,0.9158415841584159,0.9207920792079208,0.9257425742574258,0.9257425742574258,0.9306930693069307,0.9306930693069307,0.9356435643564357,0.9405940594059405,0.9405940594059405,0.9455445544554455,0.9504950495049505,0.9504950495049505,0.9653465346534653,0.9702970297029703,0.9702970297029703,0.9752475247524752,0.9851485148514851,0.9851485148514851,0.9900990099009901,0.995049504950495,0.995049504950495,1.0],"auc":0.7937768907780831,"n":584,"n_pos":202}</script>
+<script id="bucket-data" type="application/json">[{"bucket":0,"lo":0.0,"hi":0.1,"n":176,"pct_ok":91.5,"pct_banned":6.2,"pct_deleted":2.3},{"bucket":1,"lo":0.1,"hi":0.2,"n":71,"pct_ok":76.1,"pct_banned":12.7,"pct_deleted":11.3},{"bucket":2,"lo":0.2,"hi":0.3,"n":61,"pct_ok":65.6,"pct_banned":27.9,"pct_deleted":6.6},{"bucket":3,"lo":0.3,"hi":0.4,"n":55,"pct_ok":74.5,"pct_banned":10.9,"pct_deleted":14.5},{"bucket":4,"lo":0.4,"hi":0.5,"n":37,"pct_ok":51.4,"pct_banned":24.3,"pct_deleted":24.3},{"bucket":5,"lo":0.5,"hi":0.6,"n":32,"pct_ok":56.2,"pct_banned":21.9,"pct_deleted":21.9},{"bucket":6,"lo":0.6,"hi":0.7,"n":32,"pct_ok":43.8,"pct_banned":21.9,"pct_deleted":34.4},{"bucket":7,"lo":0.7,"hi":0.8,"n":26,"pct_ok":34.6,"pct_banned":23.1,"pct_deleted":42.3},{"bucket":8,"lo":0.8,"hi":0.9,"n":42,"pct_ok":33.3,"pct_banned":33.3,"pct_deleted":33.3},{"bucket":9,"lo":0.9,"hi":1.0,"n":52,"pct_ok":23.1,"pct_banned":34.6,"pct_deleted":42.3}]</script>
+<script id="elimination-data" type="application/json">[{"n_features":49,"mean":0.7812681426404149,"std":0.03260836233147471},{"n_features":48,"mean":0.7833323650034177,"std":0.035209761063841556},{"n_features":47,"mean":0.78136700815231,"std":0.03286076616408496},{"n_features":46,"mean":0.7809161845856326,"std":0.03416017169842046},{"n_features":45,"mean":0.7814257497957755,"std":0.03220009808954466},{"n_features":44,"mean":0.7819830076855108,"std":0.03349926726393945},{"n_features":43,"mean":0.7838390877415269,"std":0.035003618966825106},{"n_features":42,"mean":0.7812494623476651,"std":0.032822827046711515},{"n_features":41,"mean":0.7856690979110748,"std":0.032750675399449286},{"n_features":40,"mean":0.7869563167897572,"std":0.034013132080212755},{"n_features":39,"mean":0.7849518905356517,"std":0.029859573487982505},{"n_features":38,"mean":0.7831915459380157,"std":0.03296855465270188},{"n_features":37,"mean":0.7847158569928147,"std":0.03362606805715459},{"n_features":36,"mean":0.7860810104529616,"std":0.03476599107778086},{"n_features":35,"mean":0.7900949352316489,"std":0.030816101863329233},{"n_features":34,"mean":0.7929138755980862,"std":0.03308107724953578},{"n_features":33,"mean":0.7903186236100228,"std":0.03473447960028979},{"n_features":32,"mean":0.7878293349782437,"std":0.029494483651880853},{"n_features":31,"mean":0.788008831668973,"std":0.031206204441306427},{"n_features":30,"mean":0.7909900721871197,"std":0.031798307619896424},{"n_features":29,"mean":0.7881142240301418,"std":0.03432932271247667},{"n_features":28,"mean":0.7950983820415785,"std":0.03568182278040711},{"n_features":27,"mean":0.7925423328276345,"std":0.03284292518432064},{"n_features":26,"mean":0.793000245903006,"std":0.03785960228581754},{"n_features":25,"mean":0.7926237975759798,"std":0.03609287124864117},{"n_features":24,"mean":0.7972509544370905,"std":0.03428305096971263},{"n_features":23,"mean":0.7969671615290999,"std":0.03522538681810677},{"n_features":22,"mean":0.7935919385492555,"std":0.03642345888159081},{"n_features":21,"mean":0.7943724138505911,"std":0.03461258559894256},{"n_features":20,"mean":0.7996437782371671,"std":0.03029145987747889},{"n_features":19,"mean":0.8026303869429671,"std":0.03517124104815334},{"n_features":18,"mean":0.801186106896954,"std":0.03884451707398085},{"n_features":17,"mean":0.8029528824833705,"std":0.03737704795551216},{"n_features":16,"mean":0.7937401138655952,"std":0.03404876925062627},{"n_features":15,"mean":0.7900975984862377,"std":0.036520794659690596},{"n_features":14,"mean":0.7850490764049813,"std":0.03776406619907902},{"n_features":13,"mean":0.7849515195972192,"std":0.03741781023415311},{"n_features":12,"mean":0.783726159911975,"std":0.04159929560294463},{"n_features":11,"mean":0.7801572612240135,"std":0.03467604872924167},{"n_features":10,"mean":0.7909960447126687,"std":0.035923360098622556},{"n_features":9,"mean":0.7879819490522314,"std":0.03207549251879701},{"n_features":8,"mean":0.7816668431055466,"std":0.03349796961939831},{"n_features":7,"mean":0.7794832535885169,"std":0.038370117777094793},{"n_features":6,"mean":0.782489063568011,"std":0.036988491988337376}]</script>
+<script>
+(function(){
+  const tooltip = document.getElementById('tooltip');
+  function showTip(evt, html) { tooltip.innerHTML = html; tooltip.classList.add('show'); moveTip(evt); }
+  function moveTip(evt) { const pad = 14; tooltip.style.left = (evt.clientX+pad)+'px'; tooltip.style.top = (evt.clientY+pad)+'px'; }
+  function hideTip() { tooltip.classList.remove('show'); }
+  document.addEventListener('mousemove', e => { if (tooltip.classList.contains('show')) moveTip(e); });
+  function svgEl(tag, attrs) { const el = document.createElementNS('http://www.w3.org/2000/svg', tag); for (const k in attrs) el.setAttribute(k, attrs[k]); return el; }
+
+  // ---------------- §1 config comparison bar chart ----------------
+  (function(){
+    const DATA = JSON.parse(document.getElementById('config-data').textContent);
+    const svg = document.getElementById('configChart');
+    const W=820,H=320, padL=50, padR=20, padT=16, padB=70;
+    const plotW=W-padL-padR, plotH=H-padT-padB;
+    const n = DATA.length;
+    const groupW = plotW/n;
+    const barW = groupW*0.5;
+    const maxV = 1.0;
+    [0,0.2,0.4,0.6,0.8,1.0].forEach(v=>{
+      const y = padT+plotH-(v/maxV)*plotH;
+      svg.appendChild(svgEl('line',{x1:padL,y1:y,x2:padL+plotW,y2:y,stroke:'var(--grid)','stroke-width':1}));
+      const t = svgEl('text',{x:padL-6,y:y+3,'text-anchor':'end','font-size':'10','fill':'var(--muted)'}); t.textContent=v.toFixed(1); svg.appendChild(t);
+    });
+    const yBase = padT+plotH-(0.5/maxV)*plotH;
+    svg.appendChild(svgEl('line',{x1:padL,y1:yBase,x2:padL+plotW,y2:yBase,stroke:'var(--muted)','stroke-width':1,'stroke-dasharray':'4,3'}));
+    const bl = svgEl('text',{x:padL+plotW-4,y:yBase-4,'text-anchor':'end','font-size':'9','fill':'var(--muted)'}); bl.textContent='random chance (0.5)'; svg.appendChild(bl);
+
+    DATA.forEach((d,i)=>{
+      const cx = padL + i*groupW + groupW/2;
+      const x = cx - barW/2;
+      const h = (d.mean/maxV)*plotH;
+      const y = padT+plotH-h;
+      const color = d.target.startsWith('clubbed') ? 'var(--accent)' : 'var(--accent2)';
+      const bar = svgEl('rect',{x,y,width:barW,height:h,fill:color,rx:3});
+      bar.addEventListener('mousemove', e=>showTip(e, `${d.features}<br>${d.target}<br>mean=${d.mean.toFixed(3)} std=${d.std.toFixed(3)}<br>range ${d.min.toFixed(3)}–${d.max.toFixed(3)}`));
+      bar.addEventListener('mouseleave', hideTip);
+      svg.appendChild(bar);
+      // error bar (std)
+      const errTop = padT+plotH-((d.mean+d.std)/maxV)*plotH;
+      const errBot = padT+plotH-((d.mean-d.std)/maxV)*plotH;
+      svg.appendChild(svgEl('line',{x1:cx,y1:errTop,x2:cx,y2:errBot,stroke:'var(--ink)','stroke-width':1.5}));
+      svg.appendChild(svgEl('line',{x1:cx-6,y1:errTop,x2:cx+6,y2:errTop,stroke:'var(--ink)','stroke-width':1.5}));
+      svg.appendChild(svgEl('line',{x1:cx-6,y1:errBot,x2:cx+6,y2:errBot,stroke:'var(--ink)','stroke-width':1.5}));
+      const val = svgEl('text',{x:cx,y:y-10,'text-anchor':'middle','font-size':'12','font-weight':'700','fill':'var(--ink)'});
+      val.textContent = d.mean.toFixed(3); svg.appendChild(val);
+      // two-line label
+      const l1 = svgEl('text',{x:cx,y:padT+plotH+16,'text-anchor':'middle','font-size':'9.5','fill':'var(--ink-2)'});
+      l1.textContent = d.features; svg.appendChild(l1);
+      const l2 = svgEl('text',{x:cx,y:padT+plotH+29,'text-anchor':'middle','font-size':'9.5','fill':'var(--muted)'});
+      l2.textContent = d.target.split(' (')[0]; svg.appendChild(l2);
+    });
+  })();
+
+  // ---------------- §2 feature importance bar chart ----------------
+  (function(){
+    const DATA = JSON.parse(document.getElementById('importance-data').textContent);
+    const svg = document.getElementById('importanceChart');
+    const W=820,H=440, padL=210, padR=50, padT=10, padB=10;
+    const plotW=W-padL-padR, plotH=H-padT-padB;
+    const n = DATA.features.length;
+    const rowH = plotH/n;
+    const maxV = Math.max(...DATA.importance);
+    DATA.features.forEach((f,i)=>{
+      const y = padT + i*rowH;
+      const w = (DATA.importance[i]/maxV)*plotW;
+      const label = svgEl('text',{x:padL-8,y:y+rowH/2+3,'text-anchor':'end','font-size':'10.5','fill':'var(--ink-2)','font-family':'ui-monospace,monospace'});
+      label.textContent = f; svg.appendChild(label);
+      svg.appendChild(svgEl('rect',{x:padL,y:y+rowH*0.18,width:plotW,height:rowH*0.64,fill:'var(--divzero)',rx:2}));
+      const bar = svgEl('rect',{x:padL,y:y+rowH*0.18,width:Math.max(1,w),height:rowH*0.64,fill:'var(--accent)',rx:2});
+      bar.addEventListener('mousemove', e=>showTip(e, `${f}<br>importance: ${DATA.importance[i].toFixed(4)}`));
+      bar.addEventListener('mouseleave', hideTip);
+      svg.appendChild(bar);
+      const val = svgEl('text',{x:padL+w+6,y:y+rowH/2+3,'font-size':'10','fill':'var(--ink)','font-family':'ui-monospace,monospace'});
+      val.textContent = DATA.importance[i].toFixed(4); svg.appendChild(val);
+    });
+  })();
+
+  // ---------------- §3 ROC curve ----------------
+  (function(){
+    const DATA = JSON.parse(document.getElementById('roc-data').textContent);
+    const lbl = document.getElementById('rocAucLabel'); if (lbl) lbl.textContent = DATA.auc.toFixed(3);
+    const svg = document.getElementById('rocChart');
+    const W=480,H=480, pad=48, plotW=W-2*pad, plotH=H-2*pad;
+    function X(v){ return pad + v*plotW; }
+    function Y(v){ return pad + plotH - v*plotH; }
+    [0,0.2,0.4,0.6,0.8,1.0].forEach(v=>{
+      svg.appendChild(svgEl('line',{x1:X(v),y1:pad,x2:X(v),y2:pad+plotH,stroke:'var(--grid)','stroke-width':1}));
+      svg.appendChild(svgEl('line',{x1:pad,y1:Y(v),x2:pad+plotW,y2:Y(v),stroke:'var(--grid)','stroke-width':1}));
+      const tx = svgEl('text',{x:X(v),y:pad+plotH+16,'text-anchor':'middle','font-size':'10','fill':'var(--muted)'}); tx.textContent=v; svg.appendChild(tx);
+      const ty = svgEl('text',{x:pad-6,y:Y(v)+3,'text-anchor':'end','font-size':'10','fill':'var(--muted)'}); ty.textContent=v; svg.appendChild(ty);
+    });
+    svg.appendChild(svgEl('line',{x1:pad,y1:pad+plotH,x2:pad+plotW,y2:pad+plotH,stroke:'var(--baseline)','stroke-width':1.5}));
+    svg.appendChild(svgEl('line',{x1:pad,y1:pad,x2:pad,y2:pad+plotH,stroke:'var(--baseline)','stroke-width':1.5}));
+    const xl = svgEl('text',{x:pad+plotW/2,y:H-6,'text-anchor':'middle','font-size':'11','fill':'var(--ink-2)'}); xl.textContent='False Positive Rate'; svg.appendChild(xl);
+    const yl = svgEl('text',{x:14,y:pad+plotH/2,'text-anchor':'middle','font-size':'11','fill':'var(--ink-2)','transform':`rotate(-90 14 ${pad+plotH/2})`}); yl.textContent='True Positive Rate'; svg.appendChild(yl);
+    svg.appendChild(svgEl('line',{x1:X(0),y1:Y(0),x2:X(1),y2:Y(1),stroke:'var(--muted)','stroke-width':1,'stroke-dasharray':'4,3'}));
+    let path=''; DATA.fpr.forEach((f,i)=>{ const x=X(f), y=Y(DATA.tpr[i]); path += (i===0?'M':'L')+x.toFixed(1)+','+y.toFixed(1)+' '; });
+    let area = path + `L${X(1)},${Y(0)} L${X(0)},${Y(0)} Z`;
+    svg.appendChild(svgEl('path',{d:area, fill:'var(--accent)', opacity:'0.08'}));
+    svg.appendChild(svgEl('path',{d:path, fill:'none', stroke:'var(--accent)', 'stroke-width':2.5}));
+    const label = svgEl('text',{x:X(0.5),y:Y(0.28),'font-size':'19','font-weight':'700','fill':'var(--accent)'});
+    label.textContent = 'AUC = '+DATA.auc.toFixed(3); svg.appendChild(label);
+    const sub = svgEl('text',{x:X(0.5),y:Y(0.20),'font-size':'11','fill':'var(--muted)'});
+    sub.textContent = `n=${DATA.n} (${DATA.n_pos} removed)`; svg.appendChild(sub);
+  })();
+
+  // ---------------- §4 confirmed rate by score bucket (100%-stacked bars) ----------------
+  (function(){
+    const DATA = JSON.parse(document.getElementById('bucket-data').textContent);
+    const svg = document.getElementById('bucketChart');
+    const W=820,H=380, padL=50, padR=16, padT=16, padB=56;
+    const plotW=W-padL-padR, plotH=H-padT-padB;
+    const n = DATA.length;
+    const groupW = plotW/n;
+    const barW = groupW*0.62;
+
+    [0,25,50,75,100].forEach(v=>{
+      const y = padT+plotH - (v/100)*plotH;
+      svg.appendChild(svgEl('line',{x1:padL,y1:y,x2:padL+plotW,y2:y,stroke:'var(--grid)','stroke-width':1}));
+      const t = svgEl('text',{x:padL-6,y:y+3,'text-anchor':'end','font-size':'10','fill':'var(--muted)'}); t.textContent=v+'%'; svg.appendChild(t);
+    });
+    svg.appendChild(svgEl('line',{x1:padL,y1:padT+plotH,x2:padL+plotW,y2:padT+plotH,stroke:'var(--baseline)','stroke-width':1.5}));
+
+    DATA.forEach((d,i)=>{
+      const gx = padL + i*groupW + (groupW-barW)/2;
+      if (d.n === 0) return;
+      const segs = [['pct_ok','var(--ok)','active'], ['pct_banned','var(--accent2)','banned'], ['pct_deleted','var(--removed)','deleted']];
+      let yCursor = padT+plotH;
+      segs.forEach(([key,color,label])=>{
+        const v = d[key];
+        const h = (v/100)*plotH;
+        const y = yCursor - h;
+        const rect = svgEl('rect',{x:gx,y,width:barW,height:Math.max(0,h),fill:color,rx: h>3?2:0});
+        rect.addEventListener('mousemove', e=>showTip(e, `score ${d.lo.toFixed(1)}–${d.hi.toFixed(1)} (n=${d.n})<br>${label}: ${v.toFixed(1)}%`));
+        rect.addEventListener('mouseleave', hideTip);
+        svg.appendChild(rect);
+        yCursor -= h;
+      });
+      const nlabel = svgEl('text',{x:gx+barW/2,y:padT+plotH+16,'text-anchor':'middle','font-size':'9.5','fill':'var(--muted)'});
+      nlabel.textContent = 'n='+d.n; svg.appendChild(nlabel);
+      const rangelabel = svgEl('text',{x:gx+barW/2,y:padT+plotH+30,'text-anchor':'middle','font-size':'9.5','fill':'var(--ink-2)'});
+      rangelabel.textContent = d.lo.toFixed(1)+'–'+d.hi.toFixed(1); svg.appendChild(rangelabel);
+    });
+    const xl = svgEl('text',{x:padL+plotW/2,y:H-4,'text-anchor':'middle','font-size':'12','fill':'var(--ink-2)'}); xl.textContent='predicted removal probability (decile bucket)'; svg.appendChild(xl);
+  })();
+
+  // ---------------- §1 feature-count elimination curve ----------------
+  (function(){
+    const DATA = JSON.parse(document.getElementById('elimination-data').textContent).slice().reverse();
+    const svg = document.getElementById('eliminationChart');
+    const W=820,H=300, padL=50, padR=20, padT=16, padB=36;
+    const plotW=W-padL-padR, plotH=H-padT-padB;
+    const minN = Math.min(...DATA.map(d=>d.n_features)), maxN = Math.max(...DATA.map(d=>d.n_features));
+    const minV = 0.70, maxV = 0.85;
+    function X(n){ return padL + ((n-minN)/(maxN-minN))*plotW; }
+    function Y(v){ return padT + plotH - ((v-minV)/(maxV-minV))*plotH; }
+    [0.70,0.75,0.80,0.85].forEach(v=>{
+      const y = Y(v);
+      svg.appendChild(svgEl('line',{x1:padL,y1:y,x2:padL+plotW,y2:y,stroke:'var(--grid)','stroke-width':1}));
+      const t = svgEl('text',{x:padL-6,y:y+3,'text-anchor':'end','font-size':'10','fill':'var(--muted)'}); t.textContent=v.toFixed(2); svg.appendChild(t);
+    });
+    [10,20,30,40,49].forEach(n=>{
+      const x = X(n);
+      const t = svgEl('text',{x,y:padT+plotH+16,'text-anchor':'middle','font-size':'10','fill':'var(--muted)'}); t.textContent=n; svg.appendChild(t);
+    });
+    let path=''; DATA.forEach((d,i)=>{ const x=X(d.n_features), y=Y(d.mean); path += (i===0?'M':'L')+x.toFixed(1)+','+y.toFixed(1)+' '; });
+    svg.appendChild(svgEl('path',{d:path, fill:'none', stroke:'var(--accent)', 'stroke-width':2}));
+    DATA.forEach(d=>{
+      const x=X(d.n_features), y=Y(d.mean);
+      const dot = svgEl('circle',{cx:x,cy:y,r:2.5,fill:'var(--accent)'});
+      dot.addEventListener('mousemove', e=>showTip(e, `n=${d.n_features} features<br>AUC=${d.mean.toFixed(4)} ± ${d.std.toFixed(4)}`));
+      dot.addEventListener('mouseleave', hideTip);
+      svg.appendChild(dot);
+    });
+    // mark the final choice: 15 features (post wall-clock-bug-fix; 3 of the original 18 were
+    // dropped as post-fix duplicates, see §3 note -- this curve predates that fix so 15 isn't
+    // one of its plotted points, mark the nearest neighborhood instead)
+    const markX = X(15);
+    svg.appendChild(svgEl('line',{x1:markX,y1:padT,x2:markX,y2:padT+plotH,stroke:'var(--accent2)','stroke-width':1,'stroke-dasharray':'4,3'}));
+    const diamond = svgEl('path',{d:`M${markX},${padT-2} l6,8 l-6,8 l-6,-8 Z`, fill:'var(--accent2)'});
+    svg.appendChild(diamond);
+    const lbl = svgEl('text',{x:markX,y:padT-8,'text-anchor':'middle','font-size':'10','font-weight':'700','fill':'var(--accent2)'}); lbl.textContent='final: 15 features'; svg.appendChild(lbl);
+    const xl = svgEl('text',{x:padL+plotW/2,y:H-2,'text-anchor':'middle','font-size':'12','fill':'var(--ink-2)'}); xl.textContent='features remaining'; svg.appendChild(xl);
+  })();
+})();
+</script>
+</body></html>
