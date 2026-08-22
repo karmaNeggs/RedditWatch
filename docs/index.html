@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>RedditWatch — Report</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
   :root {
     --bg: #0d1117; --surface: #161b22; --surface2: #21262d; --border: #30363d;
@@ -57,6 +58,9 @@
   .findings-list { display: flex; flex-direction: column; gap: 10px; }
   .finding-card { padding: 12px 14px; background: var(--surface2); border-radius: 8px; font-size: 13px; border-left: 3px solid var(--series-blue); color: var(--text); }
 
+  .trend-controls { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+  .role-select { padding: 4px 10px; border-radius: 8px; border: 1px solid var(--border); color: var(--text); background: var(--surface); font-size: 12px; }
+  .chart-wrap { position: relative; height: 220px; }
   .top-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px,1fr)); gap: 10px; }
   .top-tile { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; }
   .top-rank { font-size: 11px; color: var(--muted); }
@@ -90,7 +94,7 @@
   <div class="hero">
     <div class="eyebrow">RedditWatch 1.0</div>
     <h1>Who's behind India's most-seen Reddit posts?</h1>
-    <p class="lede">A bot/spam-influence tracker for 45 India-focused subreddits. Every month, we score the accounts behind each subreddit's best-performing content against a model trained and cross-validated on <strong>684 real, live-checked Reddit accounts</strong> — not a proxy label, not a hand-tuned heuristic. Repeated-CV AUC 0.780 ± 0.035.</p>
+    <p class="lede">A bot/spam-influence tracker for 45 India-focused subreddits. Every month, we identify the accounts behind each subreddit's best-performing posts and comments, and score how likely each one is to be a bot, spam account, or otherwise low-quality account — using a model checked against <strong>684 real Reddit accounts we verified by hand</strong> (are they still active, or banned/deleted?), not a guess or a hand-picked checklist. <a href="methodology.html">How the score is built →</a></p>
     <div class="cta-row">
       <a class="cta primary" href="bot-spam-compass.html">Open the Compass →</a>
       <a class="cta secondary" href="methodology.html">How the score is built</a>
@@ -110,6 +114,21 @@
   </div>
 
   <div class="section">
+    <div class="trend-controls">
+      <div class="section-title" style="margin-bottom:0">Ecosystem trend, 24 months</div>
+      <select id="trendRoleSelect" class="role-select" onchange="renderTrendChart()">
+        <option value="avg_score">Posters + commenters</option>
+        <option value="poster_avg_score">Posters only</option>
+        <option value="commenter_avg_score">Commenters only</option>
+      </select>
+    </div>
+    <div class="card">
+      <div class="chart-wrap"><canvas id="ecoTrendChart"></canvas></div>
+    </div>
+    <p style="margin-top:10px;font-size:12.5px">Average bot/spam prevalence across all 45 tracked subreddits, month over month. Per-subreddit trend lines and every other cut of this data: <a href="bot-spam-compass.html">open the Compass</a>.</p>
+  </div>
+
+  <div class="section">
     <div class="section-title">Highest prevalence right now</div>
     <div class="top-grid">
       <div class="top-tile"><div class="top-rank">#1</div><div class="top-sub">r/funnyIndia</div><div class="top-score">26.0%</div></div>
@@ -126,7 +145,7 @@
     <div class="findings-list">
       <div class="finding-card">r/IndiaCricket saw the largest increase in combined bot/spam prevalence this month (+5.2pp), now at 21.8%.</div>
       <div class="finding-card">2 subreddits in the Critical band this month: r/funnyIndia, r/indiameme.</div>
-      <div class="finding-card">12 subreddits have low scoring coverage (&lt;40%) this month — those readings skew toward accounts too new/thin-history to score; read cautiously.</div>
+      <div class="finding-card">12 subreddits could only score fewer than 40% of their top accounts this month — for the rest, there just wasn't enough posting history yet to make a call, so those particular readings are worth treating cautiously.</div>
     </div>
   </div>
 
@@ -135,23 +154,23 @@
     <div class="pillars">
       <div class="pillar">
         <div class="pillar-num">01</div>
-        <h3>A real label, not a proxy</h3>
-        <p>684 accounts checked directly against live Reddit — banned, deleted, or still active — across ten sampling rounds. The first ground truth in this project's history the detection method had no hand in constructing.</p>
+        <h3>Checked against reality, not guessed</h3>
+        <p>684 accounts were checked by hand, one at a time, against live Reddit — is this account banned, deleted, or still there? That real record, not an assumption, is what the model was trained and tested against.</p>
       </div>
       <div class="pillar">
         <div class="pillar-num">02</div>
-        <h3>A lean, validated model</h3>
-        <p>10 features, reduced from ~67 candidates through five rounds of pruning — two of which caught real bugs (duplicate columns, a wall-clock time-decay artifact). Repeated 5×10-fold CV AUC 0.780 ± 0.035.</p>
+        <h3>Kept as simple as it can be</h3>
+        <p>Started with ~67 possible signals about an account, cut down to the 10 that actually matter — a process that caught two real mistakes along the way (see <a href="methodology.html">methodology</a>) rather than just guessing what to remove.</p>
       </div>
       <div class="pillar">
         <div class="pillar-num">03</div>
-        <h3>Posters ≠ commenters</h3>
-        <p>Checked directly, not assumed: posters of top-30 content average ~20% high-risk vs. commenters' ~12%, every month. The Compass reports both separately, plus combined, each with its own severity calibration.</p>
+        <h3>Posting ≠ commenting risk</h3>
+        <p>Turns out the people who <em>post</em> a subreddit's top content run meaningfully riskier (~20% flagged) than the people who <em>comment</em> on it (~12%) — checked directly, not assumed. The Compass reports both separately.</p>
       </div>
       <div class="pillar">
         <div class="pillar-num">04</div>
-        <h3>Influence, not volume</h3>
-        <p>Prevalence tracks who's behind each subreddit's <em>best-performing</em> content that month — the accounts Reddit's own ranking already surfaced as consequential — not a raw share of total monthly activity.</p>
+        <h3>Who's seen, not just who's active</h3>
+        <p>The score tracks who's behind a subreddit's <em>best-performing</em> content that month — the posts and comments people actually see — rather than a raw count of everything posted, seen or not.</p>
       </div>
     </div>
   </div>
@@ -161,6 +180,7 @@
   Model: 10-feature tuned XGBoost, trained on 684 live-verified Reddit accounts, repeated CV AUC ≈0.78. Full methodology: <a href="methodology.html">methodology</a> · <a href="v3-research/whitepaper.html">whitepaper</a> · <a href="v3-research/charts/model_analysis.html">full analysis</a> · <a href="https://github.com/karmaNeggs/RedditWatch">GitHub</a>. Re-run <code>scripts/v3_stage8_monthly_refresh.py</code> monthly to refresh this page's numbers.
 </footer>
 
+<script id="embedded-trend" type="application/json">{"months": [{"month": "2024-08", "aggregate": {"avg_score": 15.68, "poster_avg_score": 25.48, "commenter_avg_score": 15.6}}, {"month": "2024-09", "aggregate": {"avg_score": 16.43, "poster_avg_score": 30.33, "commenter_avg_score": 15.86}}, {"month": "2024-10", "aggregate": {"avg_score": 15.41, "poster_avg_score": 25.61, "commenter_avg_score": 15.05}}, {"month": "2024-11", "aggregate": {"avg_score": 15.41, "poster_avg_score": 27.75, "commenter_avg_score": 15.22}}, {"month": "2024-12", "aggregate": {"avg_score": 15.13, "poster_avg_score": 27.25, "commenter_avg_score": 14.56}}, {"month": "2025-01", "aggregate": {"avg_score": 14.06, "poster_avg_score": 26.08, "commenter_avg_score": 13.39}}, {"month": "2025-02", "aggregate": {"avg_score": 13.89, "poster_avg_score": 26.8, "commenter_avg_score": 13.15}}, {"month": "2025-03", "aggregate": {"avg_score": 12.91, "poster_avg_score": 23.5, "commenter_avg_score": 12.44}}, {"month": "2025-04", "aggregate": {"avg_score": 13.14, "poster_avg_score": 22.15, "commenter_avg_score": 12.54}}, {"month": "2025-05", "aggregate": {"avg_score": 11.49, "poster_avg_score": 18.19, "commenter_avg_score": 11.03}}, {"month": "2025-06", "aggregate": {"avg_score": 11.62, "poster_avg_score": 20.12, "commenter_avg_score": 10.91}}, {"month": "2025-07", "aggregate": {"avg_score": 11.7, "poster_avg_score": 25.49, "commenter_avg_score": 10.71}}, {"month": "2025-08", "aggregate": {"avg_score": 10.54, "poster_avg_score": 19.16, "commenter_avg_score": 10.02}}, {"month": "2025-09", "aggregate": {"avg_score": 10.9, "poster_avg_score": 21.82, "commenter_avg_score": 10.19}}, {"month": "2025-10", "aggregate": {"avg_score": 11.82, "poster_avg_score": 22.36, "commenter_avg_score": 10.75}}, {"month": "2025-11", "aggregate": {"avg_score": 10.77, "poster_avg_score": 20.69, "commenter_avg_score": 10.36}}, {"month": "2025-12", "aggregate": {"avg_score": 10.09, "poster_avg_score": 18.95, "commenter_avg_score": 9.86}}, {"month": "2026-01", "aggregate": {"avg_score": 10.59, "poster_avg_score": 19.15, "commenter_avg_score": 10.54}}, {"month": "2026-02", "aggregate": {"avg_score": 11.17, "poster_avg_score": 18.78, "commenter_avg_score": 11.01}}, {"month": "2026-03", "aggregate": {"avg_score": 12.93, "poster_avg_score": 23.5, "commenter_avg_score": 10.45}}, {"month": "2026-04", "aggregate": {"avg_score": 11.47, "poster_avg_score": 21.6, "commenter_avg_score": 11.23}}, {"month": "2026-05", "aggregate": {"avg_score": 11.78, "poster_avg_score": 25.13, "commenter_avg_score": 11.64}}, {"month": "2026-06", "aggregate": {"avg_score": 12.92, "poster_avg_score": 22.57, "commenter_avg_score": 13.04}}, {"month": "2026-07", "aggregate": {"avg_score": 14.57, "poster_avg_score": 21.46, "commenter_avg_score": 14.67}}, {"month": "2026-08", "aggregate": {"avg_score": 12.7, "poster_avg_score": 21.99, "commenter_avg_score": 12.56}}]}</script>
 <script>
 function initTheme() {
   const saved = localStorage.getItem('theme');
@@ -173,9 +193,39 @@ function initTheme() {
     document.documentElement.setAttribute('data-theme', isLight ? 'dark' : 'light');
     localStorage.setItem('theme', isLight ? 'dark' : 'light');
     upd();
+    renderTrendChart();
   };
 }
+function cssVar(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+
+let ecoTrendChart = null;
+function renderTrendChart() {
+  const el = document.getElementById('embedded-trend');
+  if (!el) return;
+  const history = JSON.parse(el.textContent);
+  const key = document.getElementById('trendRoleSelect').value;
+  const months = history.months.map(m => m.month);
+  const values = history.months.map(m => m.aggregate[key]);
+  const blue = cssVar('--series-blue');
+  if (ecoTrendChart) ecoTrendChart.destroy();
+  ecoTrendChart = new Chart(document.getElementById('ecoTrendChart').getContext('2d'), {
+    type: 'line',
+    data: { labels: months, datasets: [{ label: 'Ecosystem avg prevalence', data: values,
+      borderColor: blue, backgroundColor: blue + '22', borderWidth: 2, pointRadius: 2,
+      pointHoverRadius: 5, pointBackgroundColor: blue, tension: 0.15, fill: true, spanGaps: true }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false,
+        callbacks: { label: c => `${c.formattedValue}%` } } },
+      scales: {
+        x: { grid: { color: cssVar('--grid') || '#21262d' }, ticks: { color: cssVar('--muted'), font: { size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 } },
+        y: { beginAtZero: true, grid: { color: cssVar('--grid') || '#21262d' }, ticks: { color: cssVar('--muted'), font: { size: 11 }, callback: v => v + '%' } },
+      },
+    },
+  });
+}
 initTheme();
+renderTrendChart();
 </script>
 </body>
 </html>
