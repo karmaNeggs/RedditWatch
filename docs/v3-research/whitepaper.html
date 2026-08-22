@@ -4,12 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>RedditWatch — Whitepaper</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
   :root {
     color-scheme: light;
     --page: #f9f9f7; --surface: #fcfcfb; --ink: #0b0b0b; --ink-2: #52514e; --muted: #898781;
     --grid: #e1e0d9; --baseline: #c3c2b7; --border: rgba(11,11,11,0.10);
-    --accent: #2a78d6; --accent2: #d95926;
+    --accent: #2a78d6; --accent2: #d95926; --accent3: #199e70;
     --hdr-bg: rgba(249,249,247,0.94);
   }
   @media (prefers-color-scheme: dark) {
@@ -17,7 +18,7 @@
       color-scheme: dark;
       --page: #0d0d0d; --surface: #1a1a19; --ink: #ffffff; --ink-2: #c3c2b7; --muted: #898781;
       --grid: #2c2c2a; --baseline: #383835; --border: rgba(255,255,255,0.10);
-      --accent: #3987e5; --accent2: #d95926;
+      --accent: #3987e5; --accent2: #d95926; --accent3: #2bc48a;
       --hdr-bg: rgba(13,13,13,0.94);
     }
   }
@@ -67,6 +68,10 @@
   tbody tr:hover { background: var(--surface); }
   .table-wrap { overflow-x: auto; }
 
+  .chart-embed { margin: 6px 0 20px; padding: 16px 18px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
+  .chart-embed-title { font-size: 11px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); font-weight: 700; margin-bottom: 10px; }
+  .chart-wrap { position: relative; }
+
   footer { max-width: 1000px; margin: 0 auto; padding: 20px 24px 40px; color: var(--muted); font-size: 12px; border-top: 1px solid var(--border); }
 </style>
 </head>
@@ -89,6 +94,7 @@
     <div class="toc">
 <ul>
 <li><a href="#redditwatch-10-scoring-bot-and-spam-worker-activity-on-india-focused-subreddits">RedditWatch 1.0 — Scoring Bot and Spam-Worker Activity on India-Focused Subreddits</a><ul>
+<li><a href="#how-to-read-this-document">How to read this document</a></li>
 <li><a href="#1-corpus">1. Corpus</a></li>
 <li><a href="#2-earlier-approaches-what-didnt-make-the-cut">2. Earlier approaches — what didn't make the cut</a></li>
 <li><a href="#3-feature-engineering-groundwork">3. Feature-engineering groundwork</a></li>
@@ -131,6 +137,48 @@ live-checked Reddit account status (banned / deleted / still active), not a prox
   <code>python3 scripts/v3_stage8_monthly_refresh.py</code>.</li>
 </ul>
 <hr />
+<h2 id="how-to-read-this-document">How to read this document</h2>
+<blockquote>
+<p><strong>In one sentence:</strong> we taught a computer to guess whether a Reddit account is likely to get banned
+or deleted, by showing it hundreds of real accounts whose fate we already checked by hand, then used
+that to answer "which India-focused subreddits currently have the most bot/spam-like accounts behind
+their most-visible posts and comments?"</p>
+</blockquote>
+<p>This is a technical record, written to be checked and reproduced, not a casual explainer — but every
+recurring term is defined once, here, so the rest of the document doesn't require outside knowledge.
+If a paragraph gets dense later on, it's worth a scroll back to this list rather than a search engine.</p>
+<ul>
+<li><strong>Feature</strong> — one measurable fact about an account: how many comments it posts per day, how old it
+  is, how spread out its karma is across subreddits, and so on. The model looks at 10 of these per
+  account (§5).</li>
+<li><strong>Ground truth</strong> — real, independently-checked outcomes (here: an account's actual live status on
+  Reddit) used to test whether a model's guesses are correct. The opposite of a <em>proxy</em> — a stand-in
+  signal (like "posts the same text twice") that might correlate with the real thing but isn't it.</li>
+<li><strong>AUC (ROC-AUC)</strong> — a single 0.5-to-1.0 score for how well a model tells two outcomes apart. 0.5 is a
+  coin flip; 1.0 is perfect separation; every AUC number in this document is on that scale.</li>
+<li><strong>Cross-validation (CV)</strong> — the honesty check for AUC: split the labeled accounts into groups, train
+  on most of them, test on the group held back, then repeat with a different group held back each time.
+  "Repeated 5×10-fold CV" means 5 groups, repeated 10 times with different random splits — 50 separate
+  tests averaged together, so one lucky or unlucky split can't skew the number.</li>
+<li><strong>Correlation (ρ, "rho")</strong> — how tightly two numbers move together, from 0 (unrelated) to 1
+  (practically identical). Used throughout §5 to catch features that are secretly measuring the same
+  underlying thing under two different names.</li>
+<li><strong>Backward elimination</strong> — a feature-trimming method: start with every candidate feature, repeatedly
+  remove whichever single one contributes least, retrain, and watch whether accuracy holds up.</li>
+<li><strong>Score bucket / decile</strong> — accounts grouped by their predicted-risk score into 10 equal ranges
+  (0.0–0.1, 0.1–0.2, …), used to check that a higher score really does mean more real-world removals,
+  not just a number that looks plausible.</li>
+<li><strong>Prevalence</strong> — the subreddit-level number this project ultimately reports: the % of a subreddit's
+  most-visible accounts that month (its top posters and commenters) that the model flags as high-risk.</li>
+<li><strong>Severity band</strong> — Low / Moderate / High / Critical, calculated fresh each month from the actual
+  spread of observed prevalence scores, not a fixed cutoff decided in advance.</li>
+<li><strong>Poster vs. commenter</strong> — two different roles within a subreddit's influencer set: the person who
+  <em>submitted</em> a top post, versus the people who <em>commented</em> on it. §8 found these carry meaningfully
+  different risk, which is why the dashboard reports them separately.</li>
+</ul>
+<p>Everything from §4 onward is the live, current methodology. §1–3 are kept as a record of two earlier
+approaches that were tried, checked against real evidence, and set aside — worth reading for context on
+what didn't work and why, but not what the dashboard runs today.</p>
 <h2 id="1-corpus">1. Corpus</h2>
 <ul>
 <li><strong>1,619,492 comments</strong>, full body text, from <code>commenters_dedup</code> (collected via <code>scripts/v3_collect.py</code>
@@ -186,6 +234,8 @@ motivated the systematic dedup passes that followed.</p>
 hypothesis, the label is <strong>real, live-checked Reddit account status</strong> — banned, deleted, or still
 active — checked directly against live Reddit profiles, not inferred from anything in the corpus.</p>
 <h2 id="4-ground-truth">4. Ground truth</h2>
+<p><em>In short: before a model can learn what a risky account looks like, it needs correct, real-world
+examples to learn from. This section is where those examples came from — checked by hand, not guessed.</em></p>
 <p><strong>750 candidate accounts</strong> sampled across ten rounds — ranked by whatever candidate scoring function
 existed at that point (early karma-churn composites, later the model itself, finally two boundary-region
 samples straddling the tier cutoffs), each round excluding every account shown in an earlier round — and
@@ -227,7 +277,15 @@ Clubbing wins because the two share enough common signal that combining them giv
 positive examples of that shared pattern — not because a strong signal is masking a weak one.</p>
 <p>Full labeled set: <code>output/v3/ground_truth_labels.csv</code>. A parallel <code>output/v3/all_shown_accounts.csv</code>
 tracks every account ever sampled, including untagged ones, so later rounds never repeat an account.</p>
+<div class="chart-embed">
+  <div class="chart-embed-title">Chart — target choice: clubbed vs. banned-only vs. deleted-only</div>
+  <div class="chart-wrap" style="height:260px"><canvas id="chart-target"></canvas></div>
+</div>
+
 <h2 id="5-features">5. Features</h2>
+<p><em>In short: more features aren't automatically better — many measure almost the same underlying thing
+in different words, and duplicate information doesn't help a model, it just adds noise. This section is
+the search for the smallest set of genuinely different, genuinely useful facts about an account.</em></p>
 <p><strong>10 features</strong>, arrived at through five rounds of reduction over the <code>account_features</code> pool plus a
 few hand-built candidates (a handful of churn/karma-spread metrics, all of which lost to existing
 columns measuring the same constructs better and were dropped entirely):</p>
@@ -265,11 +323,20 @@ columns measuring the same constructs better and were dropped entirely):</p>
 </ul>
 <p>The final 10, ranked by importance, with the full correlation matrix behind the pruning:
 <code>docs/v3-research/charts/model_analysis.html</code> §3, <code>output/v3/final_top20_correlation.csv</code>.</p>
+<div class="chart-embed">
+  <div class="chart-embed-title">Chart — accuracy vs. number of features kept</div>
+  <div class="chart-wrap" style="height:260px"><canvas id="chart-elimination"></canvas></div>
+</div>
+
 <h2 id="6-model-and-validation">6. Model and validation</h2>
-<p>XGBoost, tuned via a 20-config random search (<code>max_depth=5, n_estimators=150, learning_rate=0.1,
-min_child_weight=1, subsample=0.9, colsample_bytree=0.7, reg_lambda=1</code>), <code>scale_pos_weight</code> for the
-202:381 class imbalance, validated by repeated stratified cross-validation (5 folds × 10 repeats = 50
-fold-evaluations), with per-fold imputation (train-fold medians only, no leakage from the held-out fold):</p>
+<p><em>In short: this is the honesty check. Anyone can claim a model works — this section is the repeated,
+held-out testing that backs the claim up, plus a second, independent way of confirming the same thing.</em></p>
+<p>XGBoost (a well-established, tree-based prediction algorithm — not a novel or exotic choice), tuned via
+a 20-config random search (<code>max_depth=5, n_estimators=150, learning_rate=0.1, min_child_weight=1,
+subsample=0.9, colsample_bytree=0.7, reg_lambda=1</code>), <code>scale_pos_weight</code> for the 233:451 class imbalance
+(233 removed accounts vs. 451 still-active/moderator), validated by repeated stratified cross-validation
+(5 folds × 10 repeats = 50 fold-evaluations), with per-fold imputation (train-fold medians only, no
+leakage from the held-out fold):</p>
 <table>
 <thead>
 <tr>
@@ -300,6 +367,11 @@ fold-evaluations), with per-fold imputation (train-fold medians only, no leakage
 </tr>
 </tbody>
 </table>
+<div class="chart-embed">
+  <div class="chart-embed-title">Chart — ROC curve (AUC = <span id="roc-auc-label">…</span>)</div>
+  <div class="chart-wrap" style="height:320px;max-width:420px;margin:0 auto"><canvas id="chart-roc"></canvas></div>
+</div>
+
 <p><strong>Independent, non-CV confirmation — confirmed-outcome rate by score bucket</strong> (the literal % of
 live-verified accounts in each decile that turned out banned/deleted, not a density curve):</p>
 <table>
@@ -324,17 +396,25 @@ live-verified accounts in each decile that turned out banned/deleted, not a dens
 </tr>
 </tbody>
 </table>
+<div class="chart-embed">
+  <div class="chart-embed-title">Chart — real outcome mix by score bucket</div>
+  <div class="chart-wrap" style="height:280px"><canvas id="chart-bucket"></canvas></div>
+</div>
+
 <p>A clean, mostly-monotonic decline. The same shape shows up in every manually-verified high/mid/low tier
 check run across this project, culminating in the largest (n=120): <strong>85% bad in the high tier, 25% in
 mid, 2.5% in low</strong>.</p>
 <p>Full analysis (target/feature comparison, feature-count elimination curve, importances, ROC,
 confirmed-rate-by-bucket): <code>docs/v3-research/charts/model_analysis.html</code>.</p>
 <p><strong>Reading this number honestly:</strong> 0.78 is real, validated signal, checked against ground truth the
-detection method itself had no hand in constructing, at a scale (n=684, 202 positive) large enough that
-the estimate has stopped swinging with each new sampling round. It is not a highly confident classifier
-— std of ±0.04 across folds means individual predictions should be read as directional risk, not a
-verdict.</p>
+detection method itself had no hand in constructing, at a scale (n=684, 233 removed accounts) large
+enough that the estimate has stopped swinging with each new sampling round. It is not a highly confident
+classifier — a standard deviation of ±0.04 across folds means individual predictions should be read as
+directional risk, not a verdict. A useful mental anchor: 0.5 would be a coin flip, 1.0 would be perfect.</p>
 <h2 id="6b-a-calibration-bug-found-and-fixed-wall-clock-time-decay">6b. A calibration bug found and fixed: wall-clock time decay</h2>
+<p><em>In short: while double-checking the subreddit dashboard, a genuine bug was found — a few features were
+quietly getting worse at their job every time the corpus was refreshed, for a boring technical reason
+that had nothing to do with real-world behavior. Here's what happened and how it was caught and fixed.</em></p>
 <p>While QC-checking the subreddit-prevalence dashboard (§8), the 24-month trend showed a smooth,
 near-monotonic decline in average prevalence — 20.8% (2024-08) down to 3.4% (2026-07) — with the most
 recent month landing entirely in the "Low" severity band. That pattern turned out to be a real bug, not
@@ -401,6 +481,10 @@ accounts. Below that floor, several features are too noisy to trust; those accou
 scoring entirely, not assigned a default score. Model artifact: <code>output/v3/final_bot_model.json</code>. Full
 population scores: <code>output/v3/final_bot_scores.parquet</code>.</p>
 <h2 id="8-subreddit-level-prevalence-the-top-30-post-methodology">8. Subreddit-level prevalence: the top-30-post methodology</h2>
+<p><em>In short: the account-level model (§4–6) scores one account at a time. This section is about turning
+that into a subreddit-level number — how do you go from "here's one account's risk score" to "how bad
+is r/example this month?" without just averaging every comment ever posted there, most of which nobody
+sees?</em></p>
 <p>Rather than "share of a month's total activity" (dominated by whichever way the bulk of ordinary
 commenters leans), prevalence is measured through <strong>influence over each subreddit's best-performing
 content</strong> — the accounts Reddit's own ranking already surfaced as consequential that month:</p>
@@ -484,11 +568,116 @@ regenerating the dashboard's embedded data in place. Takes under a minute.</p>
 <footer>
   Source: <a href="whitepaper.md">whitepaper.md</a> (this page is generated from it — edit the source, not this file). Full validation charts: <a href="charts/model_analysis.html">model_analysis.html</a>. Repo: <a href="https://github.com/karmaNeggs/RedditWatch">GitHub</a>.
 </footer>
+<script id="chart-data" type="application/json">{"config": [{"features": "without account_ordinal", "target": "clubbed (banned+deleted vs ok)", "mean": 0.7800309711873079, "std": 0.035133203115244475, "min": 0.6938534278959811, "max": 0.846135265700483}, {"features": "without account_ordinal", "target": "banned-only (vs ok+deleted)", "mean": 0.6452483580054407, "std": 0.050207882011698735, "min": 0.5346607669616519, "max": 0.7739675516224188}, {"features": "with account_ordinal", "target": "clubbed (banned+deleted vs ok)", "mean": 0.7735697727085331, "std": 0.03492464164755855, "min": 0.6990543735224587, "max": 0.8365981844242714}, {"features": "with account_ordinal", "target": "banned-only (vs ok+deleted)", "mean": 0.6257904862193961, "std": 0.051342687960792485, "min": 0.5163996948893974, "max": 0.7696414950419527}, {"features": "without account_ordinal", "target": "deleted-only (vs ok+banned)", "mean": 0.7484872724327171, "std": 0.050796886556891664, "min": 0.6136975759907657, "max": 0.8600305110602594}], "elimination": [{"n_features": 49, "mean": 0.7812681426404149, "std": 0.03260836233147471}, {"n_features": 48, "mean": 0.7833323650034177, "std": 0.035209761063841556}, {"n_features": 47, "mean": 0.78136700815231, "std": 0.03286076616408496}, {"n_features": 46, "mean": 0.7809161845856326, "std": 0.03416017169842046}, {"n_features": 45, "mean": 0.7814257497957755, "std": 0.03220009808954466}, {"n_features": 44, "mean": 0.7819830076855108, "std": 0.03349926726393945}, {"n_features": 43, "mean": 0.7838390877415269, "std": 0.035003618966825106}, {"n_features": 42, "mean": 0.7812494623476651, "std": 0.032822827046711515}, {"n_features": 41, "mean": 0.7856690979110748, "std": 0.032750675399449286}, {"n_features": 40, "mean": 0.7869563167897572, "std": 0.034013132080212755}, {"n_features": 39, "mean": 0.7849518905356517, "std": 0.029859573487982505}, {"n_features": 38, "mean": 0.7831915459380157, "std": 0.03296855465270188}, {"n_features": 37, "mean": 0.7847158569928147, "std": 0.03362606805715459}, {"n_features": 36, "mean": 0.7860810104529616, "std": 0.03476599107778086}, {"n_features": 35, "mean": 0.7900949352316489, "std": 0.030816101863329233}, {"n_features": 34, "mean": 0.7929138755980862, "std": 0.03308107724953578}, {"n_features": 33, "mean": 0.7903186236100228, "std": 0.03473447960028979}, {"n_features": 32, "mean": 0.7878293349782437, "std": 0.029494483651880853}, {"n_features": 31, "mean": 0.788008831668973, "std": 0.031206204441306427}, {"n_features": 30, "mean": 0.7909900721871197, "std": 0.031798307619896424}, {"n_features": 29, "mean": 0.7881142240301418, "std": 0.03432932271247667}, {"n_features": 28, "mean": 0.7950983820415785, "std": 0.03568182278040711}, {"n_features": 27, "mean": 0.7925423328276345, "std": 0.03284292518432064}, {"n_features": 26, "mean": 0.793000245903006, "std": 0.03785960228581754}, {"n_features": 25, "mean": 0.7926237975759798, "std": 0.03609287124864117}, {"n_features": 24, "mean": 0.7972509544370905, "std": 0.03428305096971263}, {"n_features": 23, "mean": 0.7969671615290999, "std": 0.03522538681810677}, {"n_features": 22, "mean": 0.7935919385492555, "std": 0.03642345888159081}, {"n_features": 21, "mean": 0.7943724138505911, "std": 0.03461258559894256}, {"n_features": 20, "mean": 0.7996437782371671, "std": 0.03029145987747889}, {"n_features": 19, "mean": 0.8026303869429671, "std": 0.03517124104815334}, {"n_features": 18, "mean": 0.801186106896954, "std": 0.03884451707398085}, {"n_features": 17, "mean": 0.8029528824833705, "std": 0.03737704795551216}, {"n_features": 16, "mean": 0.7937401138655952, "std": 0.03404876925062627}, {"n_features": 15, "mean": 0.7900975984862377, "std": 0.036520794659690596}, {"n_features": 14, "mean": 0.7850490764049813, "std": 0.03776406619907902}, {"n_features": 13, "mean": 0.7849515195972192, "std": 0.03741781023415311}, {"n_features": 12, "mean": 0.783726159911975, "std": 0.04159929560294463}, {"n_features": 11, "mean": 0.7801572612240135, "std": 0.03467604872924167}, {"n_features": 10, "mean": 0.7909960447126687, "std": 0.035923360098622556}, {"n_features": 9, "mean": 0.7879819490522314, "std": 0.03207549251879701}, {"n_features": 8, "mean": 0.7816668431055466, "std": 0.03349796961939831}, {"n_features": 7, "mean": 0.7794832535885169, "std": 0.038370117777094793}, {"n_features": 6, "mean": 0.782489063568011, "std": 0.036988491988337376}], "roc": {"fpr": [0.0, 0.0022172949002217295, 0.004434589800443459, 0.008869179600886918, 0.008869179600886918, 0.011086474501108648, 0.013303769401330377, 0.015521064301552107, 0.017738359201773836, 0.022172949002217297, 0.026607538802660754, 0.026607538802660754, 0.028824833702882482, 0.031042128603104215, 0.03325942350332594, 0.03547671840354767, 0.03991130820399113, 0.04212860310421286, 0.04434589800443459, 0.04434589800443459, 0.04656319290465632, 0.04878048780487805, 0.05321507760532151, 0.05543237250554324, 0.0598669623059867, 0.06208425720620843, 0.06208425720620843, 0.06430155210643015, 0.06651884700665188, 0.07095343680709534, 0.07317073170731707, 0.07982261640798226, 0.082039911308204, 0.082039911308204, 0.08425720620842572, 0.08647450110864745, 0.08869179600886919, 0.09090909090909091, 0.09534368070953436, 0.0975609756097561, 0.0975609756097561, 0.11086474501108648, 0.11529933481152993, 0.11751662971175167, 0.1197339246119734, 0.12195121951219512, 0.12416851441241686, 0.1286031042128603, 0.1286031042128603, 0.13082039911308205, 0.13303769401330376, 0.13747228381374724, 0.13968957871396895, 0.14412416851441243, 0.14634146341463414, 0.14634146341463414, 0.14855875831485588, 0.15077605321507762, 0.15299334811529933, 0.15964523281596452, 0.1662971175166297, 0.16851441241685144, 0.16851441241685144, 0.17516629711751663, 0.17960088691796008, 0.18403547671840353, 0.188470066518847, 0.19068736141906872, 0.1951219512195122, 0.1973392461197339, 0.1973392461197339, 0.2039911308203991, 0.20620842572062084, 0.20842572062084258, 0.2106430155210643, 0.21729490022172948, 0.22172949002217296, 0.22172949002217296, 0.2328159645232816, 0.23503325942350334, 0.23725055432372505, 0.2394678492239468, 0.24168514412416853, 0.24390243902439024, 0.24390243902439024, 0.24833702882483372, 0.25055432372505543, 0.2572062084257206, 0.2616407982261641, 0.2793791574279379, 0.28824833702882485, 0.28824833702882485, 0.29046563192904656, 0.29490022172949004, 0.29711751662971175, 0.29933481152993346, 0.30376940133037694, 0.31263858093126384, 0.3170731707317073, 0.3170731707317073, 0.31929046563192903, 0.3259423503325942, 0.328159645232816, 0.3325942350332594, 0.37472283813747226, 0.38137472283813745, 0.38137472283813745, 0.3858093126385809, 0.3946784922394678, 0.401330376940133, 0.4057649667405765, 0.4079822616407982, 0.41019955654101997, 0.41019955654101997, 0.42350332594235035, 0.43237250554323725, 0.43902439024390244, 0.44124168514412415, 0.4501108647450111, 0.45454545454545453, 0.45454545454545453, 0.4656319290465632, 0.4678492239467849, 0.4700665188470067, 0.47671840354767187, 0.48337028824833705, 0.4878048780487805, 0.49002217294900224, 0.49002217294900224, 0.5011086474501109, 0.5077605321507761, 0.541019955654102, 0.5631929046563193, 0.5831485587583148, 0.5898004434589801, 0.5898004434589801, 0.6297117516629712, 0.6407982261640798, 0.6518847006651884, 0.6585365853658537, 0.6851441241685144, 0.6917960088691796, 0.6917960088691796, 0.7317073170731707, 0.738359201773836, 0.7427937915742794, 0.7583148558758315, 0.8669623059866962, 0.8957871396895787, 1.0], "tpr": [0.0, 0.0, 0.017167381974248927, 0.03862660944206009, 0.060085836909871244, 0.0815450643776824, 0.0944206008583691, 0.14163090128755365, 0.14163090128755365, 0.1759656652360515, 0.18025751072961374, 0.18454935622317598, 0.19313304721030042, 0.22317596566523606, 0.23605150214592274, 0.23605150214592274, 0.2446351931330472, 0.2532188841201717, 0.2575107296137339, 0.26180257510729615, 0.26609442060085836, 0.2703862660944206, 0.2703862660944206, 0.2875536480686695, 0.2918454935622318, 0.3133047210300429, 0.31759656652360513, 0.3261802575107296, 0.34763948497854075, 0.351931330472103, 0.351931330472103, 0.36909871244635195, 0.37339055793991416, 0.3776824034334764, 0.38626609442060084, 0.3905579399141631, 0.39914163090128757, 0.39914163090128757, 0.40772532188841204, 0.41630901287553645, 0.4248927038626609, 0.4291845493562232, 0.4334763948497854, 0.44206008583690987, 0.44206008583690987, 0.44635193133047213, 0.4678111587982833, 0.4721030042918455, 0.47639484978540775, 0.4892703862660944, 0.4978540772532189, 0.4978540772532189, 0.5021459227467812, 0.5064377682403434, 0.5150214592274678, 0.51931330472103, 0.5236051502145923, 0.5278969957081545, 0.5321888412017167, 0.5321888412017167, 0.5364806866952789, 0.5450643776824035, 0.5536480686695279, 0.5579399141630901, 0.575107296137339, 0.5836909871244635, 0.5836909871244635, 0.592274678111588, 0.5965665236051502, 0.6008583690987125, 0.6094420600858369, 0.6137339055793991, 0.6180257510729614, 0.6180257510729614, 0.6223175965665236, 0.6266094420600858, 0.630901287553648, 0.6351931330472103, 0.6437768240343348, 0.648068669527897, 0.648068669527897, 0.6566523605150214, 0.6609442060085837, 0.6695278969957081, 0.6738197424892703, 0.6781115879828327, 0.6866952789699571, 0.6909871244635193, 0.6909871244635193, 0.6995708154506438, 0.703862660944206, 0.7081545064377682, 0.7124463519313304, 0.721030042918455, 0.7339055793991416, 0.7339055793991416, 0.7381974248927039, 0.7424892703862661, 0.7510729613733905, 0.7553648068669528, 0.759656652360515, 0.7682403433476395, 0.7682403433476395, 0.7725321888412017, 0.776824034334764, 0.7811158798283262, 0.7854077253218884, 0.7896995708154506, 0.7939914163090128, 0.7982832618025751, 0.7982832618025751, 0.8025751072961373, 0.8154506437768241, 0.8240343347639485, 0.8326180257510729, 0.8369098712446352, 0.8412017167381974, 0.8412017167381974, 0.8454935622317596, 0.8540772532188842, 0.8583690987124464, 0.8626609442060086, 0.8669527896995708, 0.871244635193133, 0.871244635193133, 0.8755364806866953, 0.8884120171673819, 0.8927038626609443, 0.9055793991416309, 0.9098712446351931, 0.9141630901287554, 0.9141630901287554, 0.9227467811158798, 0.9313304721030042, 0.9399141630901288, 0.944206008583691, 0.9484978540772532, 0.9527896995708155, 0.9570815450643777, 0.9570815450643777, 0.9613733905579399, 0.9699570815450643, 0.9742489270386266, 0.9785407725321889, 0.9828326180257511, 0.9871244635193133, 0.9871244635193133, 0.9914163090128756, 0.9957081545064378, 1.0], "auc": 0.7924117126461939, "n": 684, "n_pos": 233}, "bucket": [{"bucket": 0, "lo": 0.0, "hi": 0.1, "n": 201, "pct_ok": 93.0, "pct_banned": 4.5, "pct_deleted": 2.5}, {"bucket": 1, "lo": 0.1, "hi": 0.2, "n": 86, "pct_ok": 74.4, "pct_banned": 19.8, "pct_deleted": 5.8}, {"bucket": 2, "lo": 0.2, "hi": 0.3, "n": 69, "pct_ok": 75.4, "pct_banned": 10.1, "pct_deleted": 14.5}, {"bucket": 3, "lo": 0.3, "hi": 0.4, "n": 62, "pct_ok": 61.3, "pct_banned": 22.6, "pct_deleted": 16.1}, {"bucket": 4, "lo": 0.4, "hi": 0.5, "n": 42, "pct_ok": 57.1, "pct_banned": 19.0, "pct_deleted": 23.8}, {"bucket": 5, "lo": 0.5, "hi": 0.6, "n": 49, "pct_ok": 53.1, "pct_banned": 24.5, "pct_deleted": 22.4}, {"bucket": 6, "lo": 0.6, "hi": 0.7, "n": 38, "pct_ok": 47.4, "pct_banned": 26.3, "pct_deleted": 26.3}, {"bucket": 7, "lo": 0.7, "hi": 0.8, "n": 36, "pct_ok": 38.9, "pct_banned": 25.0, "pct_deleted": 36.1}, {"bucket": 8, "lo": 0.8, "hi": 0.9, "n": 54, "pct_ok": 37.0, "pct_banned": 29.6, "pct_deleted": 33.3}, {"bucket": 9, "lo": 0.9, "hi": 1.0, "n": 47, "pct_ok": 17.0, "pct_banned": 31.9, "pct_deleted": 51.1}]}</script>
 <script>
   document.querySelectorAll('table').forEach(t => {
     const wrap = document.createElement('div'); wrap.className = 'table-wrap';
     t.parentNode.insertBefore(wrap, t); wrap.appendChild(t);
   });
+
+  const DATA = JSON.parse(document.getElementById('chart-data').textContent);
+  function cssVar(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+
+  // -------- target/feature comparison (grouped bars) --------
+  (function() {
+    const el = document.getElementById('chart-target');
+    if (!el) return;
+    const rows = DATA.config;
+    new Chart(el.getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: rows.map(r => r.target.split(' (')[0] + (r.features.includes('with') ? ' + age' : '')),
+        datasets: [{ data: rows.map(r => r.mean), backgroundColor: rows.map(r => r.target.startsWith('clubbed') ? cssVar('--accent') : cssVar('--accent2')), borderRadius: 4 }],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => `AUC = ${c.raw.toFixed(3)} ± ${rows[c.dataIndex].std.toFixed(3)}` } } },
+        scales: {
+          y: { min: 0.5, max: 0.85, grid: { color: cssVar('--grid') }, ticks: { color: cssVar('--muted') } },
+          x: { grid: { display: false }, ticks: { color: cssVar('--ink-2'), font: { size: 10.5 } } },
+        },
+      },
+    });
+  })();
+
+  // -------- feature-count elimination curve --------
+  (function() {
+    const el = document.getElementById('chart-elimination');
+    if (!el) return;
+    const rows = DATA.elimination.slice().reverse();
+    new Chart(el.getContext('2d'), {
+      type: 'line',
+      data: {
+        labels: rows.map(r => r.n_features),
+        datasets: [{ label: 'CV AUC', data: rows.map(r => r.mean), borderColor: cssVar('--accent2'),
+          backgroundColor: cssVar('--accent2') + '18', borderWidth: 2, pointRadius: 0, pointHoverRadius: 4, tension: 0.25, fill: true }],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: { callbacks: { title: c => `${c[0].label} features`, label: c => `AUC = ${c.formattedValue}` } } },
+        scales: {
+          x: { title: { display: true, text: 'features remaining', color: cssVar('--muted') }, grid: { color: cssVar('--grid') }, ticks: { color: cssVar('--muted'), font: { size: 10 }, maxTicksLimit: 10 } },
+          y: { min: 0.6, max: 0.85, grid: { color: cssVar('--grid') }, ticks: { color: cssVar('--muted') } },
+        },
+      },
+    });
+  })();
+
+  // -------- ROC curve --------
+  (function() {
+    const el = document.getElementById('chart-roc');
+    if (!el) return;
+    const d = DATA.roc;
+    new Chart(el.getContext('2d'), {
+      type: 'scatter',
+      data: {
+        datasets: [
+          { label: 'Model', data: d.fpr.map((f,i) => ({x: f, y: d.tpr[i]})), showLine: true, borderColor: cssVar('--accent'),
+            backgroundColor: cssVar('--accent') + '18', borderWidth: 2.5, pointRadius: 0, fill: true, tension: 0.1 },
+          { label: 'Random guess', data: [{x:0,y:0},{x:1,y:1}], showLine: true, borderColor: cssVar('--muted'),
+            borderWidth: 1, borderDash: [4,3], pointRadius: 0 },
+        ],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false, aspectRatio: 1,
+        plugins: { legend: { display: false },
+          tooltip: { callbacks: { label: c => c.datasetIndex === 0 ? `catches ${(c.parsed.y*100).toFixed(0)}% of removed accounts at a ${(c.parsed.x*100).toFixed(0)}% false-alarm rate` : '' } } },
+        scales: {
+          x: { min: 0, max: 1, title: { display: true, text: '% of active accounts wrongly flagged', color: cssVar('--muted') }, grid: { color: cssVar('--grid') }, ticks: { color: cssVar('--muted'), callback: v => (v*100)+'%' } },
+          y: { min: 0, max: 1, title: { display: true, text: '% of removed accounts correctly caught', color: cssVar('--muted') }, grid: { color: cssVar('--grid') }, ticks: { color: cssVar('--muted'), callback: v => (v*100)+'%' } },
+        },
+      },
+    });
+    const lbl = document.getElementById('roc-auc-label');
+    if (lbl) lbl.textContent = d.auc.toFixed(3);
+  })();
+
+  // -------- confirmed-rate-by-bucket (100% stacked bars) --------
+  (function() {
+    const el = document.getElementById('chart-bucket');
+    if (!el) return;
+    const rows = DATA.bucket;
+    new Chart(el.getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: rows.map(r => `${r.lo.toFixed(1)}–${r.hi.toFixed(1)}`),
+        datasets: [
+          { label: 'Still active', data: rows.map(r => r.pct_ok), backgroundColor: cssVar('--accent'), stack: 's' },
+          { label: 'Banned', data: rows.map(r => r.pct_banned), backgroundColor: cssVar('--accent2'), stack: 's' },
+          { label: 'Deleted', data: rows.map(r => r.pct_deleted), backgroundColor: cssVar('--accent3'), stack: 's' },
+        ],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom', labels: { color: cssVar('--ink-2'), boxWidth: 10, font: { size: 11 } } },
+          tooltip: { callbacks: { afterTitle: c => `n = ${rows[c[0].dataIndex].n}`, label: c => `${c.dataset.label}: ${c.raw.toFixed(1)}%` } } },
+        scales: {
+          x: { stacked: true, title: { display: true, text: 'predicted removal probability', color: cssVar('--muted') }, grid: { display: false }, ticks: { color: cssVar('--muted'), font: { size: 10 } } },
+          y: { stacked: true, max: 100, grid: { color: cssVar('--grid') }, ticks: { color: cssVar('--muted'), callback: v => v+'%' } },
+        },
+      },
+    });
+  })();
 </script>
 </body>
 </html>

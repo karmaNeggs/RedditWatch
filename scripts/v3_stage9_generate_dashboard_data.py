@@ -20,6 +20,21 @@ ROOT = Path(__file__).resolve().parent.parent
 SRC = ROOT / 'output/v3/subreddit_bot_prevalence_mom.csv'
 DATA_DIR = ROOT / 'docs/data_v3'
 COMPASS = ROOT / 'docs/bot-spam-compass.html'
+INDEX = ROOT / 'docs/index.html'
+
+
+def embed_into_index(history):
+    """Embed the ecosystem-wide monthly trend (history only, no per-subreddit detail)
+    into index.html so the Report page's trend chart works from file://, a local
+    server, or GitHub Pages alike -- same reasoning as embed_into_compass."""
+    payload = json.dumps(history)
+    html = INDEX.read_text()
+    html, n = re.subn(r'<script id="embedded-trend" type="application/json">.*?</script>',
+                       lambda _: f'<script id="embedded-trend" type="application/json">{payload}</script>',
+                       html, flags=re.S)
+    if n:
+        INDEX.write_text(html)
+        print(f'Embedded trend data into {INDEX.relative_to(ROOT)}.')
 
 
 def embed_into_compass(history, month_docs_full):
@@ -189,6 +204,7 @@ def main():
     (DATA_DIR / 'history.json').write_text(json.dumps(history))
     print(f'Wrote {len(months)} month files + history.json to {DATA_DIR.relative_to(ROOT)}')
     embed_into_compass(history, full_docs)
+    embed_into_index(history)
 
 
 if __name__ == '__main__':

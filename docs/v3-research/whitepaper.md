@@ -20,6 +20,49 @@ live-checked Reddit account status (banned / deleted / still active), not a prox
 
 ---
 
+## How to read this document
+
+> **In one sentence:** we taught a computer to guess whether a Reddit account is likely to get banned
+> or deleted, by showing it hundreds of real accounts whose fate we already checked by hand, then used
+> that to answer "which India-focused subreddits currently have the most bot/spam-like accounts behind
+> their most-visible posts and comments?"
+
+This is a technical record, written to be checked and reproduced, not a casual explainer — but every
+recurring term is defined once, here, so the rest of the document doesn't require outside knowledge.
+If a paragraph gets dense later on, it's worth a scroll back to this list rather than a search engine.
+
+- **Feature** — one measurable fact about an account: how many comments it posts per day, how old it
+  is, how spread out its karma is across subreddits, and so on. The model looks at 10 of these per
+  account (§5).
+- **Ground truth** — real, independently-checked outcomes (here: an account's actual live status on
+  Reddit) used to test whether a model's guesses are correct. The opposite of a *proxy* — a stand-in
+  signal (like "posts the same text twice") that might correlate with the real thing but isn't it.
+- **AUC (ROC-AUC)** — a single 0.5-to-1.0 score for how well a model tells two outcomes apart. 0.5 is a
+  coin flip; 1.0 is perfect separation; every AUC number in this document is on that scale.
+- **Cross-validation (CV)** — the honesty check for AUC: split the labeled accounts into groups, train
+  on most of them, test on the group held back, then repeat with a different group held back each time.
+  "Repeated 5×10-fold CV" means 5 groups, repeated 10 times with different random splits — 50 separate
+  tests averaged together, so one lucky or unlucky split can't skew the number.
+- **Correlation (ρ, "rho")** — how tightly two numbers move together, from 0 (unrelated) to 1
+  (practically identical). Used throughout §5 to catch features that are secretly measuring the same
+  underlying thing under two different names.
+- **Backward elimination** — a feature-trimming method: start with every candidate feature, repeatedly
+  remove whichever single one contributes least, retrain, and watch whether accuracy holds up.
+- **Score bucket / decile** — accounts grouped by their predicted-risk score into 10 equal ranges
+  (0.0–0.1, 0.1–0.2, …), used to check that a higher score really does mean more real-world removals,
+  not just a number that looks plausible.
+- **Prevalence** — the subreddit-level number this project ultimately reports: the % of a subreddit's
+  most-visible accounts that month (its top posters and commenters) that the model flags as high-risk.
+- **Severity band** — Low / Moderate / High / Critical, calculated fresh each month from the actual
+  spread of observed prevalence scores, not a fixed cutoff decided in advance.
+- **Poster vs. commenter** — two different roles within a subreddit's influencer set: the person who
+  *submitted* a top post, versus the people who *commented* on it. §8 found these carry meaningfully
+  different risk, which is why the dashboard reports them separately.
+
+Everything from §4 onward is the live, current methodology. §1–3 are kept as a record of two earlier
+approaches that were tried, checked against real evidence, and set aside — worth reading for context on
+what didn't work and why, but not what the dashboard runs today.
+
 ## 1. Corpus
 
 - **1,619,492 comments**, full body text, from `commenters_dedup` (collected via `scripts/v3_collect.py`
@@ -86,6 +129,9 @@ active — checked directly against live Reddit profiles, not inferred from anyt
 
 ## 4. Ground truth
 
+*In short: before a model can learn what a risky account looks like, it needs correct, real-world
+examples to learn from. This section is where those examples came from — checked by hand, not guessed.*
+
 **750 candidate accounts** sampled across ten rounds — ranked by whatever candidate scoring function
 existed at that point (early karma-churn composites, later the model itself, finally two boundary-region
 samples straddling the tier cutoffs), each round excluding every account shown in an earlier round — and
@@ -111,7 +157,13 @@ positive examples of that shared pattern — not because a strong signal is mask
 Full labeled set: `output/v3/ground_truth_labels.csv`. A parallel `output/v3/all_shown_accounts.csv`
 tracks every account ever sampled, including untagged ones, so later rounds never repeat an account.
 
+<!--CHART:target-->
+
 ## 5. Features
+
+*In short: more features aren't automatically better — many measure almost the same underlying thing
+in different words, and duplicate information doesn't help a model, it just adds noise. This section is
+the search for the smallest set of genuinely different, genuinely useful facts about an account.*
 
 **10 features**, arrived at through five rounds of reduction over the `account_features` pool plus a
 few hand-built candidates (a handful of churn/karma-spread metrics, all of which lost to existing
@@ -151,12 +203,19 @@ Also excluded on purpose:
 The final 10, ranked by importance, with the full correlation matrix behind the pruning:
 `docs/v3-research/charts/model_analysis.html` §3, `output/v3/final_top20_correlation.csv`.
 
+<!--CHART:elimination-->
+
 ## 6. Model and validation
 
-XGBoost, tuned via a 20-config random search (`max_depth=5, n_estimators=150, learning_rate=0.1,
-min_child_weight=1, subsample=0.9, colsample_bytree=0.7, reg_lambda=1`), `scale_pos_weight` for the
-202:381 class imbalance, validated by repeated stratified cross-validation (5 folds × 10 repeats = 50
-fold-evaluations), with per-fold imputation (train-fold medians only, no leakage from the held-out fold):
+*In short: this is the honesty check. Anyone can claim a model works — this section is the repeated,
+held-out testing that backs the claim up, plus a second, independent way of confirming the same thing.*
+
+XGBoost (a well-established, tree-based prediction algorithm — not a novel or exotic choice), tuned via
+a 20-config random search (`max_depth=5, n_estimators=150, learning_rate=0.1, min_child_weight=1,
+subsample=0.9, colsample_bytree=0.7, reg_lambda=1`), `scale_pos_weight` for the 233:451 class imbalance
+(233 removed accounts vs. 451 still-active/moderator), validated by repeated stratified cross-validation
+(5 folds × 10 repeats = 50 fold-evaluations), with per-fold imputation (train-fold medians only, no
+leakage from the held-out fold):
 
 | check | result |
 |---|---|
@@ -165,6 +224,8 @@ fold-evaluations), with per-fold imputation (train-fold medians only, no leakage
 | Deleted-only vs. everyone else | 0.749 |
 | Banned-only vs. everyone else | 0.645 |
 | With `account_ordinal` included | 0.774 (no better) |
+
+<!--CHART:roc-->
 
 **Independent, non-CV confirmation — confirmed-outcome rate by score bucket** (the literal % of
 live-verified accounts in each decile that turned out banned/deleted, not a density curve):
@@ -175,6 +236,8 @@ live-verified accounts in each decile that turned out banned/deleted, not a dens
 | 0.4–0.5 | 57.1% |
 | 0.9–1.0 | 17.0% |
 
+<!--CHART:bucket-->
+
 A clean, mostly-monotonic decline. The same shape shows up in every manually-verified high/mid/low tier
 check run across this project, culminating in the largest (n=120): **85% bad in the high tier, 25% in
 mid, 2.5% in low**.
@@ -183,12 +246,16 @@ Full analysis (target/feature comparison, feature-count elimination curve, impor
 confirmed-rate-by-bucket): `docs/v3-research/charts/model_analysis.html`.
 
 **Reading this number honestly:** 0.78 is real, validated signal, checked against ground truth the
-detection method itself had no hand in constructing, at a scale (n=684, 202 positive) large enough that
-the estimate has stopped swinging with each new sampling round. It is not a highly confident classifier
-— std of ±0.04 across folds means individual predictions should be read as directional risk, not a
-verdict.
+detection method itself had no hand in constructing, at a scale (n=684, 233 removed accounts) large
+enough that the estimate has stopped swinging with each new sampling round. It is not a highly confident
+classifier — a standard deviation of ±0.04 across folds means individual predictions should be read as
+directional risk, not a verdict. A useful mental anchor: 0.5 would be a coin flip, 1.0 would be perfect.
 
 ## 6b. A calibration bug found and fixed: wall-clock time decay
+
+*In short: while double-checking the subreddit dashboard, a genuine bug was found — a few features were
+quietly getting worse at their job every time the corpus was refreshed, for a boring technical reason
+that had nothing to do with real-world behavior. Here's what happened and how it was caught and fixed.*
 
 While QC-checking the subreddit-prevalence dashboard (§8), the 24-month trend showed a smooth,
 near-monotonic decline in average prevalence — 20.8% (2024-08) down to 3.4% (2026-07) — with the most
@@ -245,6 +312,11 @@ scoring entirely, not assigned a default score. Model artifact: `output/v3/final
 population scores: `output/v3/final_bot_scores.parquet`.
 
 ## 8. Subreddit-level prevalence: the top-30-post methodology
+
+*In short: the account-level model (§4–6) scores one account at a time. This section is about turning
+that into a subreddit-level number — how do you go from "here's one account's risk score" to "how bad
+is r/example this month?" without just averaging every comment ever posted there, most of which nobody
+sees?*
 
 Rather than "share of a month's total activity" (dominated by whichever way the bulk of ordinary
 commenters leans), prevalence is measured through **influence over each subreddit's best-performing

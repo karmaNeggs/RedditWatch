@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>RedditWatch — Methodology</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
   :root {
     --bg: #0d1117; --surface: #161b22; --surface2: #21262d; --border: #30363d;
@@ -27,6 +28,10 @@
   body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, sans-serif; font-size: 14px; line-height: 1.6; }
   a { color: var(--series-blue); text-decoration: none; }
   code { font-family: ui-monospace, "SF Mono", Consolas, monospace; font-size: 0.92em; background: var(--surface2); border-radius: 4px; padding: 0.1em 0.4em; }
+  abbr[title] { text-decoration: underline dotted; text-underline-offset: 2px; cursor: help; }
+  .glossary-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px,1fr)); gap: 10px 22px; }
+  .gloss-term { font-weight: 700; font-size: 12.5px; color: var(--text); margin-bottom: 2px; }
+  .gloss-def { font-size: 12px; color: var(--muted); }
   header { position: sticky; top: 0; z-index: 10; background: var(--hdr-bg); backdrop-filter: blur(8px); border-bottom: 1px solid var(--border); }
   .hdr-inner { max-width: 980px; margin: 0 auto; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
   .brand { font-weight: 800; font-size: 15px; }
@@ -105,34 +110,34 @@
 <main>
   <div class="eyebrow">RedditWatch 1.0</div>
   <h1>How the score is built</h1>
-  <p class="lede">An account-removal model, trained and cross-validated against real, live-checked Reddit account status — not a proxy label, not a hand-tuned heuristic. This page is the "show your work" behind the <a href="bot-spam-compass.html">Compass</a> dashboard's numbers. For the full derivation and every checked-and-ruled-out alternative, see the <a href="v3-research/whitepaper.html">whitepaper</a>.</p>
+  <p class="lede">In plain terms: we taught a computer to guess whether a Reddit account is likely to get banned or deleted, by showing it hundreds of real accounts whose fate we already know, and letting it find the patterns. This page shows that work — how the training data was collected, which patterns the model actually uses, and how well it holds up. This isn't a hand-tuned checklist someone wrote by guessing; every claim below was tested against real outcomes. This page is the "show your work" behind the <a href="bot-spam-compass.html">Compass</a> dashboard's numbers. For the complete derivation and every idea that was tried and rejected, see the <a href="v3-research/whitepaper.html">whitepaper</a>.</p>
 
   <div class="section" style="margin-top:24px">
     <div class="stat-row">
       <div class="stat-tile"><div class="stat-label">Ground truth</div><div class="stat-value">684</div><div class="stat-note">accounts, live-checked on Reddit</div></div>
       <div class="stat-tile"><div class="stat-label">Features</div><div class="stat-value">10</div><div class="stat-note">down from ~67 candidates</div></div>
-      <div class="stat-tile"><div class="stat-label">CV ROC-AUC</div><div class="stat-value">0.780</div><div class="stat-note">± 0.035, repeated 5×10-fold</div></div>
+      <div class="stat-tile"><div class="stat-label"><abbr title="Cross-validation: testing the model on data it never saw during training, several times over, to get an honest accuracy estimate.">CV</abbr> <abbr title="Area Under the ROC Curve — a 0.5-to-1.0 score for how well the model separates the two outcomes. 0.5 = random guessing, 1.0 = perfect.">ROC-AUC</abbr></div><div class="stat-value">0.780</div><div class="stat-note">± 0.035, repeated 5×10-fold</div></div>
       <div class="stat-tile"><div class="stat-label">Population scored</div><div class="stat-value">38,146</div><div class="stat-note">accounts, ≥10 contributions</div></div>
     </div>
   </div>
 
   <div class="section">
     <div class="section-title">The label: real outcomes, not a proxy</div>
-    <p>650+ candidate accounts were sampled across ten rounds — ranked by whatever candidate scoring function existed at that point, each round excluding every account shown before — and checked one by one against live Reddit. <strong>684 usable: 450 still active, 117 banned, 116 deleted, 1 moderator.</strong> Banned and deleted are combined into one "removed" class: splitting them and treating banned alone consistently underperforms clubbing (0.780 vs. 0.645 AUC) — and a companion check found deleted-only is actually the <em>stronger</em> standalone signal (0.749), not a weak one riding on banned's back. This is the first ground truth in this project's history that the detection method itself had no hand in constructing.</p>
+    <p>Before a model can learn "what a risky account looks like," it needs real, correct examples of risky and non-risky accounts — that's what this section is about. Nothing here was inferred or guessed: 650+ candidate accounts were sampled across ten rounds and checked one by one, by hand, against live Reddit — is this account still there, or gone? <strong>684 were usable: 450 still active, 117 banned, 116 deleted, 1 moderator.</strong> Banned and deleted accounts are treated as one "removed" outcome rather than two separate ones — tested directly, not assumed: splitting them and training on banned accounts alone performs consistently worse (0.780 vs. 0.645 <abbr title="Area Under the ROC Curve — a 0.5-to-1.0 score for how well the model separates the two outcomes.">AUC</abbr>), and a further check found deleted accounts alone are actually the <em>stronger</em> signal of the two (0.749) — not a weak one hiding behind banned accounts. This is the first ground truth in this project's history that wasn't itself a product of the detection method being tested — a common trap where a model ends up "confirming" a label that was built using similar assumptions to the model itself.</p>
   </div>
 
   <div class="section">
     <div class="section-title">Feature selection — five rounds, two real bugs found</div>
-    <p>Started from every candidate column available (~67), reduced through five rounds of pruning. AUC held or <em>improved</em> at nearly every step — confirming most of the pool was redundant, not additive.</p>
+    <p>A "feature" is just one measurable fact about an account — how many comments it posts per day, how old it is, how spread out its karma is across subreddits, and so on. More features aren't automatically better: many measure almost the same underlying thing in different words, and feeding a model duplicate information doesn't help it, it just adds noise. So this step is about finding the smallest set of genuinely different, genuinely useful facts. Started from every candidate fact available (~67), reduced through five rounds of pruning. Accuracy held steady or even <em>improved</em> at nearly every step — direct evidence that most of the original 67 were redundant, not additive.</p>
     <div class="card">
       <div class="timeline">
         <div class="step">
           <div class="step-title">~67 candidates → 49 <span class="step-auc">baseline</span></div>
-          <div class="step-body">8 columns dropped as exact duplicates (ρ=1.000) of the account_features table's own <code>*_1</code> variants — an XGBoost artifact of silently splitting importance between identical copies.</div>
+          <div class="step-body">8 columns dropped as exact duplicates (<abbr title="Correlation coefficient — how tightly two numbers move together, from 0 (unrelated) to 1 (identical pattern).">ρ</abbr>=1.000, i.e. perfectly identical) of the account data table's own repeated variants — an artifact of the model silently splitting credit between two copies of the same fact instead of counting it once.</div>
         </div>
         <div class="step">
           <div class="step-title">49 → 18 <span class="step-auc">0.780 → 0.801*</span></div>
-          <div class="step-body">A correlation sweep on the top-20 important features found 9 more near-duplicates (ρ&gt;0.85) hiding under different names — e.g. <code>n_comments_sample</code>/<code>n_gaps</code>/<code>n_threads_active</code> all measuring the same thing. Then backward elimination (drop the lowest-importance feature, refit, repeat) down to 18, where AUC actually peaked.</div>
+          <div class="step-body">A correlation sweep — checking every important feature against every other one for hidden overlap — found 9 more near-duplicates (<abbr title="Correlation coefficient — how tightly two numbers move together, from 0 (unrelated) to 1 (identical pattern).">ρ</abbr>&gt;0.85) hiding under different names — e.g. how many comments an account has, how many gaps in its posting history, and how many discussion threads it's active in all turned out to measure basically the same thing. Then <abbr title="Backward elimination: start with everything, repeatedly remove whichever single feature contributes least, and see how accuracy changes.">backward elimination</abbr> (drop the least-useful feature, retrain, repeat) took it down to 18, where accuracy actually peaked.</div>
         </div>
         <div class="step bug">
           <div class="step-title">⚠ Bug found: wall-clock time decay</div>
@@ -144,15 +149,24 @@
         </div>
         <div class="step">
           <div class="step-title">15 → 10 <span class="step-auc">0.789 → 0.780</span></div>
-          <div class="step-body">A further backward-elimination pass, run to keep the deployed model as light and interpretable as possible. Real, modest cost below ~12 features, consistent across repeated runs (not noise), with clean correlation throughout (max ρ=0.73). Accepted as the right tradeoff.</div>
+          <div class="step-body">A further round of trimming, run to keep the deployed model as small and easy to reason about as possible. This one has a real, small cost — accuracy does dip slightly below ~12 features, consistently across repeated tests, so this wasn't free like the earlier cuts. With no pair of the remaining 10 features overlapping by more than <abbr title="Correlation coefficient — how tightly two numbers move together, from 0 (unrelated) to 1 (identical pattern).">ρ</abbr>=0.73, it was judged the right tradeoff: a noticeably simpler model for a small, known cost.</div>
         </div>
         <div class="step">
-          <div class="step-title">Final pass: fresh 57-feature sweep, from scratch</div>
-          <div class="step-body">To make sure the incremental path hadn't gotten stuck in a local optimum, backward elimination was re-run from the <em>entire</em> raw candidate pool — including <code>account_ordinal</code> and every previously-pruned feature. It found nothing the deployed 10 didn't already have: its nominally higher AUC came from letting duplicate columns (a side effect of the wall-clock fix) ride along together undetected. <code>account_ordinal</code>, tested directly for the 5th+ time, still hurts (0.780 → 0.774).</div>
+          <div class="step-title">Final pass: fresh sweep from every feature, no shortcuts</div>
+          <div class="step-body">A worry with step-by-step trimming is that early choices can lock you into a path that looks good but isn't actually the best available combination. To check, the whole elimination process was re-run completely from scratch — starting over from <em>every</em> raw candidate, including account creation order and every feature dropped earlier. It found nothing the deployed 10 didn't already have: its slightly higher apparent accuracy came from letting duplicate columns (a side effect of the time-decay bug above) sit in the model together undetected, each getting partial credit for the same signal. Account creation order, tested directly for the 5th time this project, again made things slightly worse (0.780 → 0.774).</div>
         </div>
       </div>
     </div>
     <p style="margin-top:12px">*0.801 was later found to be inflated by the wall-clock bug above; shown here only to make the timeline legible in the order the work actually happened.</p>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Why stop at 10? The full elimination curve</div>
+    <p>This is the "from scratch" sweep from the section above, plotted: start with every candidate feature (57), repeatedly drop whichever one contributes least, and watch how accuracy moves. If the curve fell off a cliff early, that would mean the model was already fragile long before 10 features. It doesn't.</p>
+    <div class="card">
+      <div class="chart-wrap" style="height:260px"><canvas id="elimChart"></canvas></div>
+    </div>
+    <p style="margin-top:12px">Accuracy (the orange line) barely moves across the entire top half of the chart — going from 57 features down to the low teens costs essentially nothing, which is the direct evidence that most of the original 57 were measuring the same handful of underlying signals in different words, not adding new information. The diamond marks the deployed model: 10 features, chosen deliberately as the point past which trimming further starts to cost real accuracy rather than free redundancy.</p>
   </div>
 
   <div class="section">
@@ -169,12 +183,12 @@
       <div class="bar-row"><div class="bar-label">removal_rate_pctl</div><div class="bar-track"><div class="bar-fill" style="width:40%"></div></div><div class="bar-val">0.075</div></div>
       <div class="bar-row"><div class="bar-label">worst_sub_mean_score</div><div class="bar-track"><div class="bar-fill" style="width:40%"></div></div><div class="bar-val">0.075</div></div>
     </div>
-    <p style="margin-top:12px">Mean XGBoost gain-based importance across 50 repeated-CV folds, n=684. <code>account_ordinal</code> (account creation order) is deliberately excluded — tested repeatedly, never helps once the feature set is deduplicated. Full definitions and the correlation matrix behind every cut: <a href="v3-research/whitepaper.html#5-features">whitepaper §5</a>.</p>
+    <p style="margin-top:12px">How much each feature actually moved the model's decisions, averaged across 50 separate training runs on 684 accounts, so no single lucky split skews the picture. Account creation order is deliberately left out — tested repeatedly, it never helps once the feature set stops double-counting the same signal. Full definitions of each feature and the correlation matrix behind every cut: <a href="v3-research/whitepaper.html#5-features">whitepaper §5</a>.</p>
   </div>
 
   <div class="section">
     <div class="section-title">Does it actually predict removal?</div>
-    <p>Repeated stratified cross-validation (5 folds × 10 repeats = 50 fold-evaluations, not a single lucky split), with per-fold imputation so no test-fold information leaks into training.</p>
+    <p>A model can look accurate just by memorizing the accounts it was trained on — the real test is whether it holds up on accounts it's never seen. That's what cross-validation does: split the 684 accounts into 5 groups, train on 4 of them, test on the group left out, then repeat with a different group held out each time — 10 times over, 50 tests in total — so the accuracy number below is an honest average, not a single lucky split. (Any missing values are filled in using only the training group's own numbers each time, never peeking at the test group.)</p>
     <div class="card">
       <table>
         <thead><tr><th>check</th><th class="num">result</th></tr></thead>
@@ -199,12 +213,12 @@
         </tbody>
       </table>
     </div>
-    <p style="margin-top:12px">A clean, mostly-monotonic decline. The same shape shows up in every manually-verified tier check run this project, culminating in the largest (n=120): <strong>85% bad in the high tier, 25% in mid, 2.5% in low.</strong> Full ROC curve, target/feature comparisons, and the complete elimination curve: <a href="v3-research/charts/model_analysis.html">model_analysis.html</a>.</p>
+    <p style="margin-top:12px">In other words: a higher score really does mean a higher real-world chance of removal, and it rises smoothly bucket by bucket, not randomly. The same shape shows up in every hand-verified check run this project, culminating in the largest one (120 accounts checked by hand): <strong>85% turned out bad in the high-score tier, 25% in the mid tier, 2.5% in the low tier.</strong> Full ROC curve, side-by-side comparisons of different modeling choices, and the complete feature-elimination curve: <a href="v3-research/charts/model_analysis.html">model_analysis.html</a>.</p>
   </div>
 
   <div class="section">
     <div class="section-title">From account risk to subreddit prevalence</div>
-    <p>Rather than "share of a month's total activity," prevalence is measured through <strong>influence over each subreddit's best-performing content</strong>: take each subreddit-month's top 30 posts by karma, pull the poster plus the top-5-by-score and top-5-most-recent commenters, score everyone with the model above, and report the % landing ≥0.7 predicted-removal probability.</p>
+    <p>The model above scores one account at a time. This section is about turning that into a subreddit-level number — "how much of r/example's visible content this month came from risky accounts?" Rather than looking at a subreddit's <em>entire</em> monthly activity (which is dominated by ordinary, low-visibility comments), the score focuses on <strong>influence over each subreddit's best-performing content</strong>: take each subreddit's top 30 posts that month by karma (Reddit's own upvote score), pull out the poster plus the 5 highest-scoring and 5 most recent commenters on each, run everyone through the model above, and report the % who land at a 0.7-or-higher predicted-removal probability — i.e., accounts the model considers clearly high-risk, not just leaning that way.</p>
     <h3>Posters and commenters carry different risk — checked directly, not assumed</h3>
     <p>A direct check (2026-08-22, full 24-month corpus) found the two roles are not interchangeable, and reports them separately on the Compass dashboard rather than blending them into one number:</p>
     <div class="compare-grid">
@@ -223,14 +237,32 @@
   </div>
 
   <div class="section">
-    <div class="section-title">What's validated vs. what's exploratory</div>
+    <div class="section-title">What's validated vs. what this doesn't claim</div>
     <div class="tier-card tier-a">
-      <div class="tier-name">Tier A — the deployed model and everything built on it</div>
-      <div class="tier-body">The 10-feature XGBoost model, its population scores, and the subreddit-level poster/commenter/combined prevalence rollup on the Compass dashboard. All checked against real ground truth above.</div>
+      <div class="tier-name">What's checked and validated</div>
+      <div class="tier-body">The 10-feature model, the scores it assigns to every account in the population, and the subreddit-level poster/commenter/combined prevalence numbers on the Compass dashboard. Every one of these is checked against the real ground truth described above — none of it is a guess or an assumption.</div>
     </div>
     <div class="tier-card tier-b">
-      <div class="tier-name">Tier B — what this doesn't establish</div>
-      <div class="tier-body">This model predicts "will this account get removed," not "is this account part of a coordinated spam or political operation." Those are correlated but not identical questions — nothing here establishes coordination between accounts, which remains an open thread from an earlier, unvalidated project hypothesis (see whitepaper §2). India-subreddit-specific: every feature and label comes from this project's 45 India-focused subreddits.</div>
+      <div class="tier-name">What this doesn't claim to know</div>
+      <div class="tier-body">This model predicts "will this account get removed from Reddit," not "is this account part of a coordinated spam or political campaign." Those two questions are related but not the same — an account can get removed for all sorts of individual reasons that have nothing to do with coordination, and this project hasn't established whether or how accounts might be working together. That remains an open, unanswered question from an earlier, unvalidated idea explored in this project (see whitepaper §2). Also worth knowing: every feature and every label comes from 45 India-focused subreddits specifically, so nothing here has been checked against Reddit communities outside that scope.</div>
+    </div>
+  </div>
+
+  <div class="section" id="glossary">
+    <div class="section-title">Glossary</div>
+    <div class="card">
+      <div class="glossary-grid">
+        <div><div class="gloss-term">Feature</div><div class="gloss-def">One measurable fact about an account that the model considers — e.g. comments per day, account age, karma spread across subreddits.</div></div>
+        <div><div class="gloss-term">Ground truth</div><div class="gloss-def">Real, independently-verified outcomes (here: live-checked Reddit account status) used to check whether a model's predictions are actually correct.</div></div>
+        <div><div class="gloss-term">Cross-validation (CV)</div><div class="gloss-def">Testing a model on data it never saw during training, repeated several times with different held-out groups, to get an honest, not-inflated accuracy estimate.</div></div>
+        <div><div class="gloss-term">AUC / ROC-AUC</div><div class="gloss-def">A 0.5-to-1.0 score for how well a model separates two outcomes. 0.5 = no better than a coin flip. 1.0 = perfect separation.</div></div>
+        <div><div class="gloss-term">Correlation (ρ)</div><div class="gloss-def">How tightly two numbers move together, from 0 (unrelated) to 1 (perfectly identical pattern) — used here to catch features that are secretly measuring the same thing.</div></div>
+        <div><div class="gloss-term">Backward elimination</div><div class="gloss-def">A feature-trimming method: start with everything, repeatedly remove whichever single feature contributes least, retrain, and see how accuracy holds up.</div></div>
+        <div><div class="gloss-term">Score bucket / decile</div><div class="gloss-def">Grouping accounts by their predicted-risk score into 10 equal ranges (0.0–0.1, 0.1–0.2, …) to check whether higher scores really do correspond to more real-world removals.</div></div>
+        <div><div class="gloss-term">Prevalence</div><div class="gloss-def">The % of a subreddit's most-visible accounts (that month's top posters/commenters) that the model flags as high-risk — a subreddit-level rollup of the account-level score.</div></div>
+        <div><div class="gloss-term">Severity band</div><div class="gloss-def">Low / Moderate / High / Critical — calculated fresh each month from the actual observed range of scores, not a fixed cutoff picked in advance.</div></div>
+        <div><div class="gloss-term">Coverage</div><div class="gloss-def">The % of an influencer set (posters/commenters on top content) with enough posting history to be scored at all. Low coverage means the reading rests on a thinner sample.</div></div>
+      </div>
     </div>
   </div>
 </main>
@@ -253,7 +285,62 @@ function initTheme() {
     upd();
   };
 }
+function cssVar(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+
+const ELIM_CURVE = [[57, 0.7761], [56, 0.7738], [55, 0.779], [54, 0.7772], [53, 0.778], [52, 0.7756], [51, 0.7767], [50, 0.7816], [49, 0.7801], [48, 0.7789], [47, 0.7821], [46, 0.7803], [45, 0.775], [44, 0.7784], [43, 0.7816], [42, 0.7849], [41, 0.7806], [40, 0.7826], [39, 0.7811], [38, 0.7814], [37, 0.7813], [36, 0.7769], [35, 0.779], [34, 0.7807], [33, 0.7837], [32, 0.783], [31, 0.7837], [30, 0.7841], [29, 0.7868], [28, 0.7873], [27, 0.7864], [26, 0.7875], [25, 0.796], [24, 0.7958], [23, 0.7918], [22, 0.7939], [21, 0.7948], [20, 0.7971], [19, 0.7935], [18, 0.7839], [17, 0.784], [16, 0.7865], [15, 0.7865], [14, 0.7776], [13, 0.7808], [12, 0.7776], [11, 0.7794], [10, 0.7727], [9, 0.7731], [8, 0.7721], [7, 0.7656]];
+
+function renderElimChart() {
+  const orange = cssVar('--series-orange');
+  const rows = ELIM_CURVE.slice().reverse();
+  new Chart(document.getElementById('elimChart').getContext('2d'), {
+    type: 'line',
+    data: {
+      labels: rows.map(r => r[0]),
+      datasets: [{
+        label: 'CV accuracy (AUC)', data: rows.map(r => r[1]),
+        borderColor: orange, backgroundColor: orange + '18', borderWidth: 2, pointRadius: 0,
+        pointHoverRadius: 4, tension: 0.25, fill: true,
+        segment: { borderColor: ctx => ctx.p0.parsed.x === 10 || ctx.p1.parsed.x === 10 ? cssVar('--series-blue') : orange },
+      }],
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { title: c => `${c[0].label} features`, label: c => `AUC = ${c.formattedValue}` } },
+      },
+      scales: {
+        x: { title: { display: true, text: 'features remaining', color: cssVar('--muted') },
+          grid: { color: cssVar('--grid') }, ticks: { color: cssVar('--muted'), font: { size: 10 }, maxTicksLimit: 10, autoSkip: true } },
+        y: { min: 0.74, max: 0.81, grid: { color: cssVar('--grid') }, ticks: { color: cssVar('--muted'), font: { size: 11 } } },
+      },
+    },
+    plugins: [{
+      id: 'markTen',
+      afterDatasetsDraw(chart) {
+        const idx = rows.findIndex(r => r[0] === 10);
+        if (idx < 0) return;
+        const meta = chart.getDatasetMeta(0);
+        const pt = meta.data[idx];
+        const ctx = chart.ctx;
+        ctx.save();
+        ctx.fillStyle = cssVar('--series-blue');
+        ctx.strokeStyle = cssVar('--bg');
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(pt.x, pt.y - 7); ctx.lineTo(pt.x + 7, pt.y); ctx.lineTo(pt.x, pt.y + 7); ctx.lineTo(pt.x - 7, pt.y);
+        ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = cssVar('--text');
+        ctx.font = '700 11px -apple-system, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('deployed: 10', pt.x, pt.y - 14);
+        ctx.restore();
+      },
+    }],
+  });
+}
 initTheme();
+renderElimChart();
 </script>
 </body>
 </html>
