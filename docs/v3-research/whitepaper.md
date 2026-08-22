@@ -263,6 +263,29 @@ Full 24-month history (2024-08→2026-07). 1,076 subreddit-month rows, 45 subred
 percentiles (P50/P80/P95) of the observed prevalence distribution, recalculated fresh at every refresh
 — not fixed cutoffs.
 
+**Posters and commenters are reported separately, not just pooled.** A direct check (2026-08-22, full
+24-month corpus) found they carry meaningfully different risk: **posters of top-30 content average
+~20% high-risk vs. commenters' ~12%**, consistently in every one of the 24 months — the opposite of the
+intuitive read that top posters skew toward established/organic contributors. The likely mechanism:
+reaching "top-30-by-karma" doesn't require being a well-liked regular — repeat karma-farming/repost
+accounts chase exactly this spot, and that cross-subreddit, high-volume, opportunistic posting pattern
+is precisely what the account-level model's features (activity rate, tier-climbing, thin history) are
+built to catch. Genuine moderator announcements mostly don't even appear here — pinned/informational
+posts rarely rank top-30 *by karma*, so "top poster" and "mod" overlap less than intuition suggests.
+A separate check for volume-driven skew (the concern that periods of elevated overall activity might
+shift who clears the top-30 cutoff) found no effect: correlation between a subreddit-month's influencer
+volume and its prevalence rate is ~0.05 (noise), and a subreddit's own high-activity months read
+essentially the same as its low-activity months (12.6% vs. 13.1%) — the always-exactly-rank-30
+selection (not an absolute karma threshold) already self-adjusts for this.
+
+Because posters (~10% of the pooled influencer set by volume) and commenters (~90%) carry different
+signal, the combined/pooled metric mostly tracks the larger commenter population — reported alongside,
+not replacing, the two separate readings. The dashboard exposes all three (posters / commenters /
+combined) with independently-calibrated severity bands for each, since a shared band set would
+misrepresent severity for whichever role sits off that band's center (e.g. a 25% poster reading is
+unremarkable against a ~21% poster average, but 25% for commenters — whose average sits near 12% — is
+Critical).
+
 ## 9. The dashboard
 
 **`docs/bot-spam-compass.html`** — the project's primary artifact: per-subreddit trend (full 24-month

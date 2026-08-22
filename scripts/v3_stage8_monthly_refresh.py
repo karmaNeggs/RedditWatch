@@ -178,29 +178,50 @@ def build_subreddit_prevalence(con, scores):
     ''').fetchdf()
 
     posters = top_posts[['sub', 'month', 'post_id', 'poster']].rename(columns={'poster': 'author'})
+    posters['role'] = 'poster'
     tc = top_commenters.merge(top_posts[['sub', 'month', 'post_id']], on='post_id')
     lc = latest_commenters.merge(top_posts[['sub', 'month', 'post_id']], on='post_id')
-    influencers = pd.concat([posters[['sub', 'month', 'author']], tc[['sub', 'month', 'author']],
-                              lc[['sub', 'month', 'author']]], ignore_index=True)
-    influencer_set = influencers.drop_duplicates(['sub', 'month', 'author'])
-    influencer_set = influencer_set.merge(scores, on='author', how='left')
-    influencer_set['scored'] = influencer_set['bot_score'].notna()
-    influencer_set['high_risk'] = influencer_set['scored'] & (influencer_set['bot_score'] >= HIGH_RISK_THRESHOLD)
+    commenters = pd.concat([tc[['sub', 'month', 'author']], lc[['sub', 'month', 'author']]], ignore_index=True)
+    commenters = commenters.drop_duplicates(['sub', 'month', 'author'])
+    commenters['role'] = 'commenter'
+
+    # combined = union of both roles, deduped per (sub, month, author) -- an account posting
+    # AND commenting in the same sub-month counts once, same definition used historically
+    combined = pd.concat([posters[['sub', 'month', 'author']], commenters[['sub', 'month', 'author']]],
+                          ignore_index=True).drop_duplicates(['sub', 'month', 'author'])
+    combined['role'] = 'combined'
+
+    all_roles = pd.concat([posters[['sub', 'month', 'author', 'role']],
+                            commenters[['sub', 'month', 'author', 'role']],
+                            combined[['sub', 'month', 'author', 'role']]], ignore_index=True)
+    all_roles = all_roles.merge(scores, on='author', how='left')
+    all_roles['scored'] = all_roles['bot_score'].notna()
+    all_roles['high_risk'] = all_roles['scored'] & (all_roles['bot_score'] >= HIGH_RISK_THRESHOLD)
 
     def summarize(g):
         n_total = len(g)
         n_scored = g['scored'].sum()
         n_hr = g['high_risk'].sum()
         return pd.Series({
-            'n_influencers': n_total, 'n_scored': n_scored,
+            'n': n_total, 'n_scored': n_scored,
             'coverage_pct': 100 * n_scored / n_total if n_total else np.nan,
-            'pct_high_risk_of_scored': 100 * n_hr / n_scored if n_scored else np.nan,
-            'mean_bot_score_scored': g.loc[g['scored'], 'bot_score'].mean() if n_scored else np.nan,
+            'pct_high_risk': 100 * n_hr / n_scored if n_scored else np.nan,
+            'mean_bot_score': g.loc[g['scored'], 'bot_score'].mean() if n_scored else np.nan,
         })
 
-    monthly = influencer_set.groupby(['sub', 'month']).apply(summarize, include_groups=False).reset_index()
+    by_role = all_roles.groupby(['sub', 'month', 'role']).apply(summarize, include_groups=False).reset_index()
+    wide = by_role.pivot(index=['sub', 'month'], columns='role',
+                          values=['n', 'n_scored', 'coverage_pct', 'pct_high_risk', 'mean_bot_score'])
+    wide.columns = [f'{role}_{metric}' for metric, role in wide.columns]
+    monthly = wide.reset_index()
+    # back-compat aliases: the combined role keeps the original (pre-split) column names, since
+    # every earlier chart/script/whitepaper section refers to these by name
+    monthly['n_influencers'] = monthly['combined_n']
+    monthly['coverage_pct'] = monthly['combined_coverage_pct']
+    monthly['pct_high_risk_of_scored'] = monthly['combined_pct_high_risk']
+    monthly['mean_bot_score_scored'] = monthly['combined_mean_bot_score']
     monthly.to_csv(OUT / 'subreddit_bot_prevalence_mom.csv', index=False)
-    print(f'Subreddit-month prevalence: {len(monthly)} rows through {max_month}.')
+    print(f'Subreddit-month prevalence (poster/commenter/combined split): {len(monthly)} rows through {max_month}.')
     return monthly
 
 

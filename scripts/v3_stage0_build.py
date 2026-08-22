@@ -56,21 +56,29 @@ def main():
     con = duckdb.connect(DB_PATH)
     con.create_function('base36_decode', base36_decode, ['VARCHAR'], 'BIGINT')
 
-    posts_glob = os.path.join(RAW, 'posts', '*.ndjson.zst')
-    comm_glob = os.path.join(RAW, 'commenters', '*.ndjson.zst')
+    # os.listdir (not a glob) enumerates the files -- the project directory name contains
+    # literal "[WIP]", and glob syntax (both Python's glob.glob and DuckDB's own) treats [...]
+    # as a character class, so any wildcard pattern silently matches zero files here. listdir
+    # + a plain suffix filter sidesteps pattern parsing on the path entirely.
+    posts_dir = os.path.join(RAW, 'posts')
+    comm_dir = os.path.join(RAW, 'commenters')
+    posts_files = sorted(os.path.join(posts_dir, f) for f in os.listdir(posts_dir) if f.endswith('.ndjson.zst'))
+    comm_files = sorted(os.path.join(comm_dir, f) for f in os.listdir(comm_dir) if f.endswith('.ndjson.zst'))
+    if not posts_files or not comm_files:
+        raise RuntimeError(f'No raw files found under {RAW} -- check data/v3/raw/{{posts,commenters}}/')
 
-    print('Building posts table...', flush=True)
-    con.execute(f"""
+    print(f'Building posts table... ({len(posts_files)} files)', flush=True)
+    con.execute("""
         CREATE OR REPLACE TABLE posts AS
         SELECT *,
             COALESCE(author = 'AutoModerator' OR author ILIKE '%bot', FALSE) AS is_confirmed_automation_seed,
             COALESCE(author IS NULL OR author = '[deleted]', FALSE) AS is_deleted_author,
             CASE WHEN author_fullname LIKE 't2\\_%' ESCAPE '\\'
                  THEN base36_decode(substr(author_fullname, 4)) END AS account_ordinal
-        FROM read_json_auto('{posts_glob}', union_by_name=true)
-    """)
+        FROM read_json_auto(?, union_by_name=true)
+    """, [posts_files])
 
-    print('Building commenters table...', flush=True)
+    print(f'Building commenters table... ({len(comm_files)} files)', flush=True)
     bot_body_clause = ' OR '.join(f"lower(body) LIKE '%{p}%'" for p in BOT_PHRASES)
     con.execute(f"""
         CREATE OR REPLACE TABLE commenters AS
@@ -82,8 +90,8 @@ def main():
             COALESCE(author IS NULL OR author = '[deleted]', FALSE) AS is_deleted_author,
             CASE WHEN author_fullname LIKE 't2\\_%' ESCAPE '\\'
                  THEN base36_decode(substr(author_fullname, 4)) END AS account_ordinal
-        FROM read_json_auto('{comm_glob}', union_by_name=true)
-    """)
+        FROM read_json_auto(?, union_by_name=true)
+    """, [comm_files])
 
     print('Building dedup / clean views...', flush=True)
     con.execute("""
