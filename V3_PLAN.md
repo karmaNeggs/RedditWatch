@@ -45,6 +45,22 @@ method). Short version:
   took it to the final 10, at a small real AUC cost, clean correlation throughout (max ρ=0.73).
   `account_ordinal` (creation-order age proxy) is excluded: it doesn't even help nominally (0.774 with
   vs 0.780 without). Full story: `docs/v3-research/whitepaper.md` §5–6b.
+- **Checked and ruled out (2026-08-22): a fully fresh feature-selection pass from all 57 raw
+  candidate columns** (not the incremental 49→18→15→10 path — every previously-pruned column,
+  including `account_ordinal`, `churn_ratio`, `shows_silo_mismatch_pattern`, back in the pool),
+  backward elimination on n=684. Peaks at n=20-25 (AUC~0.796) — nominally above the deployed 10's
+  0.780, but that gap is inflated by duplicate columns riding along together: the wall-clock bug fix
+  (§6b) had a side effect not caught at the time — `comments_per_day_since_first_seen` is now
+  mathematically identical (ρ=1.000) to the already-kept `comments_per_day_observed`, and
+  `n_gaps`≡`n_comments_sample` (ρ=1.000) too. A one-at-a-time elimination doesn't notice this (either
+  twin can be dropped with near-zero AUC cost since its copy remains), so both ride along, inflating
+  nominal feature count without adding real information. Once accounted for, every real signal family
+  the fresh sweep found is already in the deployed 10. The two apparently-new candidates both check
+  out as already-covered: `shows_silo_mismatch_pattern` is a near-dup (ρ=0.82) of
+  `n_subs_rejected_but_returned` (already in the 10); `account_ordinal` re-tested directly against the
+  current 10 on n=684 still hurts (0.780→0.774) — the 5th+ time this exact check has failed. Net: this
+  was a genuine validation pass, not a discovery of a better model. Full history:
+  `output/v3/full_pool_elim_history.json`, `full_pool_elim_sets.json`.
 - **Checked and ruled out (2026-08-22): bringing back "spread/variance" features**
   (`score_stddev`, `reception_spread`, `karma_extremeness`, `karma_per_post_extremeness`,
   `reception_spread_pctl`, `net_karma_spread_by_sub`, `churn_ratio` — the Phase 2 equation's original

@@ -1,0 +1,308 @@
+[
+  {
+    "n_features": 57,
+    "mean": 0.7761257642552739,
+    "std": 0.03583922330125473,
+    "dropping": "ever_automation_seed"
+  },
+  {
+    "n_features": 56,
+    "mean": 0.7737817446198575,
+    "std": 0.034937380182952775,
+    "dropping": "has_timing_features"
+  },
+  {
+    "n_features": 55,
+    "mean": 0.7789505240365554,
+    "std": 0.03250853289867272,
+    "dropping": "n_markers_available"
+  },
+  {
+    "n_features": 54,
+    "mean": 0.77715781864348,
+    "std": 0.03291301441872703,
+    "dropping": "hobby_absence"
+  },
+  {
+    "n_features": 53,
+    "mean": 0.7780070933280924,
+    "std": 0.032261931579849155,
+    "dropping": "reception_spread_pctl"
+  },
+  {
+    "n_features": 52,
+    "mean": 0.7756479133981447,
+    "std": 0.03771210759435049,
+    "dropping": "removal_rate_pctl"
+  },
+  {
+    "n_features": 51,
+    "mean": 0.77665645814767,
+    "std": 0.03386524958872872,
+    "dropping": "repeat_engagement_rate"
+  },
+  {
+    "n_features": 50,
+    "mean": 0.7816307199840964,
+    "std": 0.03521624033793756,
+    "dropping": "username_is_default_pattern"
+  },
+  {
+    "n_features": 49,
+    "mean": 0.7801458695482748,
+    "std": 0.03266267751330214,
+    "dropping": "thin_history_score"
+  },
+  {
+    "n_features": 48,
+    "mean": 0.7788613536735646,
+    "std": 0.0335922878241732,
+    "dropping": "karma_per_day_since_first_seen"
+  },
+  {
+    "n_features": 47,
+    "mean": 0.7821108298629111,
+    "std": 0.035959181000952405,
+    "dropping": "interval_quantization_rate"
+  },
+  {
+    "n_features": 46,
+    "mean": 0.7802813769640781,
+    "std": 0.03757201455616023,
+    "dropping": "username_char_entropy"
+  },
+  {
+    "n_features": 45,
+    "mean": 0.7750008753709031,
+    "std": 0.03357116784230361,
+    "dropping": "n_threads_with_repeat"
+  },
+  {
+    "n_features": 44,
+    "mean": 0.7784090478336547,
+    "std": 0.03519870762072113,
+    "dropping": "reception_spread"
+  },
+  {
+    "n_features": 43,
+    "mean": 0.7815905500604853,
+    "std": 0.035393343489697,
+    "dropping": "karma_per_post_extremeness"
+  },
+  {
+    "n_features": 42,
+    "mean": 0.7849472281239165,
+    "std": 0.036103531732437834,
+    "dropping": "n_subs_rejected_but_returned"
+  },
+  {
+    "n_features": 41,
+    "mean": 0.7806041889039115,
+    "std": 0.03393705054722196,
+    "dropping": "mean_body_len"
+  },
+  {
+    "n_features": 40,
+    "mean": 0.7826013086512624,
+    "std": 0.04090034352118529,
+    "dropping": "mean_post_score"
+  },
+  {
+    "n_features": 39,
+    "mean": 0.7810984086321736,
+    "std": 0.03556673213533701,
+    "dropping": "interval_entropy"
+  },
+  {
+    "n_features": 38,
+    "mean": 0.7814071717161448,
+    "std": 0.035159976920038465,
+    "dropping": "own_post_reply_rate"
+  },
+  {
+    "n_features": 37,
+    "mean": 0.781330663169701,
+    "std": 0.03779285293007499,
+    "dropping": "karma_extremeness"
+  },
+  {
+    "n_features": 36,
+    "mean": 0.7769370625263318,
+    "std": 0.03233221348923796,
+    "dropping": "n_subs_active"
+  },
+  {
+    "n_features": 35,
+    "mean": 0.7790271952325607,
+    "std": 0.03935027652291093,
+    "dropping": "is_submitter_rate"
+  },
+  {
+    "n_features": 34,
+    "mean": 0.7807175104677418,
+    "std": 0.037999091203335146,
+    "dropping": "n_low_tier_subs"
+  },
+  {
+    "n_features": 33,
+    "mean": 0.7837330152630801,
+    "std": 0.04046146532964899,
+    "dropping": "subreddit_entropy"
+  },
+  {
+    "n_features": 32,
+    "mean": 0.7829872828374217,
+    "std": 0.035518807940037395,
+    "dropping": "botmarker_composite"
+  },
+  {
+    "n_features": 31,
+    "mean": 0.7836799982831437,
+    "std": 0.03825863375285719,
+    "dropping": "username_digit_suffix_len"
+  },
+  {
+    "n_features": 30,
+    "mean": 0.7840941085843953,
+    "std": 0.03788630877497923,
+    "dropping": "mean_comment_score"
+  },
+  {
+    "n_features": 29,
+    "mean": 0.7868124729623343,
+    "std": 0.037432633125562366,
+    "dropping": "net_karma_spread_by_sub"
+  },
+  {
+    "n_features": 28,
+    "mean": 0.7872808359283846,
+    "std": 0.038580126452451076,
+    "dropping": "median_comment_score"
+  },
+  {
+    "n_features": 27,
+    "mean": 0.7864146976468902,
+    "std": 0.03462475341896055,
+    "dropping": "worst_sub_mean_score"
+  },
+  {
+    "n_features": 26,
+    "mean": 0.7874870439458783,
+    "std": 0.03802045882671201,
+    "dropping": "median_contrib_score"
+  },
+  {
+    "n_features": 25,
+    "mean": 0.7959765671680564,
+    "std": 0.03680280224696506,
+    "dropping": "score_stddev"
+  },
+  {
+    "n_features": 24,
+    "mean": 0.7957844441507715,
+    "std": 0.03688438784975274,
+    "dropping": "n_threads_active"
+  },
+  {
+    "n_features": 23,
+    "mean": 0.7918182978497502,
+    "std": 0.03743924352914899,
+    "dropping": "controversiality_rate"
+  },
+  {
+    "n_features": 22,
+    "mean": 0.7939476765397209,
+    "std": 0.03996080717619372,
+    "dropping": "n_low_tier"
+  },
+  {
+    "n_features": 21,
+    "mean": 0.7947594898677229,
+    "std": 0.03640412263151695,
+    "dropping": "best_sub_mean_score"
+  },
+  {
+    "n_features": 20,
+    "mean": 0.797063823010169,
+    "std": 0.036861455378334365,
+    "dropping": "deleted_later_rate"
+  },
+  {
+    "n_features": 19,
+    "mean": 0.7934679800618746,
+    "std": 0.03759661611636709,
+    "dropping": "burstiness_kimjo"
+  },
+  {
+    "n_features": 18,
+    "mean": 0.7839141436218217,
+    "std": 0.033289489604644014,
+    "dropping": "mean_depth"
+  },
+  {
+    "n_features": 17,
+    "mean": 0.7839548715237892,
+    "std": 0.03692634931338893,
+    "dropping": "n_subs"
+  },
+  {
+    "n_features": 16,
+    "mean": 0.7865413203304044,
+    "std": 0.04164988756761751,
+    "dropping": "n_medium_tier"
+  },
+  {
+    "n_features": 15,
+    "mean": 0.7864745662395987,
+    "std": 0.03586701236684831,
+    "dropping": "churn_ratio"
+  },
+  {
+    "n_features": 14,
+    "mean": 0.7776256439623692,
+    "std": 0.03361850813920907,
+    "dropping": "removal_rate"
+  },
+  {
+    "n_features": 13,
+    "mean": 0.7808044895796976,
+    "std": 0.03396727824916603,
+    "dropping": "deleted_later_rate_pctl"
+  },
+  {
+    "n_features": 12,
+    "mean": 0.777621200466714,
+    "std": 0.033589323578200665,
+    "dropping": "n_own_posts_with_comments"
+  },
+  {
+    "n_features": 11,
+    "mean": 0.7793666651983027,
+    "std": 0.033716244834564826,
+    "dropping": "n_high_tier"
+  },
+  {
+    "n_features": 10,
+    "mean": 0.7727442324352594,
+    "std": 0.03723339742549902,
+    "dropping": "n_posts_sample"
+  },
+  {
+    "n_features": 9,
+    "mean": 0.7731101487678732,
+    "std": 0.03801785630019281,
+    "dropping": "n_distinct_threads"
+  },
+  {
+    "n_features": 8,
+    "mean": 0.772068626819783,
+    "std": 0.03673036145386231,
+    "dropping": "n_comments_sample"
+  },
+  {
+    "n_features": 7,
+    "mean": 0.7655837007067349,
+    "std": 0.03603763665255642,
+    "dropping": "posts_per_day_since_first_seen"
+  }
+]
