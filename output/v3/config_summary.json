@@ -1,0 +1,42 @@
+[
+  {
+    "features": "without account_ordinal",
+    "target": "clubbed (banned+deleted vs ok)",
+    "mean": 0.7800332260807228,
+    "std": 0.04309135271866401,
+    "min": 0.6827922077922078,
+    "max": 0.8584415584415584
+  },
+  {
+    "features": "without account_ordinal",
+    "target": "banned-only (vs ok+deleted)",
+    "mean": 0.6426775793650793,
+    "std": 0.052502895444547615,
+    "min": 0.5347222222222222,
+    "max": 0.753968253968254
+  },
+  {
+    "features": "with account_ordinal",
+    "target": "clubbed (banned+deleted vs ok)",
+    "mean": 0.7777943021356052,
+    "std": 0.04214517645746038,
+    "min": 0.6626623376623377,
+    "max": 0.8600770218228498
+  },
+  {
+    "features": "with account_ordinal",
+    "target": "banned-only (vs ok+deleted)",
+    "mean": 0.6272212301587302,
+    "std": 0.046539003546867665,
+    "min": 0.5243055555555556,
+    "max": 0.7331349206349206
+  },
+  {
+    "features": "without account_ordinal",
+    "target": "deleted-only (vs ok+banned)",
+    "mean": 0.7572351091277533,
+    "std": 0.04258688580065623,
+    "min": 0.6917293233082706,
+    "max": 0.845360824742268
+  }
+]

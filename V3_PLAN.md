@@ -11,13 +11,120 @@ Status marks: ✅ **measured** in this project · 📚 **published**, cited ·
 
 ---
 
-## 🚦 START HERE (next session) — as of 2026-08-21
+## 🚦 START HERE (next session) — as of 2026-08-22
 
 **Read this section only.** Everything referenced here has full detail, numbers,
 and the reasoning behind every correction in §10.4 — don't re-derive anything
 below from scratch, and don't re-litigate anything marked resolved.
 
-### Newest thread: hand-labeled bot-detection methodology (Stage 5-7) — milestone frozen 2026-08-21
+### Current primary thread: RedditWatch 1.0 — account-removal model validated against real ground truth — 2026-08-22
+
+**Full writeup: `docs/v3-research/whitepaper.md` §4–11. This is the project's primary bot/spam
+scoring methodology** — supersedes the earlier duplicate-text and equation-based approaches for
+dashboard/prevalence purposes (both kept as documented background in whitepaper §2, not the live
+method). Short version:
+
+- **Real ground truth, not a proxy:** 584 usable accounts (381 active, 104 banned, 98 deleted, 1 mod),
+  each checked directly against live Reddit by the analyst across nine sampling rounds — the first
+  label set in this project not itself a product of the detection method being validated.
+  `output/v3/ground_truth_labels.csv`.
+- **Deleted accounts statistically resemble banned accounts, not active ones** — reconfirmed at final
+  scale: clubbed (banned+deleted vs ok) AUC 0.780 vs. banned-only 0.643. A companion check found
+  deleted-only is actually the *stronger* standalone signal (0.757 vs banned-only's 0.643) — banned is
+  the noisier target on its own, not a weak signal riding on deleted's coattails. Combine them; don't
+  split them.
+- **10 features**, arrived at via five rounds of reduction: 8 exact (ρ=1.000) duplicates of
+  `_1`-suffixed variants, 9 near-duplicates (ρ>0.85) found by a correlation sweep on the top-20
+  important features, backward elimination 49→18, then **a real wall-clock time-denominator bug found
+  during QC and fixed** — 3 of the 18 (`days_since_first_seen`, `comments_per_day_since_first_seen`,
+  `karma_per_day_since_first_seen`) were computed against "now" instead of `last_seen_utc`, silently
+  decaying every account's score release-over-release as the corpus aged (this is what caused the
+  subreddit-prevalence dashboard's MoM trend to look like a fake decline toward "everything's fine
+  lately" — see whitepaper §6b). Fixing it collapsed those 3 into duplicates of already-kept columns,
+  landing at 15 — then a further backward-elimination pass (user request: keep it to ~10-12 params)
+  took it to the final 10, at a small real AUC cost, clean correlation throughout (max ρ=0.73).
+  `account_ordinal` (creation-order age proxy) is excluded: it doesn't even help nominally (0.778 with
+  vs 0.780 without). Full story: `docs/v3-research/whitepaper.md` §5–6b.
+- **XGBoost, tuned hyperparameters, repeated 5×10-fold CV AUC = 0.780 ± 0.043** — real, validated, and
+  stable across the last several sampling rounds; read scores as directional. Independent confirmation:
+  manually-verified high/mid/low tier bad-rates of 85%/25%/2.5% on the largest check (n=120). Full
+  analysis (target/feature comparison, feature-count elimination curve, importances, ROC,
+  confirmed-rate-by-bucket): `docs/v3-research/charts/model_analysis.html`.
+- **Subreddit prevalence** measures influence over each subreddit's **top-30-posts-by-karma** monthly
+  (poster + top/latest commenters, deduplicated, scored, % landing ≥0.7) — not share of total monthly
+  activity. Full 24-month history (2024-08→2026-07; 2026-08 not yet collected). Trend now shows a
+  genuine dip-and-recover shape (~15%→~10%→~14%), not the pre-fix artifact decay toward zero.
+  `output/v3/subreddit_bot_prevalence_mom.csv`.
+- **Dashboard:** `docs/bot-spam-compass.html` — the project's primary bot/spam artifact, data embedded
+  at build time (works from file://, a local server, or GitHub Pages alike, no external fetch).
+  **Monthly refresh is one command:** `python3 scripts/v3_stage8_monthly_refresh.py` — retrains,
+  rescores, rebuilds prevalence, regenerates the dashboard in place.
+- **Not yet done:** this model doesn't establish *coordination* between accounts (only individual
+  removal risk) — the coordination angle from the earlier equation-based theory remains open, see the
+  coordination-check note below. The labeled set (n=584) could still grow further, but has stopped
+  swinging with each new round — this is no longer the most urgent gap.
+
+### Earlier thread: an equation-based reframing, superseded — frozen 2026-08-21
+
+**Full writeup: `docs/v3-research/whitepaper.md` §2.** This supersedes the "explicit next step"
+below (scaling 76→~300 bots was never resumed — the project pivoted instead). Short version:
+
+- **Reframing:** Phase 1's 76 bots are all templated/duplicate-text spam — a real but narrow species.
+  The analyst's theory: a second, larger population of **paid human spam workers** (political IT
+  cells, PR firms) exists, writing original text but sharing a behavioral signature — high activity,
+  karma concentrated in a "home" sub while getting downvoted (but still posting, because paid
+  regardless) in "opposition" subs. Different detection problem, built and validated independently.
+- **Equation:** (high comment or post karma) AND (high karma-reception variance across subreddits) AND
+  (high comments or posts per day) — calibrated against 7 named seed accounts (incl. `CritFin`) and
+  validated by comparing top-30-per-subreddit accounts across 3 subreddit groups: political/meme
+  "spam-dens" (IndiaSpeaks, unitedstatesofindia, indiameme, CricketShitpost, InstaCelebsGossip) vs.
+  finance vs. lifestyle comparison groups, with subreddit-level (not account-level) leave-one-out
+  z-score outlier removal. **Result: spam-dens run ~1.8–2.2x finance/lifestyle on `karma_extremeness`
+  and `reception_spread`, and are the only group with non-zero post-based spread** — replicates,
+  not tautological (accounts selected by frequency, not karma/spread), not outlier-driven.
+- **Final score:** `(comment_spread band + post_spread band) × (comments/day band + posts/day band)`,
+  0–16, **multiplicative — not additive.** A first pass summed all 4 bands (0–8 range); the analyst
+  caught this directly ("is this happening? y or N") and it was corrected — the equation was always an
+  AND ("high variance" AND "high activity"), and summing let one strong factor compensate for a weak
+  other, which a real AND-gate must not allow. The fix zeroed 21,152 of 34,565 floor-qualifying accounts
+  (61%) that had scored above 0 under the wrong formula. Thresholds unchanged (comment_spread 20/140,
+  post_spread 50/500, comments/day .05/.2, posts/day .01/.1), scored only on accounts with ≥10 sampled
+  comments or posts (34,565 of 347,886). Top score-bucket (score 16, n=29) holds 3.2% of karma alone at
+  37.76x its account share; top three bands combined (9/12/16, n=236, 0.68% of population) hold 13.6%
+  of karma and 18.1% of posts.
+- **Critical honest finding: this score does NOT validate as a classifier against either labeled
+  set it was checked against** — AUC 0.470 vs. a 20-account LLM-confirmed spam set, AUC 0.319 (worse
+  than random) vs. Phase 1's 76 duplicate-text bots — both re-checked against the corrected
+  multiplicative formula, same conclusion as the earlier (wrong) additive version. **Conclusion: Phase
+  1 and Phase 2 catch different populations** — Phase 1 bots are low-variance/low-effort by construction
+  (§6); Phase 2 targets the opposite (high-variance, high-activity). Phase 2's only real evidence is the
+  §12 group separation, not a classification metric — treat every score as directional, not validated.
+  See whitepaper §18.
+- **Subreddit-month rollup (2026-07, 44/45 subs — DesiVideoMemes' collection stopped 2026-03):**
+  `output/v3/subreddit_score_2026-07_mult.csv`. Top by % of month's activity from score≥6 accounts:
+  unitedstatesofindia (17.2%), BollyBlindsNGossip (13.2%), ISRO (13.1%), IndiaCricket (12.3%).
+  Notably **IndiaSpeaks ranks 10th (7.7%)** despite being the strongest §12 account-level signal and
+  the source of most seed accounts — the two views measure different things (individual extremity
+  vs. share of a month's aggregate activity) and both are real; see whitepaper §16 for why.
+- **Not yet done:** no purpose-built "paid spam worker" label set exists to actually validate the
+  equation against (the 20-account set was a negative check, not a fitting target). If this thread
+  continues, that's the next real step — not scaling Phase 1's bot count further.
+- **Two follow-up outputs added 2026-08-21, both documented in whitepaper §19-20:**
+  1. **Top-30-post influence rating** (`output/v3/subreddit_top30_rating_2026-07.csv`,
+     https://claude.ai/code/artifact/1223e889-72e8-4bcf-ab95-be6ed2306a87): per sub, top 30 posts by
+     karma → poster + top-5-by-score commenters + top-5-latest commenters, deduplicated, scored. Ranks
+     subs differently from §16 — delhi/unitedstatesofindia/CricketShitpost lead; IndiaSpeaks drops to
+     24th. Answers "who's behind the best-performing content," not "share of total activity."
+  2. **Full-2026 MoM trend, selectable per subreddit**
+     (`output/v3/subreddit_score_2026_mom.csv`, https://claude.ai/code/artifact/d4f5b1f6-d9b0-4658-93fa-b8913cb82313).
+- **Gotcha hit while building these:** `sub` is a real pandas `DataFrame` method (row-wise
+  subtraction) — `df.sub` (attribute access) silently returns the *method*, not a column literally
+  named `sub`, causing a confusing `'function' object has no attribute 'nunique'`-style error with no
+  hint that the column name is the problem. Always use `df['sub']` bracket notation for a column named
+  `sub` (same risk applies to other pandas-method-shadowing names: `count`, `sum`, `min`, `max`, `mean`,
+  `add`, `div`, `mul`, `pow`, `mode`, `size`, etc.).
+
+### Earlier thread: hand-labeled bot-detection methodology (Stage 5-7) — milestone frozen 2026-08-21
 
 **Full writeup, all stats/citations/limitations: `docs/v3-research/whitepaper.md`.** Short version:
 
