@@ -49,13 +49,41 @@ def get_severity(score, bands):
     return 'low'
 
 
+ROLES = ['combined', 'poster', 'commenter']
+
+
+def role_block(row, role, bands_by_role):
+    pct = row.get(f'{role}_pct_high_risk')
+    if pd.isna(pct):
+        return {'pct_high_risk': None, 'mean_bot_score': None, 'coverage_pct': None, 'n': 0, 'severity': None}
+    mean_score = row.get(f'{role}_mean_bot_score')
+    coverage = row.get(f'{role}_coverage_pct')
+    n = row.get(f'{role}_n')
+    return {
+        'pct_high_risk': round(float(pct), 3),
+        'mean_bot_score': round(float(mean_score), 4) if pd.notna(mean_score) else None,
+        'coverage_pct': round(float(coverage), 2) if pd.notna(coverage) else None,
+        'n': int(n) if pd.notna(n) else 0,
+        'severity': get_severity(float(pct), bands_by_role[role]),
+    }
+
+
 def main():
     df = pd.read_csv(SRC)
     df = df.dropna(subset=['pct_high_risk_of_scored'])
     months = sorted(df['month'].unique())
 
-    bands = severity_bands(df['pct_high_risk_of_scored'].values)
-    print('severity bands (P50/P80/P95 of observed pct_high_risk_of_scored):', bands)
+    # separate severity bands per role -- posters and commenters have genuinely different
+    # baseline risk distributions (posters run higher, see V3_PLAN.md 2026-08-22 diagnostic),
+    # so one shared band set would misrepresent severity for whichever role sits off-center.
+    bands_by_role = {}
+    for role in ROLES:
+        col = f'{role}_pct_high_risk'
+        dist = df[col].dropna().values if col in df.columns else df['pct_high_risk_of_scored'].values
+        bands_by_role[role] = severity_bands(dist)
+    bands = bands_by_role['combined']
+    for role in ROLES:
+        print(f'severity bands ({role}, P50/P80/P95):', bands_by_role[role])
 
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     month_docs = {}
@@ -63,54 +91,61 @@ def main():
         mdf = df[df['month'] == m].set_index('sub')
         subs = {}
         for sub, row in mdf.iterrows():
+            roles = {role: role_block(row, role, bands_by_role) for role in ROLES}
             subs[sub] = {
-                'pct_high_risk': round(float(row['pct_high_risk_of_scored']), 3),
-                'mean_bot_score': round(float(row['mean_bot_score_scored']), 4) if pd.notna(row['mean_bot_score_scored']) else None,
-                'coverage_pct': round(float(row['coverage_pct']), 2) if pd.notna(row['coverage_pct']) else None,
-                'n_influencers': int(row['n_influencers']),
-                'severity': get_severity(float(row['pct_high_risk_of_scored']), bands),
+                'pct_high_risk': roles['combined']['pct_high_risk'],
+                'mean_bot_score': roles['combined']['mean_bot_score'],
+                'coverage_pct': roles['combined']['coverage_pct'],
+                'n_influencers': roles['combined']['n'],
+                'severity': roles['combined']['severity'],
+                'roles': roles,
             }
         month_docs[m] = subs
 
-    def build_narrative(m, subs):
+    def build_narrative(m, subs, role):
         prev_idx = months.index(m) - 1
         prev_subs = month_docs.get(months[prev_idx]) if prev_idx >= 0 else None
-        scores = [d['pct_high_risk'] for d in subs.values()]
+        rb = bands_by_role[role]
+
+        def val(d, key='pct_high_risk'):
+            return d['roles'][role][key]
+
+        scored_subs = {s: d for s, d in subs.items() if val(d) is not None}
+        scores = [val(d) for d in scored_subs.values()]
         avg = sum(scores) / len(scores) if scores else 0
-        pct_mod = round(100 * sum(1 for s in scores if s >= bands['moderate']) / len(scores)) if scores else 0
-        pct_high = round(100 * sum(1 for s in scores if s >= bands['high']) / len(scores)) if scores else 0
+        pct_mod = round(100 * sum(1 for s in scores if s >= rb['moderate']) / len(scores)) if scores else 0
+        pct_high = round(100 * sum(1 for s in scores if s >= rb['high']) / len(scores)) if scores else 0
 
         movers = []
         if prev_subs:
-            for sub, d in subs.items():
-                if sub in prev_subs:
-                    delta = d['pct_high_risk'] - prev_subs[sub]['pct_high_risk']
-                    movers.append({'subreddit': sub, 'delta': round(delta, 2), 'final_score': d['pct_high_risk']})
+            for sub, d in scored_subs.items():
+                if sub in prev_subs and val(prev_subs[sub]) is not None:
+                    delta = val(d) - val(prev_subs[sub])
+                    movers.append({'subreddit': sub, 'delta': round(delta, 2), 'final_score': val(d)})
         movers.sort(key=lambda x: x['delta'])
         fallers = [x for x in movers if x['delta'] < 0][:3]
         risers = [x for x in movers[::-1] if x['delta'] > 0][:3]
 
         avg_prev = None
         if prev_subs:
-            prev_scores = [d['pct_high_risk'] for d in prev_subs.values()]
+            prev_scores = [val(d) for d in prev_subs.values() if val(d) is not None]
             avg_prev = sum(prev_scores) / len(prev_scores) if prev_scores else None
 
-        toppers = sorted(({'subreddit': s, 'final_score': d['pct_high_risk']} for s, d in subs.items()),
+        toppers = sorted(({'subreddit': s, 'final_score': val(d)} for s, d in scored_subs.items()),
                           key=lambda x: -x['final_score'])[:5]
 
         findings = []
         if risers:
-            findings.append(f"r/{risers[0]['subreddit']} saw the largest increase in bot/spam-influencer "
-                             f"prevalence this month (+{risers[0]['delta']:.1f}pp), now at {risers[0]['final_score']:.1f}%.")
-        crit_subs = [s for s, d in subs.items() if d['severity'] == 'critical']
+            findings.append(f"r/{risers[0]['subreddit']} saw the largest increase in {role} bot/spam prevalence "
+                             f"this month (+{risers[0]['delta']:.1f}pp), now at {risers[0]['final_score']:.1f}%.")
+        crit_subs = [s for s, d in scored_subs.items() if d['roles'][role]['severity'] == 'critical']
         if crit_subs:
-            findings.append(f"{len(crit_subs)} subreddit(s) in the Critical band this month: "
+            findings.append(f"{len(crit_subs)} subreddit(s) in the Critical band this month ({role}): "
                              + ', '.join(f'r/{s}' for s in crit_subs[:5]) + '.')
-        low_cov = [s for s, d in subs.items() if d['coverage_pct'] is not None and d['coverage_pct'] < 40]
+        low_cov = [s for s, d in scored_subs.items() if d['roles'][role]['coverage_pct'] is not None and d['roles'][role]['coverage_pct'] < 40]
         if low_cov:
-            findings.append(f"{len(low_cov)} subreddit(s) have low scoring coverage (<40%) this month — "
-                             "their top-30 influencer set skews toward accounts too new/thin-history to score; "
-                             "read those readings cautiously.")
+            findings.append(f"{len(low_cov)} subreddit(s) have low {role}-scoring coverage (<40%) this month — "
+                             "those readings skew toward accounts too new/thin-history to score; read cautiously.")
 
         return {
             'headline': {
@@ -131,14 +166,23 @@ def main():
             'month': m,
             'subreddits': subs,
             'severity_bands': bands,
-            'narrative': build_narrative(m, subs),
+            'severity_bands_by_role': bands_by_role,
+            'narrative': {role: build_narrative(m, subs, role) for role in ROLES},
         }
         full_docs[m] = doc
         (DATA_DIR / f'{m}.json').write_text(json.dumps(doc))
 
+    def role_avg(subs, role):
+        vals = [d['roles'][role]['pct_high_risk'] for d in subs.values() if d['roles'][role]['pct_high_risk'] is not None]
+        return round(sum(vals) / len(vals), 2) if vals else None
+
     history = {
         'months': [
-            {'month': m, 'aggregate': {'avg_score': round(sum(d['pct_high_risk'] for d in month_docs[m].values()) / len(month_docs[m]), 2)}}
+            {'month': m, 'aggregate': {
+                'avg_score': round(sum(d['pct_high_risk'] for d in month_docs[m].values()) / len(month_docs[m]), 2),
+                'poster_avg_score': role_avg(month_docs[m], 'poster'),
+                'commenter_avg_score': role_avg(month_docs[m], 'commenter'),
+            }}
             for m in months
         ],
     }
