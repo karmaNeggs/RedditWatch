@@ -1,26 +1,26 @@
 {
   "features": [
     "comments_per_day_observed",
-    "n_subs_rejected_but_returned",
     "thin_history_score",
     "n_own_posts_with_comments",
+    "n_subs_rejected_but_returned",
+    "sample_score_per_day_observed",
     "n_high_tier",
     "n_medium_tier",
-    "sample_score_per_day_observed",
-    "mean_body_len",
     "removal_rate_pctl",
-    "worst_sub_mean_score"
+    "worst_sub_mean_score",
+    "mean_body_len"
   ],
   "importance": [
-    0.1807,
-    0.1177,
-    0.1152,
-    0.1057,
-    0.0868,
-    0.0816,
-    0.0814,
-    0.0806,
-    0.0753,
-    0.0749
+    0.1875,
+    0.1158,
+    0.107,
+    0.0976,
+    0.0865,
+    0.0862,
+    0.0822,
+    0.0807,
+    0.0792,
+    0.0773
   ]
 }

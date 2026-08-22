@@ -24,13 +24,13 @@ scoring methodology** — supersedes the earlier duplicate-text and equation-bas
 dashboard/prevalence purposes (both kept as documented background in whitepaper §2, not the live
 method). Short version:
 
-- **Real ground truth, not a proxy:** 584 usable accounts (381 active, 104 banned, 98 deleted, 1 mod),
-  each checked directly against live Reddit by the analyst across nine sampling rounds — the first
+- **Real ground truth, not a proxy:** 684 usable accounts (450 active, 117 banned, 116 deleted, 1 mod),
+  each checked directly against live Reddit by the analyst across ten sampling rounds — the first
   label set in this project not itself a product of the detection method being validated.
   `output/v3/ground_truth_labels.csv`.
 - **Deleted accounts statistically resemble banned accounts, not active ones** — reconfirmed at final
-  scale: clubbed (banned+deleted vs ok) AUC 0.780 vs. banned-only 0.643. A companion check found
-  deleted-only is actually the *stronger* standalone signal (0.757 vs banned-only's 0.643) — banned is
+  scale: clubbed (banned+deleted vs ok) AUC 0.780 vs. banned-only 0.645. A companion check found
+  deleted-only is actually the *stronger* standalone signal (0.749 vs banned-only's 0.645) — banned is
   the noisier target on its own, not a weak signal riding on deleted's coattails. Combine them; don't
   split them.
 - **10 features**, arrived at via five rounds of reduction: 8 exact (ρ=1.000) duplicates of
@@ -43,9 +43,16 @@ method). Short version:
   lately" — see whitepaper §6b). Fixing it collapsed those 3 into duplicates of already-kept columns,
   landing at 15 — then a further backward-elimination pass (user request: keep it to ~10-12 params)
   took it to the final 10, at a small real AUC cost, clean correlation throughout (max ρ=0.73).
-  `account_ordinal` (creation-order age proxy) is excluded: it doesn't even help nominally (0.778 with
+  `account_ordinal` (creation-order age proxy) is excluded: it doesn't even help nominally (0.774 with
   vs 0.780 without). Full story: `docs/v3-research/whitepaper.md` §5–6b.
-- **XGBoost, tuned hyperparameters, repeated 5×10-fold CV AUC = 0.780 ± 0.043** — real, validated, and
+- **Checked and ruled out (2026-08-22): bringing back "spread/variance" features**
+  (`score_stddev`, `reception_spread`, `karma_extremeness`, `karma_per_post_extremeness`,
+  `reception_spread_pctl`, `net_karma_spread_by_sub`, `churn_ratio` — the Phase 2 equation's original
+  intuition) does not help on real ground truth (n=684): each is weak alone (bivariate AUC 0.51–0.61),
+  and adding all of them to the 10-feature model makes it *worse* (0.780→0.767 with 5, →0.771 with 7),
+  not better — they dilute tree splits without adding real information the kept features don't already
+  capture. Don't re-add these without new evidence; this was checked rigorously, not assumed.
+- **XGBoost, tuned hyperparameters, repeated 5×10-fold CV AUC = 0.780 ± 0.035** — real, validated, and
   stable across the last several sampling rounds; read scores as directional. Independent confirmation:
   manually-verified high/mid/low tier bad-rates of 85%/25%/2.5% on the largest check (n=120). Full
   analysis (target/feature comparison, feature-count elimination curve, importances, ROC,
@@ -61,7 +68,7 @@ method). Short version:
   rescores, rebuilds prevalence, regenerates the dashboard in place.
 - **Not yet done:** this model doesn't establish *coordination* between accounts (only individual
   removal risk) — the coordination angle from the earlier equation-based theory remains open, see the
-  coordination-check note below. The labeled set (n=584) could still grow further, but has stopped
+  coordination-check note below. The labeled set (n=684) could still grow further, but has stopped
   swinging with each new round — this is no longer the most urgent gap.
 
 ### Earlier thread: an equation-based reframing, superseded — frozen 2026-08-21

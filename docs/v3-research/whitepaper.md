@@ -6,14 +6,14 @@ tried, what worked, what didn't, and why the project moved on. Everything from �
 RedditWatch 1.0 actually runs: an account-removal model trained and cross-validated against real,
 live-checked Reddit account status (banned / deleted / still active), not a proxy label.
 
-- **584 real, live-verified accounts** (381 active, 104 banned, 98 deleted, 1 mod), checked directly by
-  the analyst across nine sampling rounds — the label set an earlier duplicate-text screen or hand-built
+- **684 real, live-verified accounts** (450 active, 117 banned, 116 deleted, 1 mod), checked directly by
+  the analyst across ten sampling rounds — the label set an earlier duplicate-text screen or hand-built
   equation had no hand in constructing.
 - **10 features**, arrived at through five rounds of reduction (8 exact duplicates, 9 near-duplicates,
   backward elimination 49→18, a wall-clock time-denominator bug found and fixed that collapsed 3 more
   into duplicates (→15), then a further backward-elimination pass to 10 to keep the model as light as
   possible — §5, §6b) — down from an original ~67-column candidate pool.
-- **Tuned XGBoost, repeated 5×10-fold CV AUC = 0.780 ± 0.043** — clubbed banned+deleted target,
+- **Tuned XGBoost, repeated 5×10-fold CV AUC = 0.780 ± 0.035** — clubbed banned+deleted target,
   `account_ordinal` excluded. Full validation: `docs/v3-research/charts/model_analysis.html`.
 - **Live dashboard:** `docs/bot-spam-compass.html`. **Monthly refresh, one command:**
   `python3 scripts/v3_stage8_monthly_refresh.py`.
@@ -86,23 +86,23 @@ active — checked directly against live Reddit profiles, not inferred from anyt
 
 ## 4. Ground truth
 
-**650 candidate accounts** sampled across nine rounds — ranked by whatever candidate scoring function
+**750 candidate accounts** sampled across ten rounds — ranked by whatever candidate scoring function
 existed at that point (early karma-churn composites, later the model itself, finally two boundary-region
 samples straddling the tier cutoffs), each round excluding every account shown in an earlier round — and
-checked one by one against live Reddit. **584 usable**:
+checked one by one against live Reddit. **684 usable**:
 
 | outcome | n |
 |---|---|
-| still active (`ok`) | 381 |
-| banned | 104 |
-| deleted | 98 |
+| still active (`ok`) | 450 |
+| banned | 117 |
+| deleted | 116 |
 | moderator (kept as `ok`-adjacent, excluded from the binary target) | 1 |
 
-**Banned and deleted accounts are combined into one "removed" positive class (n=202).** Checked
-directly at every sample-size milestone (n=234→294→354→414→534→584): splitting them and treating banned
-as the sole positive class consistently underperforms clubbing (§6: AUC 0.780 clubbed vs. 0.643
+**Banned and deleted accounts are combined into one "removed" positive class (n=233).** Checked
+directly at every sample-size milestone (n=234→294→354→414→534→584→684): splitting them and treating banned
+as the sole positive class consistently underperforms clubbing (§6: AUC 0.780 clubbed vs. 0.645
 banned-only). A companion check — deleted-only vs. everyone else — found deleted is actually the
-*stronger* standalone signal (0.757 vs. banned-only's 0.643): banned is the noisier target on its own
+*stronger* standalone signal (0.749 vs. banned-only's 0.645): banned is the noisier target on its own
 (often triggered by a single rule-violating incident that aggregate behavioral features can't always
 anticipate), while deletion tends to follow a more gradual, cumulative pattern the features can see.
 Clubbing wins because the two share enough common signal that combining them gives the model more
@@ -135,13 +135,13 @@ columns measuring the same constructs better and were dropped entirely):
 5. **A second backward-elimination pass, 15→10**, run to check how far the model could be lightened
    further. AUC held with only a small, real cost below ~12 features (0.789→~0.776–0.778, consistent
    across n=10/11/12, not noise), with clean correlation throughout (max ρ=0.73, well under the 0.85
-   threshold). **Final: 10 features, CV AUC 0.780 ± 0.043** — accepted as the right tradeoff for a
+   threshold). **Final: 10 features, CV AUC 0.780 ± 0.035** — accepted as the right tradeoff for a
    simpler, more interpretable model.
 
 Also excluded on purpose:
 
 - **`account_ordinal`** (account creation order) — a real early signal, but at final scale it doesn't
-  even help nominally (0.778 with vs. 0.780 without — §6), and multiple manually-verified samples (up
+  even help nominally (0.774 with vs. 0.780 without — §6), and multiple manually-verified samples (up
   to 120 accounts, live-checked) found the model separates high from low risk at least as well without
   it. Not worth the interpretability cost of a feature that reads as "just flags new accounts."
 - **Collection-snapshot timing fields** (`last_seen_utc`, `first_seen_utc`, `observed_span_days`) — a
@@ -160,20 +160,20 @@ fold-evaluations), with per-fold imputation (train-fold medians only, no leakage
 
 | check | result |
 |---|---|
-| **Repeated CV AUC (headline number)** | **0.780 ± 0.043** |
-| Multifold-averaged out-of-fold AUC (10-repeat average per account) | 0.794 |
-| Deleted-only vs. everyone else | 0.757 |
-| Banned-only vs. everyone else | 0.643 |
-| With `account_ordinal` included | 0.778 (no better) |
+| **Repeated CV AUC (headline number)** | **0.780 ± 0.035** |
+| Multifold-averaged out-of-fold AUC (10-repeat average per account) | 0.792 |
+| Deleted-only vs. everyone else | 0.749 |
+| Banned-only vs. everyone else | 0.645 |
+| With `account_ordinal` included | 0.774 (no better) |
 
 **Independent, non-CV confirmation — confirmed-outcome rate by score bucket** (the literal % of
 live-verified accounts in each decile that turned out banned/deleted, not a density curve):
 
 | score bucket | % still active |
 |---|---|
-| 0.0–0.1 | 91.5% |
-| 0.4–0.5 | 51.4% |
-| 0.9–1.0 | 23.1% |
+| 0.0–0.1 | 93.0% |
+| 0.4–0.5 | 57.1% |
+| 0.9–1.0 | 17.0% |
 
 A clean, mostly-monotonic decline. The same shape shows up in every manually-verified high/mid/low tier
 check run across this project, culminating in the largest (n=120): **85% bad in the high tier, 25% in
@@ -183,7 +183,7 @@ Full analysis (target/feature comparison, feature-count elimination curve, impor
 confirmed-rate-by-bucket): `docs/v3-research/charts/model_analysis.html`.
 
 **Reading this number honestly:** 0.78 is real, validated signal, checked against ground truth the
-detection method itself had no hand in constructing, at a scale (n=584, 202 positive) large enough that
+detection method itself had no hand in constructing, at a scale (n=684, 202 positive) large enough that
 the estimate has stopped swinging with each new sampling round. It is not a highly confident classifier
 — std of ±0.04 across folds means individual predictions should be read as directional risk, not a
 verdict.
@@ -217,7 +217,7 @@ taking the feature count from 18 to 15 (§5). Rebuilt `account_features` and `ac
 retrained: **AUC moved from an inflated 0.801 to the correct 0.789** — a small, honest drop, not a
 regression; the earlier number was measuring a model that partly worked by exploiting a timestamp
 artifact. A further lightening pass (§5 step 5) took the deployed model from 15 to the **final 10
-features, AUC 0.780 ± 0.043**.
+features, AUC 0.780 ± 0.035**.
 
 **Effect on the dashboard trend, before vs. after:**
 
@@ -277,7 +277,7 @@ regenerating the dashboard's embedded data in place. Takes under a minute.
 
 ## 10. Outputs
 
-- `output/v3/ground_truth_labels.csv` — the 584-account labeled ground truth.
+- `output/v3/ground_truth_labels.csv` — the 684-account labeled ground truth.
 - `output/v3/all_shown_accounts.csv` — every account ever sampled, used to avoid resampling.
 - `output/v3/final_bot_model.json` / `final_bot_model_features.json` — the trained model (10 features).
 - `output/v3/final_bot_scores.parquet` — scores for all 36,762 floor-qualifying accounts.
@@ -288,7 +288,7 @@ regenerating the dashboard's embedded data in place. Takes under a minute.
 
 ## 11. Limitations
 
-- **n=584 (202 positive) is real progress but still not large** for a 10-feature model — repeated-CV
+- **n=684 (233 positive) is real progress but still not large** for a 10-feature model — repeated-CV
   fold AUCs vary meaningfully across folds (std ±0.04). Treat scores as directional, not a verdict.
 - **"Removed" mixes admin bans and self-deletions**, and §4/§6 show these aren't interchangeable —
   deleted is the stronger standalone signal, banned the noisier one — even though clubbing them
