@@ -1,0 +1,494 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RedditWatch — Whitepaper</title>
+<style>
+  :root {
+    color-scheme: light;
+    --page: #f9f9f7; --surface: #fcfcfb; --ink: #0b0b0b; --ink-2: #52514e; --muted: #898781;
+    --grid: #e1e0d9; --baseline: #c3c2b7; --border: rgba(11,11,11,0.10);
+    --accent: #2a78d6; --accent2: #d95926;
+    --hdr-bg: rgba(249,249,247,0.94);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      color-scheme: dark;
+      --page: #0d0d0d; --surface: #1a1a19; --ink: #ffffff; --ink-2: #c3c2b7; --muted: #898781;
+      --grid: #2c2c2a; --baseline: #383835; --border: rgba(255,255,255,0.10);
+      --accent: #3987e5; --accent2: #d95926;
+      --hdr-bg: rgba(13,13,13,0.94);
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { background: var(--page); color: var(--ink); margin: 0; padding: 0; }
+  body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; line-height: 1.6; font-size: 15px; }
+  a { color: var(--accent); }
+  .mono { font-family: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace; font-size: 0.92em; }
+  code { font-family: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace; font-size: 0.9em;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 4px; padding: 0.1em 0.4em; }
+  pre code { display: block; padding: 12px 14px; overflow-x: auto; }
+
+  header { position: sticky; top: 0; z-index: 10; background: var(--hdr-bg); backdrop-filter: blur(8px); border-bottom: 1px solid var(--border); }
+  .hdr-inner { max-width: 1000px; margin: 0 auto; padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+  .brand { font-weight: 800; font-size: 15px; color: var(--ink); text-decoration: none; }
+  .nav-tab { color: var(--muted); font-size: 13px; font-weight: 600; padding: 6px 10px; border-radius: 6px; text-decoration: none; }
+  .nav-tab.active { color: var(--ink); background: var(--surface); }
+
+  .layout { max-width: 1000px; margin: 0 auto; padding: 32px 24px 80px; display: grid; grid-template-columns: 200px minmax(0,1fr); gap: 40px; }
+  @media (max-width: 820px) { .layout { grid-template-columns: 1fr; } }
+
+  .toc { position: sticky; top: 72px; align-self: start; font-size: 12.5px; max-height: calc(100vh - 100px); overflow-y: auto; }
+  .toc-title { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); font-weight: 700; margin-bottom: 10px; }
+  .toc ul { list-style: none; margin: 0; padding: 0; }
+  .toc > ul > li { margin-bottom: 3px; }
+  .toc ul ul { padding-left: 12px; }
+  .toc a { color: var(--ink-2); text-decoration: none; display: block; padding: 2px 0; border-left: 2px solid transparent; padding-left: 8px; margin-left: -8px; }
+  .toc a:hover { color: var(--accent); }
+  @media (max-width: 820px) { .toc { position: static; max-height: none; margin-bottom: 20px; border-bottom: 1px solid var(--grid); padding-bottom: 16px; } }
+
+  .content { min-width: 0; max-width: 74ch; }
+  .content h1 { font-size: 25px; font-weight: 700; letter-spacing: -0.01em; margin: 0 0 6px; text-wrap: balance; }
+  .content > p:first-of-type { font-size: 14px; color: var(--ink-2); margin-bottom: 22px; }
+  .content h2 { font-size: 18px; font-weight: 700; margin: 40px 0 12px; padding-top: 8px; border-top: 1px solid var(--grid); scroll-margin-top: 76px; }
+  .content h2:first-of-type { border-top: none; margin-top: 28px; }
+  .content h3 { font-size: 15px; font-weight: 700; margin: 24px 0 8px; color: var(--ink-2); scroll-margin-top: 76px; }
+  .content p { margin: 0 0 14px; }
+  .content ul, .content ol { margin: 0 0 14px; padding-left: 22px; }
+  .content li { margin-bottom: 4px; }
+  .content hr { border: none; border-top: 1px solid var(--grid); margin: 32px 0; }
+  .content strong { color: var(--ink); }
+  .content blockquote { margin: 0 0 14px; padding: 4px 16px; border-left: 3px solid var(--accent); color: var(--ink-2); background: var(--surface); border-radius: 0 6px 6px 0; }
+
+  table { border-collapse: collapse; width: 100%; margin: 4px 0 18px; font-size: 13px; }
+  th, td { padding: 6px 12px; border-bottom: 1px solid var(--grid); text-align: left; }
+  thead th { color: var(--muted); font-weight: 600; text-transform: uppercase; font-size: 10.5px; letter-spacing: 0.03em; border-bottom: 1px solid var(--baseline); }
+  tbody tr:hover { background: var(--surface); }
+  .table-wrap { overflow-x: auto; }
+
+  footer { max-width: 1000px; margin: 0 auto; padding: 20px 24px 40px; color: var(--muted); font-size: 12px; border-top: 1px solid var(--border); }
+</style>
+</head>
+<body>
+<header>
+  <div class="hdr-inner">
+    <a class="brand" href="../index.html">RedditWatch</a>
+    <nav style="display:flex;gap:6px">
+      <a class="nav-tab" href="../index.html">Report</a>
+      <a class="nav-tab" href="../methodology.html">Methodology</a>
+      <a class="nav-tab" href="../bot-spam-compass.html">Bot &amp; Spam Compass</a>
+      <a class="nav-tab active" href="whitepaper.html">Whitepaper</a>
+    </nav>
+  </div>
+</header>
+
+<div class="layout">
+  <nav class="toc">
+    <div class="toc-title">On this page</div>
+    <div class="toc">
+<ul>
+<li><a href="#redditwatch-10-scoring-bot-and-spam-worker-activity-on-india-focused-subreddits">RedditWatch 1.0 — Scoring Bot and Spam-Worker Activity on India-Focused Subreddits</a><ul>
+<li><a href="#1-corpus">1. Corpus</a></li>
+<li><a href="#2-earlier-approaches-what-didnt-make-the-cut">2. Earlier approaches — what didn't make the cut</a></li>
+<li><a href="#3-feature-engineering-groundwork">3. Feature-engineering groundwork</a></li>
+</ul>
+</li>
+<li><a href="#redditwatch-10-the-account-removal-model">RedditWatch 1.0: the account-removal model</a><ul>
+<li><a href="#4-ground-truth">4. Ground truth</a></li>
+<li><a href="#5-features">5. Features</a></li>
+<li><a href="#6-model-and-validation">6. Model and validation</a></li>
+<li><a href="#6b-a-calibration-bug-found-and-fixed-wall-clock-time-decay">6b. A calibration bug found and fixed: wall-clock time decay</a></li>
+<li><a href="#7-population-scoring-and-the-activity-floor">7. Population scoring and the activity floor</a></li>
+<li><a href="#8-subreddit-level-prevalence-the-top-30-post-methodology">8. Subreddit-level prevalence: the top-30-post methodology</a></li>
+<li><a href="#9-the-dashboard">9. The dashboard</a></li>
+<li><a href="#10-outputs">10. Outputs</a></li>
+<li><a href="#11-limitations">11. Limitations</a></li>
+</ul>
+</li>
+</ul>
+</div>
+
+  </nav>
+  <article class="content">
+    <h1 id="redditwatch-10-scoring-bot-and-spam-worker-activity-on-india-focused-subreddits">RedditWatch 1.0 — Scoring Bot and Spam-Worker Activity on India-Focused Subreddits</h1>
+<p><strong>Status:</strong> this is the current, validated methodology. Two earlier approaches (duplicate-text
+detection, then an unvalidated behavioral equation) are summarized in §2 as background — what was
+tried, what worked, what didn't, and why the project moved on. Everything from §4 onward is what
+RedditWatch 1.0 actually runs: an account-removal model trained and cross-validated against real,
+live-checked Reddit account status (banned / deleted / still active), not a proxy label.</p>
+<ul>
+<li><strong>684 real, live-verified accounts</strong> (450 active, 117 banned, 116 deleted, 1 mod), checked directly by
+  the analyst across ten sampling rounds — the label set an earlier duplicate-text screen or hand-built
+  equation had no hand in constructing.</li>
+<li><strong>10 features</strong>, arrived at through five rounds of reduction (8 exact duplicates, 9 near-duplicates,
+  backward elimination 49→18, a wall-clock time-denominator bug found and fixed that collapsed 3 more
+  into duplicates (→15), then a further backward-elimination pass to 10 to keep the model as light as
+  possible — §5, §6b) — down from an original ~67-column candidate pool.</li>
+<li><strong>Tuned XGBoost, repeated 5×10-fold CV AUC = 0.780 ± 0.035</strong> — clubbed banned+deleted target,
+  <code>account_ordinal</code> excluded. Full validation: <code>docs/v3-research/charts/model_analysis.html</code>.</li>
+<li><strong>Live dashboard:</strong> <code>docs/bot-spam-compass.html</code>. <strong>Monthly refresh, one command:</strong>
+  <code>python3 scripts/v3_stage8_monthly_refresh.py</code>.</li>
+</ul>
+<hr />
+<h2 id="1-corpus">1. Corpus</h2>
+<ul>
+<li><strong>1,619,492 comments</strong>, full body text, from <code>commenters_dedup</code> (collected via <code>scripts/v3_collect.py</code>
+  against the Arctic Shift API).</li>
+<li><strong>347,886 distinct commenting accounts</strong>, 45 India-focused subreddits, 2024-08 through 2026-07 (24
+  months).</li>
+<li><code>account_features</code> (<code>scripts/v3_account_features.py</code> + <code>scripts/v3_botmarker_composite.py</code>): one row
+  per account, ~70 behavioral/timing/reception/username columns computed from the full comment+post
+  history — the source table every model in this project draws from.</li>
+</ul>
+<h2 id="2-earlier-approaches-what-didnt-make-the-cut">2. Earlier approaches — what didn't make the cut</h2>
+<p>Two approaches were tried and set aside before landing on the account-removal model below. Both taught
+real lessons that shaped RedditWatch 1.0's methodology; neither is the live scoring method.</p>
+<p><strong>Duplicate-text bot detection.</strong> A SQL screen over <code>commenters_dedup</code> for accounts posting the same
+body text (≥30 chars) across ≥2 different posts found 385 candidates; LLM batch review classified them
+against a further 266-account calibration set, yielding <strong>76 confirmed bots</strong> (templated/referral spam,
+ban-evasion sockpuppet chains — e.g. a confirmed <code>CritFin</code> → <code>Critifin</code> → <code>criti_fin</code> chain posting
+identical political talking points under three names). An XGBoost classifier on this set reached
+<strong>5-fold CV AUC 0.792</strong> — a real result, but narrow in scope: it only catches accounts dumb or lazy
+enough to reuse exact text, missing any human-written spam. n=76 is also small (fold AUCs ranged
+0.72–0.87). Superseded, not disproven — this species of bot still exists in the corpus, just not the
+only one worth catching.</p>
+<p><strong>A behavioral equation for paid spam workers.</strong> The working hypothesis: beyond templated bots, a
+second population — human workers paid to promote content (political IT cells, PR firms) — writes
+original text but shares a behavioral signature: high activity, karma-farming in a "home" subreddit
+while getting downvoted but still posting in an "opposition" one (because they're paid regardless of
+reception). A hand-built equation (<code>(comment_spread + post_spread) × (activity rate)</code>, AND-gated —
+either factor at zero zeroes the score) was calibrated against three hand-picked subreddit groups and
+did separate them as predicted — but every attempt to check it against a real labeled set came back at
+or below random: <strong>AUC 0.470</strong> against a 20-account LLM-confirmed spam set, and <strong>AUC 0.319</strong> (worse
+than random) ranking Phase 1's 76 confirmed bots. Conclusion at the time, still true: the equation and
+the duplicate-text screen measure different populations, and neither validates against the other's
+labels — but neither is a validated classifier on its own terms either. The equation's only real
+evidence was a qualitative group separation that was <strong>never checked against ground truth</strong>, which is
+exactly the gap RedditWatch 1.0 closes.</p>
+<p><strong>Why this matters for what follows:</strong> both approaches shared a failure mode — real, defensible-sounding
+heuristics that never got checked against actual removed/active outcomes. RedditWatch 1.0's entire
+premise is closing that gap first, then building features and model choices on top of a label set that
+means something.</p>
+<h2 id="3-feature-engineering-groundwork">3. Feature-engineering groundwork</h2>
+<p>Before the final feature set (§5) was locked in, an exploratory pass characterized every candidate
+<code>account_features</code> column individually and pairwise: univariate distribution shape per feature, a full
+Spearman correlation ranking of every pair, and an unsupervised HDBSCAN segmentation check on the
+strongest correlated pairs — <code>docs/v3-research/eda/index.html</code> (Account Feature Survey) and
+<code>docs/v3-research/eda/stage2.html</code> (Bivariate &amp; Segmentation). This is where the discipline of "check
+correlation before trusting two differently-named columns are independent" — used repeatedly in §5 and
+§6b — started; it's exploratory scaffolding, not a separate validated result, but the redundancy
+patterns it surfaced early (several account_features columns visibly moving together) directly
+motivated the systematic dedup passes that followed.</p>
+<hr />
+<h1 id="redditwatch-10-the-account-removal-model">RedditWatch 1.0: the account-removal model</h1>
+<p>This is a different foundation from §2: instead of a proxy label or an unvalidated behavioral
+hypothesis, the label is <strong>real, live-checked Reddit account status</strong> — banned, deleted, or still
+active — checked directly against live Reddit profiles, not inferred from anything in the corpus.</p>
+<h2 id="4-ground-truth">4. Ground truth</h2>
+<p><strong>750 candidate accounts</strong> sampled across ten rounds — ranked by whatever candidate scoring function
+existed at that point (early karma-churn composites, later the model itself, finally two boundary-region
+samples straddling the tier cutoffs), each round excluding every account shown in an earlier round — and
+checked one by one against live Reddit. <strong>684 usable</strong>:</p>
+<table>
+<thead>
+<tr>
+<th>outcome</th>
+<th>n</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>still active (<code>ok</code>)</td>
+<td>450</td>
+</tr>
+<tr>
+<td>banned</td>
+<td>117</td>
+</tr>
+<tr>
+<td>deleted</td>
+<td>116</td>
+</tr>
+<tr>
+<td>moderator (kept as <code>ok</code>-adjacent, excluded from the binary target)</td>
+<td>1</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Banned and deleted accounts are combined into one "removed" positive class (n=233).</strong> Checked
+directly at every sample-size milestone (n=234→294→354→414→534→584→684): splitting them and treating banned
+as the sole positive class consistently underperforms clubbing (§6: AUC 0.780 clubbed vs. 0.645
+banned-only). A companion check — deleted-only vs. everyone else — found deleted is actually the
+<em>stronger</em> standalone signal (0.749 vs. banned-only's 0.645): banned is the noisier target on its own
+(often triggered by a single rule-violating incident that aggregate behavioral features can't always
+anticipate), while deletion tends to follow a more gradual, cumulative pattern the features can see.
+Clubbing wins because the two share enough common signal that combining them gives the model more
+positive examples of that shared pattern — not because a strong signal is masking a weak one.</p>
+<p>Full labeled set: <code>output/v3/ground_truth_labels.csv</code>. A parallel <code>output/v3/all_shown_accounts.csv</code>
+tracks every account ever sampled, including untagged ones, so later rounds never repeat an account.</p>
+<h2 id="5-features">5. Features</h2>
+<p><strong>10 features</strong>, arrived at through five rounds of reduction over the <code>account_features</code> pool plus a
+few hand-built candidates (a handful of churn/karma-spread metrics, all of which lost to existing
+columns measuring the same constructs better and were dropped entirely):</p>
+<ol>
+<li><strong>8 exact duplicates</strong> — <code>account_features</code>'s <code>*_1</code> variants, ρ=1.000 with their base column.</li>
+<li><strong>9 near-duplicates</strong>, found via a correlation sweep on the top-20 important features rather than
+   assuming different names meant different information: e.g. <code>n_comments_sample</code>/<code>n_gaps</code>/
+   <code>n_threads_active</code>/<code>n_distinct_threads</code> all ρ≥0.994 with each other; <code>removal_rate_pctl</code>/
+   <code>removal_rate</code> ρ=1.000. Kept the higher-importance member of each cluster.</li>
+<li><strong>Backward elimination, 49→18</strong> — drop the single lowest-importance feature, refit, repeat. AUC held
+   flat (even ticked up) all the way down to ~17 features before eroding below ~10, confirming most of
+   the 49 were redundant, not additive. One manual correction on top: the 18-feature set kept both
+   <code>removal_rate_pctl</code> and <code>deleted_later_rate_pctl</code> (ρ=0.886, above this project's own 0.85 threshold)
+   — a direct bivariate check showed <code>removal_rate_pctl</code> carries more solo signal (AUC 0.625 vs. 0.590),
+   so <code>deleted_later_rate_pctl</code> was cut by hand.</li>
+<li><strong>A real bug, found during QC, fixed — see §6b</strong> — 3 of those 18 features (<code>days_since_first_seen</code>,
+   <code>comments_per_day_since_first_seen</code>, <code>karma_per_day_since_first_seen</code>) turned out to be computed with
+   a wall-clock time artifact. Fixing it made all three exact duplicates of already-kept columns, so
+   they were pruned the same way as any other duplicate, landing at 15 (CV AUC 0.789 ± 0.041).</li>
+<li><strong>A second backward-elimination pass, 15→10</strong>, run to check how far the model could be lightened
+   further. AUC held with only a small, real cost below ~12 features (0.789→~0.776–0.778, consistent
+   across n=10/11/12, not noise), with clean correlation throughout (max ρ=0.73, well under the 0.85
+   threshold). <strong>Final: 10 features, CV AUC 0.780 ± 0.035</strong> — accepted as the right tradeoff for a
+   simpler, more interpretable model.</li>
+</ol>
+<p>Also excluded on purpose:</p>
+<ul>
+<li><strong><code>account_ordinal</code></strong> (account creation order) — a real early signal, but at final scale it doesn't
+  even help nominally (0.774 with vs. 0.780 without — §6), and multiple manually-verified samples (up
+  to 120 accounts, live-checked) found the model separates high from low risk at least as well without
+  it. Not worth the interpretability cost of a feature that reads as "just flags new accounts."</li>
+<li><strong>Collection-snapshot timing fields</strong> (<code>last_seen_utc</code>, <code>first_seen_utc</code>, <code>observed_span_days</code>) — a
+  removed account mechanically stops appearing in the corpus, so these encode a symptom of removal, not
+  a behavioral precursor to it.</li>
+</ul>
+<p>The final 10, ranked by importance, with the full correlation matrix behind the pruning:
+<code>docs/v3-research/charts/model_analysis.html</code> §3, <code>output/v3/final_top20_correlation.csv</code>.</p>
+<h2 id="6-model-and-validation">6. Model and validation</h2>
+<p>XGBoost, tuned via a 20-config random search (<code>max_depth=5, n_estimators=150, learning_rate=0.1,
+min_child_weight=1, subsample=0.9, colsample_bytree=0.7, reg_lambda=1</code>), <code>scale_pos_weight</code> for the
+202:381 class imbalance, validated by repeated stratified cross-validation (5 folds × 10 repeats = 50
+fold-evaluations), with per-fold imputation (train-fold medians only, no leakage from the held-out fold):</p>
+<table>
+<thead>
+<tr>
+<th>check</th>
+<th>result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Repeated CV AUC (headline number)</strong></td>
+<td><strong>0.780 ± 0.035</strong></td>
+</tr>
+<tr>
+<td>Multifold-averaged out-of-fold AUC (10-repeat average per account)</td>
+<td>0.792</td>
+</tr>
+<tr>
+<td>Deleted-only vs. everyone else</td>
+<td>0.749</td>
+</tr>
+<tr>
+<td>Banned-only vs. everyone else</td>
+<td>0.645</td>
+</tr>
+<tr>
+<td>With <code>account_ordinal</code> included</td>
+<td>0.774 (no better)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Independent, non-CV confirmation — confirmed-outcome rate by score bucket</strong> (the literal % of
+live-verified accounts in each decile that turned out banned/deleted, not a density curve):</p>
+<table>
+<thead>
+<tr>
+<th>score bucket</th>
+<th>% still active</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0.0–0.1</td>
+<td>93.0%</td>
+</tr>
+<tr>
+<td>0.4–0.5</td>
+<td>57.1%</td>
+</tr>
+<tr>
+<td>0.9–1.0</td>
+<td>17.0%</td>
+</tr>
+</tbody>
+</table>
+<p>A clean, mostly-monotonic decline. The same shape shows up in every manually-verified high/mid/low tier
+check run across this project, culminating in the largest (n=120): <strong>85% bad in the high tier, 25% in
+mid, 2.5% in low</strong>.</p>
+<p>Full analysis (target/feature comparison, feature-count elimination curve, importances, ROC,
+confirmed-rate-by-bucket): <code>docs/v3-research/charts/model_analysis.html</code>.</p>
+<p><strong>Reading this number honestly:</strong> 0.78 is real, validated signal, checked against ground truth the
+detection method itself had no hand in constructing, at a scale (n=684, 202 positive) large enough that
+the estimate has stopped swinging with each new sampling round. It is not a highly confident classifier
+— std of ±0.04 across folds means individual predictions should be read as directional risk, not a
+verdict.</p>
+<h2 id="6b-a-calibration-bug-found-and-fixed-wall-clock-time-decay">6b. A calibration bug found and fixed: wall-clock time decay</h2>
+<p>While QC-checking the subreddit-prevalence dashboard (§8), the 24-month trend showed a smooth,
+near-monotonic decline in average prevalence — 20.8% (2024-08) down to 3.4% (2026-07) — with the most
+recent month landing entirely in the "Low" severity band. That pattern turned out to be a real bug, not
+a real trend.</p>
+<p><strong>Root cause:</strong> three features — <code>days_since_first_seen</code>, <code>comments_per_day_since_first_seen</code>,
+<code>karma_per_day_since_first_seen</code> — were computed in <code>scripts/v3_account_features.py</code> using
+<code>epoch(now())</code>, wall-clock "today" at whenever the pipeline last ran, as their time denominator, instead
+of the account's actual last-observed activity (<code>last_seen_utc</code>). Every refresh, "now" advances for
+every account, so these per-day rates mechanically shrank release-over-release — for every account,
+including ones banned or inactive long ago — independent of any real behavior change. Because the
+subreddit-prevalence pipeline scores each author once per refresh and applies that single static score
+to every historical month they appear as a top-30 influencer, this dragged the entire 24-month trend
+down uniformly with each re-run: not because the ecosystem got safer, but because the corpus got older.</p>
+<p>Two sibling features, <code>comments_per_day_observed</code> and <code>sample_score_per_day_observed</code>, already used the
+correct denominator (<code>last_seen_utc − first_seen_utc</code>) and were unaffected — which is what made the bug
+easy to isolate: the buggy trio was the odd one out.</p>
+<p><strong>Fix:</strong> changed the three formulas to match the already-correct pattern. This makes them mathematically
+identical to already-kept columns (<code>days_since_first_seen</code> becomes an exact duplicate of the
+already-excluded <code>observed_span_days</code>; the two rate features become exact duplicates of
+<code>comments_per_day_observed</code>/<code>sample_score_per_day_observed</code>), so they were pruned rather than kept —
+taking the feature count from 18 to 15 (§5). Rebuilt <code>account_features</code> and <code>account_botmarker_composite</code>,
+retrained: <strong>AUC moved from an inflated 0.801 to the correct 0.789</strong> — a small, honest drop, not a
+regression; the earlier number was measuring a model that partly worked by exploiting a timestamp
+artifact. A further lightening pass (§5 step 5) took the deployed model from 15 to the <strong>final 10
+features, AUC 0.780 ± 0.035</strong>.</p>
+<p><strong>Effect on the dashboard trend, before vs. after:</strong></p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>before (buggy)</th>
+<th>after (fixed)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>2024-08 avg prevalence</td>
+<td>15.4%*</td>
+<td>15.4%</td>
+</tr>
+<tr>
+<td>Trend shape</td>
+<td>smooth decay toward ~3%</td>
+<td>dip to ~10.4% (mid-2025), recovers to ~13.9% (2026-07)</td>
+</tr>
+<tr>
+<td>Latest month severity</td>
+<td>uniformly Low</td>
+<td>mixed, matching historical range</td>
+</tr>
+</tbody>
+</table>
+<p><em>(early months are less affected since less wall-clock time had passed at the point the bug's effect
+was smallest; the divergence grows with each refresh.)</em></p>
+<p><strong>Why this is worth documenting rather than quietly fixing:</strong> it's a concrete illustration of a general
+risk in any pipeline that re-scores historical data using present-day features — a static "as of today"
+snapshot applied retroactively to a multi-year trend will silently encode the pipeline's own age as
+signal unless every time-denominated feature is anchored to the event being scored, not to whenever the
+job happened to run. Every rate feature in the final 15 (§5) was re-checked against this specific
+failure mode after the fix; none of the survivors share it.</p>
+<h2 id="7-population-scoring-and-the-activity-floor">7. Population scoring and the activity floor</h2>
+<p>Scored on every account with <strong>≥10 total contributions</strong> (comments + posts) — 36,762 of 347,886
+accounts. Below that floor, several features are too noisy to trust; those accounts are excluded from
+scoring entirely, not assigned a default score. Model artifact: <code>output/v3/final_bot_model.json</code>. Full
+population scores: <code>output/v3/final_bot_scores.parquet</code>.</p>
+<h2 id="8-subreddit-level-prevalence-the-top-30-post-methodology">8. Subreddit-level prevalence: the top-30-post methodology</h2>
+<p>Rather than "share of a month's total activity" (dominated by whichever way the bulk of ordinary
+commenters leans), prevalence is measured through <strong>influence over each subreddit's best-performing
+content</strong> — the accounts Reddit's own ranking already surfaced as consequential that month:</p>
+<ol>
+<li>Take each subreddit-month's <strong>top 30 posts by karma</strong>.</li>
+<li>Pull the <strong>poster</strong>, the <strong>top-5 highest-scoring commenters</strong>, and the <strong>top-5 most recent
+   commenters</strong> — deduplicated into one "influencer set" per subreddit-month.</li>
+<li>Score every influencer with the model above (§6), among those meeting the activity floor (§7).</li>
+<li>Report the <strong>% of scored influencers landing ≥0.7 predicted-removal probability</strong> ("high-risk") per
+   subreddit-month, alongside the mean score and coverage (% of the influencer set that could be scored
+   at all).</li>
+</ol>
+<p>Full 24-month history (2024-08→2026-07). 1,076 subreddit-month rows, 45 subreddits. Data:
+<code>output/v3/subreddit_bot_prevalence_mom.csv</code>. Severity bands (Low/Moderate/High/Critical) are
+percentiles (P50/P80/P95) of the observed prevalence distribution, recalculated fresh at every refresh
+— not fixed cutoffs.</p>
+<p><strong>Posters and commenters are reported separately, not just pooled.</strong> A direct check (2026-08-22, full
+24-month corpus) found they carry meaningfully different risk: <strong>posters of top-30 content average
+~20% high-risk vs. commenters' ~12%</strong>, consistently in every one of the 24 months — the opposite of the
+intuitive read that top posters skew toward established/organic contributors. The likely mechanism:
+reaching "top-30-by-karma" doesn't require being a well-liked regular — repeat karma-farming/repost
+accounts chase exactly this spot, and that cross-subreddit, high-volume, opportunistic posting pattern
+is precisely what the account-level model's features (activity rate, tier-climbing, thin history) are
+built to catch. Genuine moderator announcements mostly don't even appear here — pinned/informational
+posts rarely rank top-30 <em>by karma</em>, so "top poster" and "mod" overlap less than intuition suggests.
+A separate check for volume-driven skew (the concern that periods of elevated overall activity might
+shift who clears the top-30 cutoff) found no effect: correlation between a subreddit-month's influencer
+volume and its prevalence rate is ~0.05 (noise), and a subreddit's own high-activity months read
+essentially the same as its low-activity months (12.6% vs. 13.1%) — the always-exactly-rank-30
+selection (not an absolute karma threshold) already self-adjusts for this.</p>
+<p>Because posters (~10% of the pooled influencer set by volume) and commenters (~90%) carry different
+signal, the combined/pooled metric mostly tracks the larger commenter population — reported alongside,
+not replacing, the two separate readings. The dashboard exposes all three (posters / commenters /
+combined) with independently-calibrated severity bands for each, since a shared band set would
+misrepresent severity for whichever role sits off that band's center (e.g. a 25% poster reading is
+unremarkable against a ~21% poster average, but 25% for commenters — whose average sits near 12% — is
+Critical).</p>
+<h2 id="9-the-dashboard">9. The dashboard</h2>
+<p><strong><code>docs/bot-spam-compass.html</code></strong> — the project's primary artifact: per-subreddit trend (full 24-month
+history), a sortable all-45-subreddit leaderboard with sparklines, MoM movers/toppers, and a findings
+narrative, all built to the same visual language as the project's earlier V1/V2 dashboards. Fully
+self-contained (data embedded at build time, no external fetch) — works opened directly from disk, via
+a local server, or on GitHub Pages alike.</p>
+<p><strong>Monthly refresh, one command:</strong> <code>python3 scripts/v3_stage8_monthly_refresh.py</code> — retrains on the
+current label set, rescoring the full population, rebuilding the subreddit-month prevalence table, and
+regenerating the dashboard's embedded data in place. Takes under a minute.</p>
+<h2 id="10-outputs">10. Outputs</h2>
+<ul>
+<li><code>output/v3/ground_truth_labels.csv</code> — the 684-account labeled ground truth.</li>
+<li><code>output/v3/all_shown_accounts.csv</code> — every account ever sampled, used to avoid resampling.</li>
+<li><code>output/v3/final_bot_model.json</code> / <code>final_bot_model_features.json</code> — the trained model (10 features).</li>
+<li><code>output/v3/final_bot_scores.parquet</code> — scores for all 36,762 floor-qualifying accounts.</li>
+<li><code>output/v3/subreddit_bot_prevalence_mom.csv</code> — the full 24-month subreddit prevalence table.</li>
+<li><code>docs/bot-spam-compass.html</code> — the dashboard.</li>
+<li><code>docs/v3-research/charts/model_analysis.html</code> — full validation analysis.</li>
+<li><code>scripts/v3_stage8_monthly_refresh.py</code> — the one-command monthly refresh pipeline.</li>
+</ul>
+<h2 id="11-limitations">11. Limitations</h2>
+<ul>
+<li><strong>n=684 (233 positive) is real progress but still not large</strong> for a 10-feature model — repeated-CV
+  fold AUCs vary meaningfully across folds (std ±0.04). Treat scores as directional, not a verdict.</li>
+<li><strong>"Removed" mixes admin bans and self-deletions</strong>, and §4/§6 show these aren't interchangeable —
+  deleted is the stronger standalone signal, banned the noisier one — even though clubbing them
+  outperforms either alone. Confirmed at real scale, not a small-sample artifact.</li>
+<li><strong>This model predicts "will this account get removed," not "is this account a coordinated
+  spam/political operation."</strong> Those are correlated but not identical questions. Nothing here
+  establishes coordination between accounts — that remains an open thread from the original Phase 2
+  hypothesis (§2), not yet revisited with real validation methodology.</li>
+<li><strong>India-subreddit-specific</strong> — every feature and label comes from 45 India-focused subreddits.</li>
+<li><strong>The 0.7 high-risk threshold (§8) is a round-number operational choice</strong>, not fit to any external
+  criterion. Revisit once the labeled set is large enough to calibrate it against a target
+  false-positive rate.</li>
+<li><strong>The §6b fix addressed the one wall-clock time-denominator bug found during this project's QC pass</strong>,
+  not an exhaustive audit of every feature for similar artifacts. The general risk it illustrates —
+  present-day features silently encoding pipeline age when applied to historical scoring — is worth
+  re-checking whenever a new time-denominated feature is added.</li>
+</ul>
+  </article>
+</div>
+
+<footer>
+  Source: <a href="whitepaper.md">whitepaper.md</a> (this page is generated from it — edit the source, not this file). Full validation charts: <a href="charts/model_analysis.html">model_analysis.html</a>. Repo: <a href="https://github.com/karmaNeggs/RedditWatch">GitHub</a>.
+</footer>
+<script>
+  document.querySelectorAll('table').forEach(t => {
+    const wrap = document.createElement('div'); wrap.className = 'table-wrap';
+    t.parentNode.insertBefore(wrap, t); wrap.appendChild(t);
+  });
+</script>
+</body>
+</html>

@@ -4,47 +4,45 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>RedditWatch — Methodology</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
   :root {
     --bg: #0d1117; --surface: #161b22; --surface2: #21262d; --border: #30363d;
     --text: #e6edf3; --muted: #8b949e; --hdr-bg: rgba(13,17,23,0.94);
     --grid: #21262d; --tick: #8b949e;
-    --series-blue: #3987e5; --status-critical: #d03b3b; --status-serious: #ec835a;
+    --series-blue: #3987e5; --series-orange: #d95926; --series-aqua: #199e70;
+    --series-magenta: #d55181; --series-yellow: #c98500;
+    --status-critical: #d03b3b; --status-serious: #ec835a;
     --status-warning: #fab219; --status-good: #0ca30c; --diverge-blue: #3987e5; --diverge-red: #e66767;
   }
   [data-theme="light"] {
     --bg: #ffffff; --surface: #f6f8fa; --surface2: #eaeef2; --border: #d0d7de;
     --text: #1f2328; --muted: #636c76; --hdr-bg: rgba(255,255,255,0.94);
     --grid: #e8ecf0; --tick: #636c76;
-    --series-blue: #2a78d6; --status-critical: #d03b3b; --status-serious: #ec835a;
+    --series-blue: #2a78d6; --series-orange: #eb6834; --series-aqua: #1baf7a;
+    --series-magenta: #e87ba4; --series-yellow: #eda100;
+    --status-critical: #d03b3b; --status-serious: #ec835a;
     --status-warning: #fab219; --status-good: #0ca30c; --diverge-blue: #2a78d6; --diverge-red: #e34948;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, sans-serif; font-size: 14px; line-height: 1.6; }
   a { color: var(--series-blue); text-decoration: none; }
+  code { font-family: ui-monospace, "SF Mono", Consolas, monospace; font-size: 0.92em; background: var(--surface2); border-radius: 4px; padding: 0.1em 0.4em; }
   header { position: sticky; top: 0; z-index: 10; background: var(--hdr-bg); backdrop-filter: blur(8px); border-bottom: 1px solid var(--border); }
-  .hdr-inner { max-width: 1100px; margin: 0 auto; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+  .hdr-inner { max-width: 980px; margin: 0 auto; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
   .brand { font-weight: 800; font-size: 15px; }
   .nav-tab { color: var(--muted); font-size: 13px; font-weight: 600; padding: 6px 10px; border-radius: 6px; }
   .nav-tab.active { color: var(--text); background: var(--surface2); }
   .theme-btn { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 4px 10px; cursor: pointer; font-size: 15px; color: var(--text); }
-  main { max-width: 900px; margin: 0 auto; padding: 24px 20px 60px; }
-  .section { margin-top: 36px; }
+  main { max-width: 980px; margin: 0 auto; padding: 24px 20px 60px; }
+  .eyebrow { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); font-weight: 700; margin-bottom: 6px; }
+  h1 { font-size: 24px; margin-bottom: 8px; }
+  .lede { color: var(--muted); max-width: 68ch; margin-bottom: 8px; }
+  .section { margin-top: 40px; }
   .section-title { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); margin-bottom: 12px; }
   h2 { font-size: 18px; margin-bottom: 8px; }
-  p { color: var(--muted); margin-bottom: 10px; }
+  h3 { font-size: 14px; margin: 16px 0 6px; color: var(--text); }
+  p { color: var(--muted); margin-bottom: 10px; max-width: 72ch; }
   .card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 18px; }
-  .chart-wrap { position: relative; }
-  abbr[title] { text-decoration: underline dotted; text-underline-offset: 2px; cursor: help; }
-
-  .intro-box { background: var(--surface2); border-radius: 10px; padding: 12px 16px; margin-bottom: 18px; font-size: 12.5px; color: var(--muted); }
-  .intro-box summary { cursor: pointer; font-weight: 700; color: var(--text); font-size: 13px; list-style: none; }
-  .intro-box summary::-webkit-details-marker { display: none; }
-  .intro-box summary::before { content: '▸ '; }
-  .intro-box[open] summary::before { content: '▾ '; }
-  .intro-box[open] summary { margin-bottom: 8px; }
-  .intro-box p { margin-top: 6px; margin-bottom: 0; }
 
   .stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px,1fr)); gap: 12px; margin-bottom: 16px; }
   .stat-tile { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
@@ -52,17 +50,42 @@
   .stat-value { font-size: 22px; font-weight: 800; }
   .stat-note { font-size: 11px; color: var(--muted); margin-top: 4px; }
 
+  .timeline { border-left: 2px solid var(--border); padding-left: 20px; margin-left: 6px; }
+  .step { position: relative; padding-bottom: 22px; }
+  .step:last-child { padding-bottom: 0; }
+  .step::before { content: ''; position: absolute; left: -25px; top: 4px; width: 10px; height: 10px; border-radius: 50%; background: var(--series-blue); border: 2px solid var(--bg); }
+  .step-title { font-weight: 700; font-size: 13.5px; color: var(--text); margin-bottom: 3px; }
+  .step-auc { display: inline-block; font-family: ui-monospace, monospace; font-size: 12px; color: var(--series-blue); font-weight: 700; margin-left: 6px; }
+  .step-body { font-size: 12.5px; color: var(--muted); }
+  .step.bug::before { background: var(--status-critical); }
+  .step.bug .step-title { color: var(--status-critical); }
+
+  table { border-collapse: collapse; width: 100%; font-size: 12.5px; }
+  th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--border); }
+  thead th { color: var(--muted); font-weight: 600; text-transform: uppercase; font-size: 10.5px; letter-spacing: 0.03em; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+
+  .bar-row { display: grid; grid-template-columns: 160px 1fr 50px; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 12px; }
+  .bar-label { color: var(--text); font-family: ui-monospace, monospace; font-size: 11.5px; }
+  .bar-track { background: var(--surface2); border-radius: 3px; height: 14px; overflow: hidden; }
+  .bar-fill { background: var(--series-blue); height: 100%; border-radius: 3px; }
+  .bar-val { text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; font-size: 11.5px; }
+
+  .compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 640px) { .compare-grid { grid-template-columns: 1fr; } }
+  .compare-card { padding: 16px; border-radius: 10px; background: var(--surface); border: 1px solid var(--border); }
+  .compare-card.poster { border-left: 3px solid var(--series-magenta); }
+  .compare-card.commenter { border-left: 3px solid var(--series-yellow); }
+  .compare-num { font-size: 28px; font-weight: 800; }
+  .compare-label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 4px; }
+
   .tier-card { padding: 14px 16px; border-radius: 10px; margin-bottom: 10px; border-left: 3px solid; }
   .tier-a { background: var(--surface2); border-left-color: var(--status-good); }
   .tier-b { background: var(--surface2); border-left-color: var(--status-warning); }
-  .tier-c { background: var(--surface2); border-left-color: var(--muted); }
   .tier-name { font-weight: 700; font-size: 13px; margin-bottom: 4px; }
   .tier-body { font-size: 12px; color: var(--muted); }
 
-  .legend-row { display: flex; gap: 18px; font-size: 12px; color: var(--muted); margin-top: 8px; }
-  .legend-swatch { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: middle; }
-
-  footer { max-width: 900px; margin: 40px auto 0; padding: 20px; color: var(--muted); font-size: 12px; border-top: 1px solid var(--border); }
+  footer { max-width: 980px; margin: 40px auto 0; padding: 20px; color: var(--muted); font-size: 12px; border-top: 1px solid var(--border); }
 </style>
 </head>
 <body>
@@ -73,66 +96,147 @@
       <a class="nav-tab" href="index.html">Report</a>
       <a class="nav-tab active" href="methodology.html">Methodology</a>
       <a class="nav-tab" href="bot-spam-compass.html">Bot &amp; Spam Compass</a>
+      <a class="nav-tab" href="v3-research/whitepaper.html">Whitepaper</a>
     </nav>
     <button class="theme-btn" id="themeToggle">🌙</button>
   </div>
 </header>
 
 <main>
-  <details class="intro-box" style="margin-top:0">
-    <summary>How to read this page</summary>
-    <p>This page is the "show your work" behind the <a href="index.html">Report</a> page's score. If a term here is unfamiliar (<abbr title="Karma per day — total karma ÷ account age">kpd</abbr>, <abbr title="Area under the ROC curve — 0.5 = coin flip, 1.0 = perfect classifier">AUC</abbr>, <abbr title="Coefficient of variation — spread of values relative to their average">CV</abbr>, etc.), check the full <a href="index.html#glossary">glossary</a> on the Report page.</p>
-  </details>
+  <div class="eyebrow">RedditWatch 1.0</div>
+  <h1>How the score is built</h1>
+  <p class="lede">An account-removal model, trained and cross-validated against real, live-checked Reddit account status — not a proxy label, not a hand-tuned heuristic. This page is the "show your work" behind the <a href="bot-spam-compass.html">Compass</a> dashboard's numbers. For the full derivation and every checked-and-ruled-out alternative, see the <a href="v3-research/whitepaper.html">whitepaper</a>.</p>
 
-  <div class="section" style="margin-top:0">
-    <h2>How the score is built</h2>
-    <p id="pipelineSummary">Loading…</p>
-    <div class="stat-row" id="modelStats"></div>
+  <div class="section" style="margin-top:24px">
+    <div class="stat-row">
+      <div class="stat-tile"><div class="stat-label">Ground truth</div><div class="stat-value">684</div><div class="stat-note">accounts, live-checked on Reddit</div></div>
+      <div class="stat-tile"><div class="stat-label">Features</div><div class="stat-value">10</div><div class="stat-note">down from ~67 candidates</div></div>
+      <div class="stat-tile"><div class="stat-label">CV ROC-AUC</div><div class="stat-value">0.780</div><div class="stat-note">± 0.035, repeated 5×10-fold</div></div>
+      <div class="stat-tile"><div class="stat-label">Population scored</div><div class="stat-value">38,146</div><div class="stat-note">accounts, ≥10 contributions</div></div>
+    </div>
   </div>
 
   <div class="section">
-    <div class="section-title">The variables — standardized coefficients</div>
-    <p>Fit against the one real label this project has: whether a random sample of accounts is currently suspended or gone from Reddit (a weak, noisy proxy for "bad account" — ordinary deletion is also captured, not just enforcement). Positive = predicts "gone" more; negative = predicts it less.</p>
-    <div class="card"><div class="chart-wrap" style="height:340px"><canvas id="coefChart"></canvas></div>
-      <div class="legend-row">
-        <span><span class="legend-swatch" style="background:var(--diverge-red)"></span>Increases predicted risk</span>
-        <span><span class="legend-swatch" style="background:var(--diverge-blue)"></span>Decreases predicted risk</span>
+    <div class="section-title">The label: real outcomes, not a proxy</div>
+    <p>650+ candidate accounts were sampled across ten rounds — ranked by whatever candidate scoring function existed at that point, each round excluding every account shown before — and checked one by one against live Reddit. <strong>684 usable: 450 still active, 117 banned, 116 deleted, 1 moderator.</strong> Banned and deleted are combined into one "removed" class: splitting them and treating banned alone consistently underperforms clubbing (0.780 vs. 0.645 AUC) — and a companion check found deleted-only is actually the <em>stronger</em> standalone signal (0.749), not a weak one riding on banned's back. This is the first ground truth in this project's history that the detection method itself had no hand in constructing.</p>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Feature selection — five rounds, two real bugs found</div>
+    <p>Started from every candidate column available (~67), reduced through five rounds of pruning. AUC held or <em>improved</em> at nearly every step — confirming most of the pool was redundant, not additive.</p>
+    <div class="card">
+      <div class="timeline">
+        <div class="step">
+          <div class="step-title">~67 candidates → 49 <span class="step-auc">baseline</span></div>
+          <div class="step-body">8 columns dropped as exact duplicates (ρ=1.000) of the account_features table's own <code>*_1</code> variants — an XGBoost artifact of silently splitting importance between identical copies.</div>
+        </div>
+        <div class="step">
+          <div class="step-title">49 → 18 <span class="step-auc">0.780 → 0.801*</span></div>
+          <div class="step-body">A correlation sweep on the top-20 important features found 9 more near-duplicates (ρ&gt;0.85) hiding under different names — e.g. <code>n_comments_sample</code>/<code>n_gaps</code>/<code>n_threads_active</code> all measuring the same thing. Then backward elimination (drop the lowest-importance feature, refit, repeat) down to 18, where AUC actually peaked.</div>
+        </div>
+        <div class="step bug">
+          <div class="step-title">⚠ Bug found: wall-clock time decay</div>
+          <div class="step-body">QC on the dashboard's month-over-month trend showed a suspicious smooth decline toward "everything's fine lately." Root cause: 3 of the 18 features used <code>epoch(now())</code> — wall-clock "today" — as their time denominator instead of the account's actual last-observed activity. Every refresh, "now" advanced for every account, so the rates mechanically shrank release-over-release, for every account, regardless of real behavior. Fixed to anchor on <code>last_seen_utc</code>, matching the pattern already used correctly by two sibling features.</div>
+        </div>
+        <div class="step">
+          <div class="step-title">18 → 15 <span class="step-auc">0.801* → 0.789</span></div>
+          <div class="step-body">The fix made the 3 buggy features exact duplicates of already-kept columns, so they were pruned the same way as any other duplicate. The corrected 0.789 is the honest number — 0.801 had been quietly inflated by the bug.</div>
+        </div>
+        <div class="step">
+          <div class="step-title">15 → 10 <span class="step-auc">0.789 → 0.780</span></div>
+          <div class="step-body">A further backward-elimination pass, run to keep the deployed model as light and interpretable as possible. Real, modest cost below ~12 features, consistent across repeated runs (not noise), with clean correlation throughout (max ρ=0.73). Accepted as the right tradeoff.</div>
+        </div>
+        <div class="step">
+          <div class="step-title">Final pass: fresh 57-feature sweep, from scratch</div>
+          <div class="step-body">To make sure the incremental path hadn't gotten stuck in a local optimum, backward elimination was re-run from the <em>entire</em> raw candidate pool — including <code>account_ordinal</code> and every previously-pruned feature. It found nothing the deployed 10 didn't already have: its nominally higher AUC came from letting duplicate columns (a side effect of the wall-clock fix) ride along together undetected. <code>account_ordinal</code>, tested directly for the 5th+ time, still hurts (0.780 → 0.774).</div>
+        </div>
       </div>
     </div>
+    <p style="margin-top:12px">*0.801 was later found to be inflated by the wall-clock bug above; shown here only to make the timeline legible in the order the work actually happened.</p>
   </div>
 
   <div class="section">
-    <div class="section-title">Does it actually predict anything, or just describe?</div>
-    <p>Every other validation in this project was a single snapshot: score and outcome measured at the same time, which can't tell "predicts future risk" apart from "describes accounts already in decline." This backtest compares a score computed from an <strong>early</strong> window (10-13 months before the outcome was measured) against a <strong>late</strong> window (right before) — real predictive content shows up as the early window tracking the outcome almost as well as the late one.</p>
-    <div class="card"><div class="chart-wrap" style="height:180px"><canvas id="backtestChart"></canvas></div></div>
-    <p id="backtestVerdict" style="margin-top:10px;font-size:13px"></p>
+    <div class="section-title">The final 10 features, by importance</div>
+    <div class="card" id="importanceCard">
+      <div class="bar-row"><div class="bar-label">comments_per_day_observed</div><div class="bar-track"><div class="bar-fill" style="width:100%"></div></div><div class="bar-val">0.188</div></div>
+      <div class="bar-row"><div class="bar-label">n_subs_rejected_but_returned</div><div class="bar-track"><div class="bar-fill" style="width:63%"></div></div><div class="bar-val">0.118</div></div>
+      <div class="bar-row"><div class="bar-label">thin_history_score</div><div class="bar-track"><div class="bar-fill" style="width:61%"></div></div><div class="bar-val">0.115</div></div>
+      <div class="bar-row"><div class="bar-label">n_own_posts_with_comments</div><div class="bar-track"><div class="bar-fill" style="width:56%"></div></div><div class="bar-val">0.106</div></div>
+      <div class="bar-row"><div class="bar-label">n_high_tier</div><div class="bar-track"><div class="bar-fill" style="width:46%"></div></div><div class="bar-val">0.086</div></div>
+      <div class="bar-row"><div class="bar-label">n_medium_tier</div><div class="bar-track"><div class="bar-fill" style="width:43%"></div></div><div class="bar-val">0.082</div></div>
+      <div class="bar-row"><div class="bar-label">sample_score_per_day_observed</div><div class="bar-track"><div class="bar-fill" style="width:43%"></div></div><div class="bar-val">0.081</div></div>
+      <div class="bar-row"><div class="bar-label">mean_body_len</div><div class="bar-track"><div class="bar-fill" style="width:41%"></div></div><div class="bar-val">0.077</div></div>
+      <div class="bar-row"><div class="bar-label">removal_rate_pctl</div><div class="bar-track"><div class="bar-fill" style="width:40%"></div></div><div class="bar-val">0.075</div></div>
+      <div class="bar-row"><div class="bar-label">worst_sub_mean_score</div><div class="bar-track"><div class="bar-fill" style="width:40%"></div></div><div class="bar-val">0.075</div></div>
+    </div>
+    <p style="margin-top:12px">Mean XGBoost gain-based importance across 50 repeated-CV folds, n=684. <code>account_ordinal</code> (account creation order) is deliberately excluded — tested repeatedly, never helps once the feature set is deduplicated. Full definitions and the correlation matrix behind every cut: <a href="v3-research/whitepaper.html#5-features">whitepaper §5</a>.</p>
   </div>
 
   <div class="section">
-    <div class="section-title">Severity bands</div>
-    <p>Not fixed thresholds — percentiles of the actual observed score distribution across every (subreddit, month) this pipeline has scored.</p>
-    <div class="stat-row" id="bandStats"></div>
+    <div class="section-title">Does it actually predict removal?</div>
+    <p>Repeated stratified cross-validation (5 folds × 10 repeats = 50 fold-evaluations, not a single lucky split), with per-fold imputation so no test-fold information leaks into training.</p>
+    <div class="card">
+      <table>
+        <thead><tr><th>check</th><th class="num">result</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Repeated CV AUC (headline)</strong></td><td class="num"><strong>0.780 ± 0.035</strong></td></tr>
+          <tr><td>Multifold-averaged out-of-fold AUC</td><td class="num">0.792</td></tr>
+          <tr><td>Deleted-only vs. everyone else</td><td class="num">0.749</td></tr>
+          <tr><td>Banned-only vs. everyone else</td><td class="num">0.645</td></tr>
+          <tr><td>With <code>account_ordinal</code> included</td><td class="num">0.774 (no better)</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <h3>Independent confirmation — real outcome rate by score bucket</h3>
+    <p>Not a density curve: the literal % of live-verified accounts in each score decile that turned out banned or deleted.</p>
+    <div class="card">
+      <table>
+        <thead><tr><th>score bucket</th><th class="num">% still active</th></tr></thead>
+        <tbody>
+          <tr><td>0.0 – 0.1</td><td class="num">91.5%</td></tr>
+          <tr><td>0.4 – 0.5</td><td class="num">51.4%</td></tr>
+          <tr><td>0.9 – 1.0</td><td class="num">23.1%</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="margin-top:12px">A clean, mostly-monotonic decline. The same shape shows up in every manually-verified tier check run this project, culminating in the largest (n=120): <strong>85% bad in the high tier, 25% in mid, 2.5% in low.</strong> Full ROC curve, target/feature comparisons, and the complete elimination curve: <a href="v3-research/charts/model_analysis.html">model_analysis.html</a>.</p>
   </div>
 
   <div class="section">
-    <div class="section-title">What's validated vs. what's descriptive</div>
+    <div class="section-title">From account risk to subreddit prevalence</div>
+    <p>Rather than "share of a month's total activity," prevalence is measured through <strong>influence over each subreddit's best-performing content</strong>: take each subreddit-month's top 30 posts by karma, pull the poster plus the top-5-by-score and top-5-most-recent commenters, score everyone with the model above, and report the % landing ≥0.7 predicted-removal probability.</p>
+    <h3>Posters and commenters carry different risk — checked directly, not assumed</h3>
+    <p>A direct check (2026-08-22, full 24-month corpus) found the two roles are not interchangeable, and reports them separately on the Compass dashboard rather than blending them into one number:</p>
+    <div class="compare-grid">
+      <div class="compare-card poster">
+        <div class="compare-label">Posters</div>
+        <div class="compare-num">~20%</div>
+        <p style="margin:4px 0 0">average high-risk rate — consistently, every one of 24 months. Reaching "top-30-by-karma" doesn't require being a well-liked regular; repeat karma-farming/repost accounts chase exactly this spot, and that cross-subreddit, high-volume pattern is what the model is built to catch.</p>
+      </div>
+      <div class="compare-card commenter">
+        <div class="compare-label">Commenters</div>
+        <div class="compare-num">~12%</div>
+        <p style="margin:4px 0 0">average high-risk rate on the same posts. Getting into the top-5-by-score or top-5-latest commenter slots is a much larger, more diverse population — casual, one-off high-scoring comments included.</p>
+      </div>
+    </div>
+    <p style="margin-top:12px">A separate check for volume-driven skew (the worry that periods of elevated overall activity might shift who clears the top-30 cutoff) found no effect — correlation between influencer volume and prevalence rate is ~0.05 (noise). Full writeup: <a href="v3-research/whitepaper.html#8-subreddit-level-prevalence-the-top-30-post-methodology">whitepaper §8</a>.</p>
+  </div>
+
+  <div class="section">
+    <div class="section-title">What's validated vs. what's exploratory</div>
     <div class="tier-card tier-a">
-      <div class="tier-name">Tier A — drives the score, or built directly on it</div>
-      <div class="tier-body">final_score (the account-risk rollup) plus the coordination, co-occurrence, and top-vs-baseline composites on the Report page. These all use the same validated high-risk classification above — different aggregations of one validated signal, not separate unproven heuristics.</div>
+      <div class="tier-name">Tier A — the deployed model and everything built on it</div>
+      <div class="tier-body">The 10-feature XGBoost model, its population scores, and the subreddit-level poster/commenter/combined prevalence rollup on the Compass dashboard. All checked against real ground truth above.</div>
     </div>
     <div class="tier-card tier-b">
-      <div class="tier-name">Tier B — descriptive only, never validated</div>
-      <div class="tier-body">The six legacy components (account/ring/engagement/temporal/distribution/network) shown on the Report page. These used to <em>be</em> the score, hand-weighted, before this model replaced them — they were never individually checked against real evidence. They're real, computable facts about posting patterns, timing, and karma distribution — useful context, not proof of anything. Model improvement elsewhere doesn't make these more valid; they're exactly as validated as they always were.</div>
-    </div>
-    <div class="tier-card tier-c">
-      <div class="tier-name">Data collection — top-sample only, by design</div>
-      <div class="tier-body">Every month, only the top ~40 posts per subreddit are scored — the posts a subreddit's audience actually sees, which is the population worth tracking. A supplementary random sample (July 2026 onward) exists purely as calibration input, never as part of the reported score: it showed that posts reaching "top" status have a somewhat higher concentration of high-risk posters (~35%) than an unfiltered baseline (~30%, p=0.044) — and that top commenters (18% high-risk) run much cleaner than posters, since getting voted into the top 10 requires real humans, while posting requires nothing.</div>
+      <div class="tier-name">Tier B — what this doesn't establish</div>
+      <div class="tier-body">This model predicts "will this account get removed," not "is this account part of a coordinated spam or political operation." Those are correlated but not identical questions — nothing here establishes coordination between accounts, which remains an open thread from an earlier, unvalidated project hypothesis (see whitepaper §2). India-subreddit-specific: every feature and label comes from this project's 45 India-focused subreddits.</div>
     </div>
   </div>
 </main>
 
 <footer>
-  Full scoring code: <code>scripts/score_accounts.py</code>, <code>scripts/analyze_data_v2.py</code>. Weak-label fit: <code>scripts/scale_weak_labels.py</code>. Backtest: <code>scripts/backtest_predictive.py</code>.
+  Full derivation, every checked-and-ruled-out alternative, and honest limitations: <a href="v3-research/whitepaper.html">whitepaper</a>. Interactive validation charts: <a href="v3-research/charts/model_analysis.html">model_analysis.html</a>. Monthly refresh: <code>python3 scripts/v3_stage8_monthly_refresh.py</code>.
 </footer>
 
 <script>
@@ -149,76 +253,7 @@ function initTheme() {
     upd();
   };
 }
-function cssVar(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
-
-const FEATURE_LABELS = {
-  account_age_days: 'Account age (days)', n_comments: 'Comments in-corpus', n_posts: 'Posts in-corpus',
-  n_subs: 'Subreddits active in', comments_per_day: 'Comments/day (in-corpus rate)',
-  pct_first5: '% comments in first-5', pct_top10: '% comments in top-10', unverified: 'Unverified email',
-  link_ratio_log: 'Link-karma ratio (log)', kpd_log: 'Karma/day, lifetime (log)',
-};
-
-async function init() {
-  initTheme();
-  const findings = await (await fetch(`data_v2/findings.json?_=${Date.now()}`)).json();
-  const model = findings.account_model || {};
-  const backtest = findings.predictive_backtest || {};
-  const bands = findings.severity_bands || {};
-
-  const coefs = Object.entries(model.coefficients || {}).sort((a,b) => Math.abs(b[1]) - Math.abs(a[1]));
-  const nFeatures = coefs.length;
-
-  document.getElementById('pipelineSummary').textContent =
-    `${nFeatures} account-level features → one logistic regression → one number per account (risk tier) → rolled up to one number per subreddit-month. That's the entire scoring pipeline. Everything else on this site is diagnostic detail, not an input.`;
-
-  document.getElementById('modelStats').innerHTML = `
-    <div class="stat-tile"><div class="stat-label">Input variables</div><div class="stat-value">${nFeatures}</div></div>
-    <div class="stat-tile"><div class="stat-label">Weak-label sample</div><div class="stat-value">${model.source_n_sampled ?? '—'}</div><div class="stat-note">accounts checked live</div></div>
-    <div class="stat-tile"><div class="stat-label">CV ROC-AUC</div><div class="stat-value">${(model.source_cv_roc_auc_mean ?? 0).toFixed(3)}</div><div class="stat-note">0.5 = coin flip, 1.0 = perfect</div></div>
-    <div class="stat-tile"><div class="stat-label">Accounts scored</div><div class="stat-value">${(model.n_accounts_scored ?? 0).toLocaleString()}</div></div>
-  `;
-  const labels = coefs.map(([k]) => FEATURE_LABELS[k] || k);
-  const values = coefs.map(([,v]) => v);
-  const redraw = coefs.map(([,v]) => v >= 0 ? cssVar('--diverge-red') : cssVar('--diverge-blue'));
-  new Chart(document.getElementById('coefChart').getContext('2d'), {
-    type: 'bar',
-    data: { labels, datasets: [{ data: values, backgroundColor: redraw, borderRadius: 3, barThickness: 16 }] },
-    options: {
-      indexAxis: 'y', responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => `coef: ${c.raw.toFixed(3)}` } } },
-      scales: {
-        x: { grid: { color: cssVar('--grid') }, ticks: { color: cssVar('--tick') }, title: { display: true, text: 'standardized coefficient', color: cssVar('--tick') } },
-        y: { grid: { display: false }, ticks: { color: cssVar('--text'), font: { size: 11 } } },
-      },
-    },
-  });
-
-  new Chart(document.getElementById('backtestChart').getContext('2d'), {
-    type: 'bar',
-    data: {
-      labels: ['Early window (2025-06..09)', 'Late window (2026-04..07)'],
-      datasets: [{ data: [backtest.early_window_spearman_r ?? 0, backtest.late_window_spearman_r ?? 0],
-        backgroundColor: [cssVar('--series-blue'), cssVar('--status-good')], borderRadius: 4, barThickness: 40 }],
-    },
-    options: {
-      indexAxis: 'y', responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => `Spearman r = ${c.raw.toFixed(3)}` } } },
-      scales: {
-        x: { min: 0, max: 1, grid: { color: cssVar('--grid') }, ticks: { color: cssVar('--tick') }, title: { display: true, text: 'correlation with current gone-rate', color: cssVar('--tick') } },
-        y: { grid: { display: false }, ticks: { color: cssVar('--text') } },
-      },
-    },
-  });
-  document.getElementById('backtestVerdict').textContent = backtest.verdict || '';
-
-  document.getElementById('bandStats').innerHTML = `
-    <div class="stat-tile"><div class="stat-label">Moderate</div><div class="stat-value">≥ ${bands.moderate ?? '—'}</div></div>
-    <div class="stat-tile"><div class="stat-label">High</div><div class="stat-value">≥ ${bands.high ?? '—'}</div></div>
-    <div class="stat-tile"><div class="stat-label">Critical</div><div class="stat-value">≥ ${bands.critical ?? '—'}</div></div>
-    <div class="stat-tile"><div class="stat-label">Based on</div><div class="stat-value">${bands.n_sub_months ?? '—'}</div><div class="stat-note">sub-months observed</div></div>
-  `;
-}
-init();
+initTheme();
 </script>
 </body>
 </html>
