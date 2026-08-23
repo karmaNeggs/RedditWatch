@@ -74,8 +74,14 @@ method). Short version:
   clearly not redundant. Three other candidates (post/comment moderator-removal rate, "total posts per
   month" as a volume trend, per-sub ban counts) were checked and dropped — removal rates went the wrong
   direction (ρ=−0.13 to +0.06), post volume is capped at ~120/sub/month by collection design so it can't
-  measure real activity, and per-sub ban timelines aren't available in the data at all. Full story:
-  `docs/v3-research/whitepaper.html` §8.
+  measure real activity, and per-sub ban timelines aren't available in the data at all.
+- **Added (2026-08-23): subscriber growth (MoM %)**, a second sub-level signal, weaker but real
+  (ρ=0.18 vs. combined risk, vs. comment self-deletion's 0.32) — shows up on the commenter side
+  (ρ=0.18) not the poster side (ρ=0.03); raw subscriber count alone barely matters (ρ=0.09). Also
+  checked: total/average comment volume on the top-30 posts as a "traction" signal — **not** added,
+  its raw level is largely redundant with comment self-deletion rate (ρ=0.38 between the two) and its
+  MoM growth carries no signal (ρ≈0.00, too noisy — one viral thread swings it). "Views" aren't
+  available at all — not exposed by Reddit's public API. Full story: `docs/v3-research/whitepaper.html` §8.
 - **XGBoost, tuned hyperparameters, repeated 5×10-fold CV AUC = 0.780 ± 0.035** — real, validated, and
   stable across the last several sampling rounds; read scores as directional. Independent confirmation:
   manually-verified high/mid/low tier bad-rates of 85%/25%/2.5% on the largest check (n=120). Full

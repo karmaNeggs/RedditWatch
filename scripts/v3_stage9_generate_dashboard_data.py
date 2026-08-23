@@ -108,6 +108,7 @@ def main():
         for sub, row in mdf.iterrows():
             roles = {role: role_block(row, role, bands_by_role) for role in ROLES}
             csdr = row.get('comment_self_del_rate')
+            subgrowth = row.get('subscriber_growth_pct')
             subs[sub] = {
                 'pct_high_risk': roles['combined']['pct_high_risk'],
                 'mean_bot_score': roles['combined']['mean_bot_score'],
@@ -115,6 +116,7 @@ def main():
                 'n_influencers': roles['combined']['n'],
                 'severity': roles['combined']['severity'],
                 'comment_self_del_rate': round(float(csdr), 2) if pd.notna(csdr) else None,
+                'subscriber_growth_pct': round(float(subgrowth), 2) if pd.notna(subgrowth) else None,
                 'roles': roles,
             }
         month_docs[m] = subs
