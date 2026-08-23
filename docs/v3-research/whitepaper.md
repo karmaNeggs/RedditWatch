@@ -169,26 +169,34 @@ the search for the smallest set of genuinely different, genuinely useful facts a
 few hand-built candidates (a handful of churn/karma-spread metrics, all of which lost to existing
 columns measuring the same constructs better and were dropped entirely):
 
-1. **8 exact duplicates** — `account_features`'s `*_1` variants, ρ=1.000 with their base column.
-2. **9 near-duplicates**, found via a correlation sweep on the top-20 important features rather than
-   assuming different names meant different information: e.g. `n_comments_sample`/`n_gaps`/
-   `n_threads_active`/`n_distinct_threads` all ρ≥0.994 with each other; `removal_rate_pctl`/
-   `removal_rate` ρ=1.000. Kept the higher-importance member of each cluster.
-3. **Backward elimination, 49→18** — drop the single lowest-importance feature, refit, repeat. AUC held
-   flat (even ticked up) all the way down to ~17 features before eroding below ~10, confirming most of
-   the 49 were redundant, not additive. One manual correction on top: the 18-feature set kept both
-   `removal_rate_pctl` and `deleted_later_rate_pctl` (ρ=0.886, above this project's own 0.85 threshold)
-   — a direct bivariate check showed `removal_rate_pctl` carries more solo signal (AUC 0.625 vs. 0.590),
-   so `deleted_later_rate_pctl` was cut by hand.
-4. **A real bug, found during QC, fixed — see §6b** — 3 of those 18 features (`days_since_first_seen`,
-   `comments_per_day_since_first_seen`, `karma_per_day_since_first_seen`) turned out to be computed with
-   a wall-clock time artifact. Fixing it made all three exact duplicates of already-kept columns, so
-   they were pruned the same way as any other duplicate, landing at 15 (CV AUC 0.789 ± 0.041).
-5. **A second backward-elimination pass, 15→10**, run to check how far the model could be lightened
-   further. AUC held with only a small, real cost below ~12 features (0.789→~0.776–0.778, consistent
-   across n=10/11/12, not noise), with clean correlation throughout (max ρ=0.73, well under the 0.85
-   threshold). **Final: 10 features, CV AUC 0.780 ± 0.035** — accepted as the right tradeoff for a
-   simpler, more interpretable model.
+1. **8 exact duplicates.** Eight columns turned out to be the same fact stored twice under two
+   different names (`account_features`'s `*_1` variants, ρ=1.000 — perfectly identical). Dropped.
+2. **9 near-duplicates.** A correlation sweep on the top-20 important features — checking each one
+   against every other for hidden overlap, rather than trusting that different names meant different
+   information — found 9 more columns measuring almost the same thing under different names. The
+   clearest example: how many comments an account has, how many pauses appear in its posting timeline,
+   how many discussion threads it's active in, and how many distinct threads it's touched all moved
+   together (ρ≥0.994) — four ways of asking "how much does this account post," not four separate facts.
+   Similarly, an account's raw removal rate and its percentile rank for removal rate were literally
+   identical (ρ=1.000). Kept the single highest-importance member of each overlapping cluster.
+3. **Backward elimination, 49→18.** Repeatedly drop whichever single feature contributes least, retrain,
+   repeat. Accuracy held flat — even ticked up — all the way down to ~17 features before it started to
+   genuinely erode below ~10, confirming most of the original 49 were redundant, not adding anything
+   new. One manual correction on top: the resulting 18-feature set kept both an account's removal-rate
+   percentile and a near-identical column for "removal rate that happens later, after a delay"
+   (ρ=0.886, above this project's own 0.85 overlap threshold) — a direct check showed the percentile
+   version carries more standalone signal (0.625 vs. 0.590 accuracy on its own), so the other was cut
+   by hand.
+4. **A real bug, found during QC, fixed — see §6b.** Three of those 18 features — how long the account
+   has existed, how fast it comments, and how fast it earns karma — turned out to be computed against
+   the wrong reference point in time, an artifact that silently deflated their values every time the
+   data was refreshed. Fixing it made all three exact duplicates of already-kept columns, so they were
+   pruned the same way as any other duplicate, landing at 15 (accuracy 0.789 ± 0.041).
+5. **A second backward-elimination pass, 15→10**, run to check how much further the model could be
+   lightened. Accuracy held with only a small, real cost below ~12 features (0.789→~0.776–0.778,
+   consistent across repeated tests — not noise), and every remaining pair of the 10 stayed under the
+   0.85 overlap threshold (max ρ=0.73). **Final: 10 features, accuracy 0.780 ± 0.035** — accepted as the
+   right tradeoff for a simpler, easier-to-reason-about model.
 
 Also excluded on purpose:
 
@@ -200,7 +208,23 @@ Also excluded on purpose:
   removed account mechanically stops appearing in the corpus, so these encode a symptom of removal, not
   a behavioral precursor to it.
 
-The final 10, ranked by importance, with the full correlation matrix behind the pruning:
+**What the final 10 actually look at, in order of importance** — each is a genuine fact about an
+account's Reddit history, not an abstract statistic:
+
+| what it looks at | column name |
+|---|---|
+| How many comments it posts per day, averaged over the whole time we've observed it active | `comments_per_day_observed` |
+| How many subreddits kept downvoting it on average for months at a time — and it kept posting there anyway | `n_subs_rejected_but_returned` |
+| How sparse or thin its overall posting history looks — a high score means we've barely seen this account do anything | `thin_history_score` |
+| How many of its own posts actually got any comments back | `n_own_posts_with_comments` |
+| How much of its activity happens in subreddits we've flagged as high political-manipulation-incentive (national news and politics) | `n_high_tier` |
+| Same, but for medium-incentive subreddits (city/regional politics) | `n_medium_tier` |
+| Roughly how much karma it earns per day of activity | `sample_score_per_day_observed` |
+| How long its comments tend to be, on average | `mean_body_len` |
+| Where it ranks against every other account for how often its comments get taken down | `removal_rate_pctl` |
+| Its average reception in the one subreddit that likes it least | `worst_sub_mean_score` |
+
+Full importance ranking (as a chart), and the correlation matrix behind every pruning decision above:
 `docs/v3-research/charts/model_analysis.html` §3, `output/v3/final_top20_correlation.csv`.
 
 <!--CHART:elimination-->
