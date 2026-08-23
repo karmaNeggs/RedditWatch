@@ -375,6 +375,22 @@ computed from it would mostly reflect the collection cap, not real subreddit act
 per-month *ban* counts aren't available at all — Reddit's API doesn't expose "banned from r/X on date Y,"
 and this project's ground truth is Reddit-wide status as of now, not a per-subreddit ban timeline.
 
+**A second sub-level signal — subscriber growth — was checked and also held up, more weakly.**
+Month-over-month % change in the subreddit's subscriber count (a real, uncapped number tracked per
+post, unlike the post-count cap above) correlates with account risk at ρ=0.18 vs. combined prevalence
+— weaker than comment self-deletion (ρ=0.32) but real, not noise. The shape is informative: it shows up
+on the commenter side (ρ=0.18) but barely on the poster side (ρ=0.03) — fast subscriber growth
+associates with more risky *commenting* activity, not a different mix of who reaches the top of the
+leaderboard. Raw subscriber count alone barely matters (ρ=0.09) — size isn't the signal, the rate of
+change is. Added as its own column alongside comment self-deletion rate. A related idea — total or
+average comment volume on the top-30 posts, as a "traction" signal — was checked and **not** added: its
+raw level is largely redundant with comment self-deletion rate (ρ=0.38 between the two, higher than
+either's correlation with account risk), and its month-over-month growth carries essentially no signal
+(ρ≈0.00) — a single viral thread can swing a subreddit's monthly comment total either direction,
+independent of anything about account risk. "Views" were considered and ruled out immediately: Reddit's
+public API doesn't expose post view/impression counts to third-party collection at all.
+
+
 ## 9. The dashboard
 
 **`docs/bot-spam-compass.html`** — the project's primary artifact: per-subreddit trend (full 24-month

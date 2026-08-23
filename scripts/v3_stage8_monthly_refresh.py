@@ -239,6 +239,20 @@ def build_subreddit_prevalence(con, scores):
     monthly = monthly.merge(comment_self_del[['sub', 'month', 'comment_self_del_rate']],
                              on=['sub', 'month'], how='left')
 
+    # Subreddit subscriber growth -- a second sub-level signal, checked 2026-08-23 the same way:
+    # weaker than comment self-deletion (rho=0.18 vs combined risk, vs 0.32) but real and
+    # consistent, not noise. Interesting shape: it shows up on the commenter side (rho=0.18) not
+    # the poster side (rho=0.03) -- fast subscriber growth associates with more risky commenting
+    # activity, not a different mix of who gets to the top of the leaderboard. Raw subscriber
+    # COUNT barely matters (rho=0.09) -- it's the rate of change that carries signal, not size.
+    subscribers = con.execute('''
+        SELECT sub, month, median(subreddit_subscribers) AS subscribers
+        FROM posts GROUP BY 1, 2
+    ''').fetchdf().sort_values(['sub', 'month'])
+    subscribers['subscriber_growth_pct'] = subscribers.groupby('sub')['subscribers'].pct_change() * 100
+    monthly = monthly.merge(subscribers[['sub', 'month', 'subscribers', 'subscriber_growth_pct']],
+                             on=['sub', 'month'], how='left')
+
     monthly.to_csv(OUT / 'subreddit_bot_prevalence_mom.csv', index=False)
     print(f'Subreddit-month prevalence (poster/commenter/combined split): {len(monthly)} rows through {max_month}.')
     return monthly
