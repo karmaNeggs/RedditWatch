@@ -68,6 +68,14 @@ method). Short version:
   and adding all of them to the 10-feature model makes it *worse* (0.780→0.767 with 5, →0.771 with 7),
   not better — they dilute tree splits without adding real information the kept features don't already
   capture. Don't re-add these without new evidence; this was checked rigorously, not assumed.
+- **Added (2026-08-23): comment self-deletion rate**, a subreddit-level content-moderation signal,
+  reported as its own column on the dashboard (not blended into the prevalence score). Checked against
+  1,114 subreddit-months: ρ=0.32 vs. combined account-risk prevalence — real, moderately correlated,
+  clearly not redundant. Three other candidates (post/comment moderator-removal rate, "total posts per
+  month" as a volume trend, per-sub ban counts) were checked and dropped — removal rates went the wrong
+  direction (ρ=−0.13 to +0.06), post volume is capped at ~120/sub/month by collection design so it can't
+  measure real activity, and per-sub ban timelines aren't available in the data at all. Full story:
+  `docs/v3-research/whitepaper.html` §8.
 - **XGBoost, tuned hyperparameters, repeated 5×10-fold CV AUC = 0.780 ± 0.035** — real, validated, and
   stable across the last several sampling rounds; read scores as directional. Independent confirmation:
   manually-verified high/mid/low tier bad-rates of 85%/25%/2.5% on the largest check (n=120). Full

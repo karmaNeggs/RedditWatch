@@ -220,6 +220,25 @@ def build_subreddit_prevalence(con, scores):
     monthly['coverage_pct'] = monthly['combined_coverage_pct']
     monthly['pct_high_risk_of_scored'] = monthly['combined_pct_high_risk']
     monthly['mean_bot_score_scored'] = monthly['combined_mean_bot_score']
+    # Comment self-deletion rate -- checked 2026-08-23 against 1,114 subreddit-months: the one
+    # content-moderation signal (of four candidates) that's genuinely complementary to account
+    # risk, not redundant with it. Spearman rho=0.32 vs combined_pct_high_risk -- moderate and
+    # real, not near-1.0 (same signal) or near-0 (noise). Post removal rates went the *wrong*
+    # direction to use naively (more active moderation reads as *lower* apparent risk, since
+    # it's catching things before they become "influencers") and were dropped; "total posts"
+    # was dropped too -- the posts table is capped at ~120/sub/month by collection design, so
+    # it measures the cap, not real activity. Reported as its own column, not blended into the
+    # risk score, same transparency-over-black-box reasoning as the poster/commenter split.
+    comment_self_del = con.execute('''
+        SELECT sub, month, count(*) AS n_comments_sampled,
+               sum(CASE WHEN meta_removal_type = 'deleted' THEN 1 ELSE 0 END) AS n_self_deleted
+        FROM commenters_dedup GROUP BY 1, 2
+    ''').fetchdf()
+    comment_self_del['comment_self_del_rate'] = (
+        100 * comment_self_del['n_self_deleted'] / comment_self_del['n_comments_sampled'])
+    monthly = monthly.merge(comment_self_del[['sub', 'month', 'comment_self_del_rate']],
+                             on=['sub', 'month'], how='left')
+
     monthly.to_csv(OUT / 'subreddit_bot_prevalence_mom.csv', index=False)
     print(f'Subreddit-month prevalence (poster/commenter/combined split): {len(monthly)} rows through {max_month}.')
     return monthly
