@@ -358,6 +358,23 @@ misrepresent severity for whichever role sits off that band's center (e.g. a 25%
 unremarkable against a ~21% poster average, but 25% for commenters — whose average sits near 12% — is
 Critical).
 
+**A fourth, content-moderation signal was checked and one of four candidates held up.** The question was
+whether subreddit-level activity/moderation volume (MoM post-count changes, content removal counts,
+ban counts) should factor into the prevalence score. Checked directly (2026-08-23, 1,114
+subreddit-months): **comment self-deletion rate — the % of a subreddit's sampled comments the author
+deleted themselves — correlates moderately with account risk (Spearman ρ=0.32 vs. combined prevalence)**,
+real signal and clearly not a restatement of the same thing (ρ nowhere near 1.0). It's now reported as
+its own column, not blended into the risk score — same transparency-over-black-box reasoning as the
+poster/commenter split. Three other candidates were checked and dropped: post- and comment-level
+*moderator/Reddit* removal rates correlate weakly and in the *wrong* direction (ρ=−0.13, −0.12, +0.06)
+— more active moderation reads as *lower* apparent risk, plausibly because it's catching problem content
+before its authors accumulate enough karma to become "influencers," not because removal itself signals
+risk. "Total posts per month" as a volume trend was ruled out before testing: the `posts` table is
+capped at ~120/sub/month by collection design (top-100-by-score + a small counter-sample), so any trend
+computed from it would mostly reflect the collection cap, not real subreddit activity. Per-subreddit,
+per-month *ban* counts aren't available at all — Reddit's API doesn't expose "banned from r/X on date Y,"
+and this project's ground truth is Reddit-wide status as of now, not a per-subreddit ban timeline.
+
 ## 9. The dashboard
 
 **`docs/bot-spam-compass.html`** — the project's primary artifact: per-subreddit trend (full 24-month
