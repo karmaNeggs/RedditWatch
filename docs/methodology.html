@@ -70,8 +70,10 @@
   thead th { color: var(--muted); font-weight: 600; text-transform: uppercase; font-size: 10.5px; letter-spacing: 0.03em; }
   td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 
-  .bar-row { display: grid; grid-template-columns: 160px 1fr 50px; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 12px; }
-  .bar-label { color: var(--text); font-family: ui-monospace, monospace; font-size: 11.5px; }
+  .bar-row { display: grid; grid-template-columns: 300px 1fr 50px; align-items: center; gap: 10px; margin-bottom: 12px; font-size: 12px; }
+  @media (max-width: 700px) { .bar-row { grid-template-columns: 1fr; gap: 4px; margin-bottom: 16px; } .bar-val { text-align: left; } }
+  .bar-label { color: var(--text); font-size: 12.5px; line-height: 1.35; }
+  .bar-label code { font-size: 10.5px; color: var(--muted); background: none; padding: 0; display: block; margin-top: 1px; }
   .bar-track { background: var(--surface2); border-radius: 3px; height: 14px; overflow: hidden; }
   .bar-fill { background: var(--series-blue); height: 100%; border-radius: 3px; }
   .bar-val { text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; font-size: 11.5px; }
@@ -170,18 +172,18 @@
   </div>
 
   <div class="section">
-    <div class="section-title">The final 10 features, by importance</div>
+    <div class="section-title">What we actually look at in an account's profile</div>
     <div class="card" id="importanceCard">
-      <div class="bar-row"><div class="bar-label">comments_per_day_observed</div><div class="bar-track"><div class="bar-fill" style="width:100%"></div></div><div class="bar-val">0.188</div></div>
-      <div class="bar-row"><div class="bar-label">n_subs_rejected_but_returned</div><div class="bar-track"><div class="bar-fill" style="width:63%"></div></div><div class="bar-val">0.118</div></div>
-      <div class="bar-row"><div class="bar-label">thin_history_score</div><div class="bar-track"><div class="bar-fill" style="width:61%"></div></div><div class="bar-val">0.115</div></div>
-      <div class="bar-row"><div class="bar-label">n_own_posts_with_comments</div><div class="bar-track"><div class="bar-fill" style="width:56%"></div></div><div class="bar-val">0.106</div></div>
-      <div class="bar-row"><div class="bar-label">n_high_tier</div><div class="bar-track"><div class="bar-fill" style="width:46%"></div></div><div class="bar-val">0.086</div></div>
-      <div class="bar-row"><div class="bar-label">n_medium_tier</div><div class="bar-track"><div class="bar-fill" style="width:43%"></div></div><div class="bar-val">0.082</div></div>
-      <div class="bar-row"><div class="bar-label">sample_score_per_day_observed</div><div class="bar-track"><div class="bar-fill" style="width:43%"></div></div><div class="bar-val">0.081</div></div>
-      <div class="bar-row"><div class="bar-label">mean_body_len</div><div class="bar-track"><div class="bar-fill" style="width:41%"></div></div><div class="bar-val">0.077</div></div>
-      <div class="bar-row"><div class="bar-label">removal_rate_pctl</div><div class="bar-track"><div class="bar-fill" style="width:40%"></div></div><div class="bar-val">0.075</div></div>
-      <div class="bar-row"><div class="bar-label">worst_sub_mean_score</div><div class="bar-track"><div class="bar-fill" style="width:40%"></div></div><div class="bar-val">0.075</div></div>
+      <div class="bar-row"><div class="bar-label">How many comments it posts per day, averaged over the whole time we've seen it active<code>comments_per_day_observed</code></div><div class="bar-track"><div class="bar-fill" style="width:100%"></div></div><div class="bar-val">0.188</div></div>
+      <div class="bar-row"><div class="bar-label">How many subreddits kept downvoting it for months at a time — and it kept posting there anyway<code>n_subs_rejected_but_returned</code></div><div class="bar-track"><div class="bar-fill" style="width:63%"></div></div><div class="bar-val">0.118</div></div>
+      <div class="bar-row"><div class="bar-label">How thin its overall posting history looks — high means we've barely seen this account do anything<code>thin_history_score</code></div><div class="bar-track"><div class="bar-fill" style="width:61%"></div></div><div class="bar-val">0.115</div></div>
+      <div class="bar-row"><div class="bar-label">How many of its own posts actually got any comments back<code>n_own_posts_with_comments</code></div><div class="bar-track"><div class="bar-fill" style="width:56%"></div></div><div class="bar-val">0.106</div></div>
+      <div class="bar-row"><div class="bar-label">How much of its activity is in subreddits flagged as high political-manipulation-incentive (national news/politics)<code>n_high_tier</code></div><div class="bar-track"><div class="bar-fill" style="width:46%"></div></div><div class="bar-val">0.086</div></div>
+      <div class="bar-row"><div class="bar-label">Same, but for medium-incentive subreddits (city/regional politics)<code>n_medium_tier</code></div><div class="bar-track"><div class="bar-fill" style="width:43%"></div></div><div class="bar-val">0.082</div></div>
+      <div class="bar-row"><div class="bar-label">Roughly how much karma it earns per day of activity<code>sample_score_per_day_observed</code></div><div class="bar-track"><div class="bar-fill" style="width:43%"></div></div><div class="bar-val">0.081</div></div>
+      <div class="bar-row"><div class="bar-label">How long its comments tend to be, on average<code>mean_body_len</code></div><div class="bar-track"><div class="bar-fill" style="width:41%"></div></div><div class="bar-val">0.077</div></div>
+      <div class="bar-row"><div class="bar-label">Where it ranks against every other account for how often its comments get taken down<code>removal_rate_pctl</code></div><div class="bar-track"><div class="bar-fill" style="width:40%"></div></div><div class="bar-val">0.075</div></div>
+      <div class="bar-row"><div class="bar-label">Its average reception in the one subreddit that likes it least<code>worst_sub_mean_score</code></div><div class="bar-track"><div class="bar-fill" style="width:40%"></div></div><div class="bar-val">0.075</div></div>
     </div>
     <p style="margin-top:12px">How much each feature actually moved the model's decisions, averaged across 50 separate training runs on 684 accounts, so no single lucky split skews the picture. Account creation order is deliberately left out — tested repeatedly, it never helps once the feature set stops double-counting the same signal. Full definitions of each feature and the correlation matrix behind every cut: <a href="v3-research/whitepaper.html#5-features">whitepaper §5</a>.</p>
   </div>
