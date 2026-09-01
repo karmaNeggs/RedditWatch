@@ -10,6 +10,7 @@ visual and data language.
 Run via scripts/v3_stage8_monthly_refresh.py (calls this automatically), or
 standalone after re-running that script.
 """
+import datetime as dt
 import json
 import re
 import numpy as np
@@ -21,6 +22,11 @@ SRC = ROOT / 'output/v3/subreddit_bot_prevalence_mom.csv'
 DATA_DIR = ROOT / 'docs/data_v3'
 COMPASS = ROOT / 'docs/bot-spam-compass.html'
 INDEX = ROOT / 'docs/index.html'
+BASELINE = ROOT / 'output/v3/severity_baseline.json'
+# Bump ONLY for a deliberate methodology change. A bump starts a new vintage directory and
+# leaves the previous series in place; it never edits already-published month files.
+SERIES_VERSION = '1.1.0'
+VINTAGE_DIR = DATA_DIR / f'v{SERIES_VERSION}'
 
 
 def embed_into_index(history):
@@ -57,6 +63,47 @@ def severity_bands(dist):
     return {'moderate': round(p50, 2), 'high': round(p80, 2), 'critical': round(p95, 2)}
 
 
+def load_or_freeze_bands(df, roles):
+    """Severity bands are FROZEN to a declared baseline, not recomputed each refresh.
+
+    Recomputing them meant two things, both bad. (1) Drift: a subreddit's published severity
+    could change with no change in its own number -- 3.4% of published labels flipped on the
+    2026-08-22 refresh from band movement alone. (2) Worse, self-normalization: bands defined as
+    P50/P80/P95 of the observed distribution mean exactly 50%/20%/5% of subreddit-months land in
+    moderate/high/critical *by construction, forever*. If ecosystem-wide bot prevalence doubled,
+    the bands would double with it and the dashboard would look identical -- a relative ranking
+    presented to viewers as an absolute severity scale.
+
+    First run writes the baseline from the current distribution and records which months defined
+    it; every later run loads it verbatim. Delete the file (or edit it deliberately) to
+    re-baseline -- that is a methodology change and should be a visible commit, not a side effect
+    of a monthly run."""
+    if BASELINE.exists():
+        payload = json.loads(BASELINE.read_text())
+        print(f"Loaded frozen severity baseline {payload['baseline_version']} "
+              f"({payload['baseline_window']}, n={payload['n_subreddit_months']}).")
+        return payload['bands_by_role'], payload
+
+    bands_by_role = {}
+    for role in roles:
+        col = f'{role}_pct_high_risk'
+        dist = df[col].dropna().values if col in df.columns else df['pct_high_risk_of_scored'].values
+        bands_by_role[role] = severity_bands(dist)
+    months = sorted(df['month'].unique())
+    payload = {
+        'baseline_version': '1.1.0',
+        'baseline_window': f'{months[0]}..{months[-1]}',
+        'n_subreddit_months': int(len(df)),
+        'method': 'P50/P80/P95 of the pct_high_risk distribution over the baseline window, '
+                  'computed once and frozen. Not recomputed per refresh.',
+        'bands_by_role': bands_by_role,
+    }
+    BASELINE.write_text(json.dumps(payload, indent=2))
+    print(f"Froze severity baseline 1.1.0 from {payload['baseline_window']} "
+          f"(n={payload['n_subreddit_months']}) -> {BASELINE.relative_to(ROOT)}")
+    return bands_by_role, payload
+
+
 def get_severity(score, bands):
     if score >= bands['critical']: return 'critical'
     if score >= bands['high']: return 'high'
@@ -91,11 +138,8 @@ def main():
     # separate severity bands per role -- posters and commenters have genuinely different
     # baseline risk distributions (posters run higher, see V3_PLAN.md 2026-08-22 diagnostic),
     # so one shared band set would misrepresent severity for whichever role sits off-center.
-    bands_by_role = {}
-    for role in ROLES:
-        col = f'{role}_pct_high_risk'
-        dist = df[col].dropna().values if col in df.columns else df['pct_high_risk_of_scored'].values
-        bands_by_role[role] = severity_bands(dist)
+    # Frozen to a declared baseline rather than recomputed -- see load_or_freeze_bands.
+    bands_by_role, baseline_meta = load_or_freeze_bands(df, ROLES)
     bands = bands_by_role['combined']
     for role in ROLES:
         print(f'severity bands ({role}, P50/P80/P95):', bands_by_role[role])
@@ -178,35 +222,87 @@ def main():
             'curated_findings': findings,
         }
 
-    full_docs = {}
+    # ---- append-only publishing ----------------------------------------------------------
+    # A month file, once written into the vintage directory, is never rewritten. Each refresh
+    # recomputes every month (cheap, and we want the new month), but only *new* months are
+    # persisted; for months already published we keep the frozen file and discard the
+    # recomputed values. That is what makes the viewer's trend stable: measured on the
+    # 2026-08-22 refresh, an ordinary monthly run silently restated 94.5% of published
+    # subreddit-months and flipped a quarter of published severity labels.
+    #
+    # A deliberate methodology change does NOT edit these files -- it bumps SERIES_VERSION and
+    # publishes a new vintage alongside the old one, so a restatement is always visible as a
+    # new series rather than a number that quietly changed.
+    VINTAGE_DIR.mkdir(parents=True, exist_ok=True)
+    today = dt.datetime.now(dt.timezone.utc).strftime('%Y-%m-%d')
+    manifest_path = DATA_DIR / 'manifest.json'
+    manifest = (json.loads(manifest_path.read_text()) if manifest_path.exists()
+                else {'series_version': SERIES_VERSION, 'first_published': {}})
+    if manifest.get('series_version') != SERIES_VERSION:
+        # New vintage: start a fresh manifest rather than inheriting another series' history.
+        manifest = {'series_version': SERIES_VERSION, 'first_published': {}}
+
+    full_docs, frozen, appended = {}, [], []
     for m in months:
+        path = VINTAGE_DIR / f'{m}.json'
+        if path.exists():
+            full_docs[m] = json.loads(path.read_text())
+            frozen.append(m)
+            continue
         subs = month_docs[m]
         doc = {
             'month': m,
+            'series_version': SERIES_VERSION,
+            'first_published': today,
             'subreddits': subs,
             'severity_bands': bands,
             'severity_bands_by_role': bands_by_role,
+            # Provenance for the bands: which window defined them and when. Without this a
+            # viewer can't tell whether "critical" means the same thing it meant last month.
+            'severity_baseline': {k: baseline_meta[k] for k in
+                                  ('baseline_version', 'baseline_window', 'n_subreddit_months',
+                                   'method')},
             'narrative': {role: build_narrative(m, subs, role) for role in ROLES},
         }
         full_docs[m] = doc
-        (DATA_DIR / f'{m}.json').write_text(json.dumps(doc))
+        path.write_text(json.dumps(doc))
+        manifest['first_published'][m] = today
+        appended.append(m)
+
+    published_months = sorted(full_docs)
 
     def role_avg(subs, role):
         vals = [d['roles'][role]['pct_high_risk'] for d in subs.values() if d['roles'][role]['pct_high_risk'] is not None]
         return round(sum(vals) / len(vals), 2) if vals else None
 
+    # Built from the PUBLISHED docs, not the fresh recompute -- otherwise the per-month files
+    # would be frozen while the trend chart above them still moved every refresh.
     history = {
+        'series_version': SERIES_VERSION,
         'months': [
             {'month': m, 'aggregate': {
-                'avg_score': round(sum(d['pct_high_risk'] for d in month_docs[m].values()) / len(month_docs[m]), 2),
-                'poster_avg_score': role_avg(month_docs[m], 'poster'),
-                'commenter_avg_score': role_avg(month_docs[m], 'commenter'),
+                'avg_score': round(sum(d['pct_high_risk'] for d in full_docs[m]['subreddits'].values())
+                                   / len(full_docs[m]['subreddits']), 2),
+                'poster_avg_score': role_avg(full_docs[m]['subreddits'], 'poster'),
+                'commenter_avg_score': role_avg(full_docs[m]['subreddits'], 'commenter'),
             }}
-            for m in months
+            for m in published_months
         ],
     }
+    (VINTAGE_DIR / 'history.json').write_text(json.dumps(history))
+    manifest['months'] = published_months
+    manifest['updated'] = today
+    manifest_path.write_text(json.dumps(manifest, indent=2))
+
+    # Mirror the active vintage at the flat paths the existing consumers already use, so
+    # nothing downstream has to learn the vintage layout to read the current series.
+    for m in published_months:
+        (DATA_DIR / f'{m}.json').write_text(json.dumps(full_docs[m]))
     (DATA_DIR / 'history.json').write_text(json.dumps(history))
-    print(f'Wrote {len(months)} month files + history.json to {DATA_DIR.relative_to(ROOT)}')
+
+    print(f'Series v{SERIES_VERSION}: {len(appended)} month(s) appended '
+          f'({", ".join(appended) if appended else "none"}), '
+          f'{len(frozen)} kept frozen. -> {VINTAGE_DIR.relative_to(ROOT)}')
     embed_into_compass(history, full_docs)
     embed_into_index(history)
 

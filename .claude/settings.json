@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(rm data/v3/raw/*)",
+      "Bash(python3 scripts/v3_*)",
+      "Bash(python3 -u scripts/v3_*)",
+      "Bash(git checkout -- data/v3/*)",
+      "Bash(git checkout -- output/v3/*)",
+      "Bash(git checkout -- docs/*)"
+    ]
+  }
+}

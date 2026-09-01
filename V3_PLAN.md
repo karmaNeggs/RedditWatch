@@ -88,14 +88,70 @@ method). Short version:
   analysis (target/feature comparison, feature-count elimination curve, importances, ROC,
   confirmed-rate-by-bucket): `docs/v3-research/charts/model_analysis.html`.
 - **Subreddit prevalence** measures influence over each subreddit's **top-30-posts-by-karma** monthly
-  (poster + top/latest commenters, deduplicated, scored, % landing ≥0.7) — not share of total monthly
-  activity. Full 24-month history (2024-08→2026-07; 2026-08 not yet collected). Trend now shows a
-  genuine dip-and-recover shape (~15%→~10%→~14%), not the pre-fix artifact decay toward zero.
+  (poster + top-5-by-score and top-5-latest commenters, deduplicated, scored, % landing ≥0.7) — not
+  share of total monthly activity. Unchanged in v1.1. Full 25-month history (2024-08→2026-08).
+- **🔭 Open proposal, deliberately NOT in v1.1 — widen the sample.** The collector already stores 100
+  top-by-score posts per sub-month and up to 10 top + 10 first commenters per post; the pipeline reads
+  only 30 posts and 5+5 commenters, i.e. a fraction of what is already on disk. Raising it costs **no
+  new collection** and would take median unique posters 25→73 (p10 16→42) and commenters 128→966,
+  which would make the small-n problem disappear rather than be managed. But it changes what the
+  metric MEANS — influence over a sub's top ~100 posts, not its top 30 — and measured prevalence falls
+  ~1.5pp (12.72%→11.26%), because the elite-30 slice runs hotter: karma-farmers chase exactly the top
+  spot. Spearman between the two definitions is 0.867. **That is a new metric, not a refresh** — if
+  adopted it must ship as its own SERIES_VERSION with both series published, never folded into a
+  routine monthly run.
   `output/v3/subreddit_bot_prevalence_mom.csv`.
+- **Minimum-n floor, added 2026-09-01 (was a real reporting gap).** `build_subreddit_prevalence`
+  applied **no** minimum-scored-accounts floor, unlike `v3_stage7_monthly_score.py:82`'s
+  `MIN_ACCOUNTS_PER_SUB_MONTH = 15` — so `IndiaTrending 2026-03` published a figure derived from
+  **one** scored account (22 influencers, 4.5% coverage), reading 100% in one vintage and 0% in the
+  next. Now `MIN_SCORED_PER_CELL = 5`; cells below it report their counts but withhold the rate
+  (37 of 3,360 role-cells, 1.1%).
+  **Why 5 and not stage7's 15:** at v1.1's top-30 sampling the poster cell is structurally capped at
+  30 (median 19 scored, p10 of 10), so a floor of 15 would blank **28.8% of poster cells** — it would
+  delete a third of one of the three headline metrics to remove a handful of degenerate ones. 5
+  removes exactly the pathological cases (the n=1 cell above) and little else. A floor of 15 only
+  becomes reasonable alongside the widening proposal above, which lifts the poster p10 to 42. **If
+  the widening is adopted, revisit this floor at the same time** — the two are coupled, and a floor
+  that removes a third of the data is a sign the sample is too small, not that the floor is too high.
 - **Dashboard:** `docs/bot-spam-compass.html` — the project's primary bot/spam artifact, data embedded
   at build time (works from file://, a local server, or GitHub Pages alike, no external fetch).
-  **Monthly refresh is one command:** `python3 scripts/v3_stage8_monthly_refresh.py` — retrains,
-  rescores, rebuilds prevalence, regenerates the dashboard in place.
+  **Monthly refresh is one command:** `python3 scripts/v3_stage8_monthly_refresh.py` — loads the
+  **pinned** model, rescores, rebuilds prevalence, regenerates the dashboard. It no longer
+  retrains: that now requires an explicit `--retrain`, which restates every month and should bump
+  `MODEL_VERSION`.
+- **Frozen-vintage publishing (added 2026-09-01).** Previously every refresh silently restated
+  published history: measured across the 2026-08-22 run, an ordinary monthly refresh changed
+  **94.5% of 1,076 already-published subreddit-months** (mean |Δ| 1.74pp, max 18.18pp) and flipped
+  **24.6% of published severity labels**, growing the headline trend's peak-to-trough amplitude
+  4.90pp→6.34pp — the "dip and recover" shape was partly an artifact of recomputation. Decomposed:
+  24.4% of flips came from account scores moving, only 3.4% from severity bands. Three fixes:
+  (1) the model is **pinned** (`output/v3/final_bot_model_meta.json`, `MODEL_VERSION`), retrained
+  only under `--retrain`; (2) **impute medians are persisted** with it — they were previously fit
+  on the labeled set at train time but recomputed on the full population at score time, a moving
+  reference *and* a train/serve skew; (3) `random_state` pinned. Severity bands are frozen to
+  `output/v3/severity_baseline.json` (declared window, not recomputed — a P50/P80/P95-of-observed
+  band set is self-normalizing: 50/20/5% of months land in each band *by construction*, so a
+  genuine ecosystem-wide rise would be invisible). Published months are **append-only** under
+  `docs/data_v3/v{SERIES_VERSION}/`; a methodology change bumps `SERIES_VERSION` and publishes a
+  new vintage beside the old rather than editing history.
+- **Non-deterministic ranking, found and fixed 2026-09-01 — this was a live bug in published v1.0.**
+  `build_subreddit_prevalence` ranked posts with `row_number() OVER (… ORDER BY score DESC)` and
+  commenters likewise, with **no tiebreaker**. Re-running the identical query against the identical
+  database pulled between **4 and 22 counter-sample posts** into the "top-30" set across five
+  consecutive executions, because 99 of 1,120 sub-months (8.8%) have a score tie exactly at the 30/31
+  cutoff. Published v1.0 numbers were therefore not reproducible even from unchanged data. Two fixes:
+  a stable tiebreaker (`, post_id` / `, c.author`) and an explicit `AND role = 'top'` filter — the
+  collector's ~20-post counter-sample is a control group drawn from *below* the top 100 and was never
+  meant to enter the influencer set. Verified: all four published `pct_high_risk` columns are now
+  bit-identical across repeated runs (only `mean_bot_score` varies, by one float32 ulp, and it is
+  rounded to 4dp before publication).
+- **Still moves history, NOT yet fixed:** `account_features` aggregates each account's whole
+  25-month history, so extending the corpus changes features — and scores — for months already
+  published. It also means today's 2024-09 figure uses behavior observed through 2026-08:
+  look-ahead bias, not just instability. Real fix is **point-in-time features** (compute each
+  account's features from data ≤ the month being scored), which makes a subreddit-month immutable
+  by construction. Append-only publishing contains the symptom; it does not remove the cause.
 - **Not yet done:** this model doesn't establish *coordination* between accounts (only individual
   removal risk) — the coordination angle from the earlier equation-based theory remains open, see the
   coordination-check note below. The labeled set (n=684) could still grow further, but has stopped
@@ -204,8 +260,17 @@ below (scaling 76→~300 bots was never resumed — the project pivoted instead)
 
 - **Stage 0–2 (collection, cleaning, account features, EDA, bivariate/segmentation):
   done and stable.** Rebuild scripts in `scripts/v3_stage0_build.py` →
-  `v3_account_features.py` → `v3_feature_sanitise.py` → `v3_eda_build.py` →
-  `v3_stage2_bivariate.py`. `account_features_model` (347,886 × 73 cols, VIF-pruned,
+  `v3_account_features.py` → **`v3_botmarker_composite.py`** → `v3_feature_sanitise.py` →
+  `v3_eda_build.py` → `v3_stage2_bivariate.py`.
+  **`v3_botmarker_composite.py` is REQUIRED, not optional** — corrected 2026-09-01 after this
+  omission caused a real mis-run. Despite its "unsupervised prep work" docstring, its line 91
+  does `CREATE OR REPLACE TABLE account_features AS SELECT af.*, bm.removal_rate_pctl,
+  bm.deleted_later_rate_pctl, bm.thin_history_score, …`, i.e. it *adds* the percentile columns
+  to `account_features`. Two of the deployed model's 10 features (`removal_rate_pctl`,
+  `thin_history_score`) exist only after it runs. Skip it and `account_features` has 50 columns
+  instead of 58, and Stage 8 silently trains an **8-feature** model instead of 10 — no error,
+  just a quietly different model. Order matters: it must run after `v3_account_features.py`
+  and before `v3_feature_sanitise.py`. `account_features_model` (347,886 × 73 cols, VIF-pruned,
   volume-normalized, hurdle-split) is the correct feature source for anything
   account-level — never hand-select from raw `account_features`.
 - **Stage 3 (account XGBoost per label channel): mature, near its honest

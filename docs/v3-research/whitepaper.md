@@ -13,7 +13,7 @@ live-checked Reddit account status (banned / deleted / still active), not a prox
   backward elimination 49→18, a wall-clock time-denominator bug found and fixed that collapsed 3 more
   into duplicates (→15), then a further backward-elimination pass to 10 to keep the model as light as
   possible — §5, §6b) — down from an original ~67-column candidate pool.
-- **Tuned XGBoost, repeated 5×10-fold CV AUC = 0.780 ± 0.035** — clubbed banned+deleted target,
+- **Tuned XGBoost, repeated 5×10-fold CV AUC = 0.793 ± 0.054** — clubbed banned+deleted target,
   `account_ordinal` excluded. Full validation: `docs/v3-research/charts/model_analysis.html`.
 - **Live dashboard:** `docs/bot-spam-compass.html`. **Monthly refresh, one command:**
   `python3 scripts/v3_stage8_monthly_refresh.py`.
@@ -53,8 +53,9 @@ If a paragraph gets dense later on, it's worth a scroll back to this list rather
   not just a number that looks plausible.
 - **Prevalence** — the subreddit-level number this project ultimately reports: the % of a subreddit's
   most-visible accounts that month (its top posters and commenters) that the model flags as high-risk.
-- **Severity band** — Low / Moderate / High / Critical, calculated fresh each month from the actual
-  spread of observed prevalence scores, not a fixed cutoff decided in advance.
+- **Severity band** — Low / Moderate / High / Critical, computed once from the spread of observed
+  prevalence scores over a declared baseline window and then **frozen** (§8b), not recalculated each
+  refresh and not a cutoff decided in advance.
 - **Poster vs. commenter** — two different roles within a subreddit's influencer set: the person who
   *submitted* a top post, versus the people who *commented* on it. §8 found these carry meaningfully
   different risk, which is why the dashboard reports them separately.
@@ -65,9 +66,9 @@ what didn't work and why, but not what the dashboard runs today.
 
 ## 1. Corpus
 
-- **1,619,492 comments**, full body text, from `commenters_dedup` (collected via `scripts/v3_collect.py`
+- **1,684,682 comments**, full body text, from `commenters_dedup` (collected via `scripts/v3_collect.py`
   against the Arctic Shift API).
-- **347,886 distinct commenting accounts**, 45 India-focused subreddits, 2024-08 through 2026-07 (24
+- **360,431 distinct commenting accounts**, 45 India-focused subreddits, 2024-08 through 2026-08 (25
   months).
 - `account_features` (`scripts/v3_account_features.py` + `scripts/v3_botmarker_composite.py`): one row
   per account, ~70 behavioral/timing/reception/username columns computed from the full comment+post
@@ -243,7 +244,7 @@ leakage from the held-out fold):
 
 | check | result |
 |---|---|
-| **Repeated CV AUC (headline number)** | **0.780 ± 0.035** |
+| **Repeated CV AUC (headline number)** | **0.793 ± 0.054** (v1.1; 0.780 ± 0.035 as published in v1.0) |
 | Multifold-averaged out-of-fold AUC (10-repeat average per account) | 0.792 |
 | Deleted-only vs. everyone else | 0.749 |
 | Banned-only vs. everyone else | 0.645 |
@@ -330,7 +331,7 @@ failure mode after the fix; none of the survivors share it.
 
 ## 7. Population scoring and the activity floor
 
-Scored on every account with **≥10 total contributions** (comments + posts) — 36,762 of 347,886
+Scored on every account with **≥10 total contributions** (comments + posts) — 38,197 of 360,227
 accounts. Below that floor, several features are too noisy to trust; those accounts are excluded from
 scoring entirely, not assigned a default score. Model artifact: `output/v3/final_bot_model.json`. Full
 population scores: `output/v3/final_bot_scores.parquet`.
@@ -354,10 +355,14 @@ content** — the accounts Reddit's own ranking already surfaced as consequentia
    subreddit-month, alongside the mean score and coverage (% of the influencer set that could be scored
    at all).
 
-Full 24-month history (2024-08→2026-07). 1,076 subreddit-month rows, 45 subreddits. Data:
+Cells with **fewer than 5 scored accounts** are suppressed rather than published — below that the
+ratio is noise, not a measurement (one cell previously published a figure derived from a single
+account, reading 100% in one release and 0% in the next).
+
+Full 25-month history (2024-08→2026-08). 1,120 subreddit-month rows, 45 subreddits. Data:
 `output/v3/subreddit_bot_prevalence_mom.csv`. Severity bands (Low/Moderate/High/Critical) are
-percentiles (P50/P80/P95) of the observed prevalence distribution, recalculated fresh at every refresh
-— not fixed cutoffs.
+percentiles (P50/P80/P95) of the prevalence distribution over a **declared baseline window**, computed
+once and frozen in `output/v3/severity_baseline.json` — not recalculated at every refresh (§8b).
 
 **Posters and commenters are reported separately, not just pooled.** A direct check (2026-08-22, full
 24-month corpus) found they carry meaningfully different risk: **posters of top-30 content average
@@ -413,6 +418,77 @@ either's correlation with account risk), and its month-over-month growth carries
 (ρ≈0.00) — a single viral thread can swing a subreddit's monthly comment total either direction,
 independent of anything about account risk. "Views" were considered and ruled out immediately: Reddit's
 public API doesn't expose post view/impression counts to third-party collection at all.
+
+
+## 8b. Why published numbers no longer change: frozen vintages
+
+*In short: until v1.1, every monthly refresh silently rewrote the entire published history. A reader
+who screenshotted the trend in August and returned in September saw a different past. This section is
+what was wrong and what was done about it.*
+
+**The measurement.** Comparing the published series immediately before and after the 2026-08-22
+refresh — an ordinary monthly run, no methodology change:
+
+| Effect on the 1,076 already-published subreddit-months | |
+|---|---|
+| Values that changed at all | **94.5%** (1,017) |
+| Mean absolute revision | **1.74 pp** |
+| Largest single revision | **18.18 pp** |
+| Published severity labels that flipped | **24.6%** (265) |
+| Ecosystem trend peak-to-trough | **4.90 pp → 6.34 pp** |
+
+That last row matters most: the headline "dip and recover" shape became **29% more dramatic** without a
+single new fact about 2024 or 2025. Part of the story the chart told was produced by recomputation.
+
+**Where it came from.** Re-scoring under frozen-versus-moving bands isolates the cause: values moving
+accounted for 24.4% of the label flips, severity bands moving for only 3.4%. Four distinct drivers were
+found, all fixed in v1.1:
+
+1. **The model was retrained on every refresh.** New coefficients, new scores for every account, every
+   month restated. Retraining now requires an explicit `--retrain` and a `MODEL_VERSION` bump.
+2. **Imputation used a moving reference — and was skewed.** Missing features were filled with the
+   *labeled set's* median at training time but the *full population's* median at scoring time. Beyond
+   drifting each refresh, this is a train/serve skew: the model was trained to read "missing" as one
+   value and served another. Medians are now fit once and persisted with the model.
+3. **The fit was stochastic.** `subsample`/`colsample_bytree` with no `random_state`, so two retrains
+   on identical data produced different trees. Seed pinned.
+4. **Ranking was non-deterministic.** Posts and commenters were ranked with `row_number() OVER
+   (… ORDER BY score DESC)` and no tiebreaker. Re-running the identical query against the identical
+   database pulled between **4 and 22** counter-sample posts into the "top-30" set across five
+   consecutive executions, because **99 of 1,120 sub-months (8.8%)** have a score tie exactly at the
+   30/31 cutoff. Published figures were not reproducible even from unchanged data. Fixed with a stable
+   tiebreaker, plus an explicit `role = 'top'` filter — the collector's ~20-post counter-sample is a
+   control group drawn from *below* the top 100 and was never meant to enter the influencer set.
+
+**Severity bands are frozen, and this is not cosmetic.** Bands defined as P50/P80/P95 *of the observed
+distribution* are self-normalizing: exactly 50%/20%/5% of subreddit-months land in moderate/high/
+critical **by construction, forever**. Had ecosystem-wide bot prevalence doubled, the bands would have
+doubled with it and the dashboard would have looked identical — a relative ranking presented to readers
+as an absolute severity scale. Bands are now computed once over a declared window and frozen in
+`output/v3/severity_baseline.json`, with the window and method published in every month file.
+
+**Publishing is append-only.** A month file, once written under `docs/data_v3/v{SERIES_VERSION}/`, is
+never rewritten. Each refresh still recomputes everything (the new month has to come from somewhere),
+but only genuinely new months are persisted; recomputed values for already-published months are
+discarded. `history.json` is rebuilt from the *published* files rather than the recompute — otherwise
+month files would freeze while the trend chart above them kept moving. A deliberate methodology change
+does not edit these files: it bumps `SERIES_VERSION` and publishes a new vintage alongside the old, so
+a restatement is always visible as a new series rather than a number that quietly changed. Both series
+ship: `docs/data_v3/v1.0.0/` is the previously published series, preserved verbatim.
+
+**v1.1 is itself a restatement, and is labelled as one.** Fixing the four drivers above necessarily
+moves numbers: against v1.0.0 the mean absolute revision is 1.65 pp and 21.5% of severity labels
+change. That is why it ships as its own vintage rather than as a refresh of v1.0.0. Figures are
+comparable *within* a series, not across series.
+
+**What is still not fixed.** `account_features` aggregates each account's entire 25-month history, so
+extending the corpus changes the features — and therefore the scores — of every still-active account,
+including for months long since published. Append-only publishing contains this symptom but does not
+remove the cause. It also means today's published 2024-09 figure is computed from behavior observed
+through 2026-08: **look-ahead bias**, not merely instability — that figure could not have been produced
+in September 2024. The real fix is point-in-time features (computing each account's features from data
+≤ the month being scored), which would make a subreddit-month immutable by construction. That is a
+separate build and is not done.
 
 
 ## 9. The dashboard

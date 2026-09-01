@@ -13,6 +13,7 @@ posts/comments) to:
 
 No manual steps beyond running this file. Takes well under a minute.
 """
+import argparse
 import duckdb, pandas as pd, numpy as np, json
 from pathlib import Path
 import xgboost as xgb
@@ -87,10 +88,50 @@ EXCLUDE_COLS = ['last_seen_utc', 'first_seen_utc', 'observed_span_days', 'accoun
 # columns where NaN means "has no posts" (semantically 0, not the population median)
 POST_ZERO_COLS = ['n_own_posts_with_comments']
 
+# random_state pinned 2026-09-01: subsample/colsample make the fit stochastic, so two retrains
+# on identical data landed on different trees -- one more source of silent restatement.
 BEST_CFG = {'max_depth': 5, 'n_estimators': 150, 'learning_rate': 0.1, 'min_child_weight': 1,
-            'subsample': 0.9, 'colsample_bytree': 0.7, 'reg_lambda': 1}
+            'subsample': 0.9, 'colsample_bytree': 0.7, 'reg_lambda': 1, 'random_state': 42}
 ACTIVITY_FLOOR = 10   # min total (comments+posts) contributions to be scored at all
 HIGH_RISK_THRESHOLD = 0.7
+# Sampling depth for the subreddit-prevalence metric. These are the v1.0 published values and are
+# NOT changed in v1.1 -- widening them is a live proposal, deliberately deferred.
+#
+# The case for widening, measured 2026-09-01 and held for a separate decision: the collector
+# already stores 100 top-by-score posts per sub-month and up to 10 top + 10 first commenters per
+# post, so the pipeline reads a fraction of what is on disk. Raising these to 100 / 30 costs no
+# new collection and would take median unique posters 25 -> 73 (p10 16 -> 42) and commenters
+# 128 -> 966. But it changes what the metric MEANS -- influence over a sub's top ~100 posts rather
+# than its top 30 -- and measured prevalence falls ~1.5pp as a result (12.72% -> 11.26%), because
+# the elite-30 slice runs hotter: repeat karma-farmers chase exactly the top spot (V3_PLAN.md
+# 2026-08-22). Spearman between the two definitions is 0.867. That is a new metric, not a refresh,
+# so it belongs in its own SERIES_VERSION with both series published -- not folded into v1.1.
+TOP_POSTS_PER_CELL = 30
+COMMENTERS_PER_POST = 5
+# Minimum SCORED accounts before a (sub, month, role) cell gets a published prevalence figure.
+# Matches v3_stage7_monthly_score.py's MIN_ACCOUNTS_PER_SUB_MONTH -- that floor existed there but
+# was never applied here, the path that actually feeds the dashboard. Found 2026-09-01: 19 of
+# 1,120 published subreddit-months sat below it and 3 below n=3. IndiaTrending 2026-03 published
+# a figure derived from ONE scored account (22 influencers, 4.5% coverage), so it read 100% in one
+# vintage and 0% in the next -- a coin flip rendered as a severity band. Cells below the floor are
+# now suppressed to NaN (stage9 drops NaN rows) rather than published as if they were measurements.
+MIN_SCORED_PER_CELL = 5
+
+# Frozen-vintage scoring, 2026-09-01. Measured against the 2026-08-22 refresh: re-running this
+# script restated 94.5% of the 1,076 published subreddit-months (mean |delta| 1.74pp, max 18.18pp)
+# and flipped 24.6% of published severity labels. 24.4% of those flips traced to account scores
+# moving, only 3.4% to severity bands -- so the scoring function is what had to be pinned:
+#   1. train_final_model() ran every refresh. Now only under --retrain, which bumps MODEL_VERSION.
+#   2. Imputation used the population median at score time but the labeled-set median at train
+#      time -- a moving reference AND a train/serve skew. Medians are now fit once, persisted,
+#      and reused verbatim when scoring.
+#   3. random_state (above).
+# Still unfixed and still moves history: account_features aggregates each account's whole 24-month
+# history, so extending the corpus changes features -- and scores -- for months already published.
+# Fix is point-in-time features; see V3_PLAN.md.
+MODEL_VERSION = '1.1.0'
+MODEL_PATH = OUT / 'final_bot_model.json'
+MODEL_META_PATH = OUT / 'final_bot_model_meta.json'
 
 
 def load_features(con):
@@ -127,54 +168,110 @@ def train_final_model(af, feature_cols):
 
     train_df = allt[['author', 'y']].merge(af, on='author', how='left')
     X_train = train_df[feature_cols].astype('float64')
-    X_train = X_train.fillna(X_train.median())
+    # These medians ARE the model's definition of "missing" -- persist them and reuse at score
+    # time. Recomputing them per-population was the train/serve skew described at MODEL_VERSION.
+    impute_medians = X_train.median()
+    X_train = X_train.fillna(impute_medians)
     y_train = train_df['y'].values
 
     model = xgb.XGBClassifier(scale_pos_weight=(y_train == 0).sum() / (y_train == 1).sum(),
                                eval_metric='logloss', **BEST_CFG)
     model.fit(X_train, y_train)
-    model.save_model(str(OUT / 'final_bot_model.json'))
+    model.save_model(str(MODEL_PATH))
     with open(OUT / 'final_bot_model_features.json', 'w') as f:
         json.dump(feature_cols, f)
-    print(f'Trained on n={len(train_df)} labeled accounts ({y_train.sum()} banned/deleted), '
-          f'{len(feature_cols)} features (RedditWatch 1.0: no account_ordinal, deduplicated, '
-          f'backward-eliminated to the minimal set, tuned).')
-    return model
+    meta = {
+        'model_version': MODEL_VERSION,
+        'n_train': int(len(train_df)),
+        'n_positive': int(y_train.sum()),
+        'feature_cols': feature_cols,
+        'impute_medians': {k: (None if pd.isna(v) else float(v))
+                           for k, v in impute_medians.items()},
+        'best_cfg': BEST_CFG,
+        'activity_floor': ACTIVITY_FLOOR,
+        'high_risk_threshold': HIGH_RISK_THRESHOLD,
+    }
+    with open(MODEL_META_PATH, 'w') as f:
+        json.dump(meta, f, indent=2)
+    print(f'Trained model_version={MODEL_VERSION} on n={len(train_df)} labeled accounts '
+          f'({y_train.sum()} banned/deleted), {len(feature_cols)} features (RedditWatch 1.0: '
+          f'no account_ordinal, deduplicated, backward-eliminated to the minimal set, tuned).')
+    return model, meta
 
 
-def score_population(af, feature_cols, model):
+def load_pinned_model():
+    """Load the frozen model + the feature list and impute medians it was fit with.
+
+    Refuses rather than falling back to a retrain: silently retraining is exactly the behavior
+    that restated published history, so a missing artifact must be an explicit --retrain."""
+    if not (MODEL_PATH.exists() and MODEL_META_PATH.exists()):
+        raise SystemExit(
+            f'No pinned model at {MODEL_PATH.name} / {MODEL_META_PATH.name}.\n'
+            'Run once with --retrain to fit and pin one. Refusing to retrain implicitly: that '
+            'restates every published month (see MODEL_VERSION note in this file).')
+    meta = json.loads(MODEL_META_PATH.read_text())
+    model = xgb.XGBClassifier()
+    model.load_model(str(MODEL_PATH))
+    print(f"Loaded pinned model_version={meta['model_version']} "
+          f"({len(meta['feature_cols'])} features, trained on n={meta['n_train']}).")
+    return model, meta
+
+
+def score_population(af, model, meta):
+    feature_cols = meta['feature_cols']
+    missing = [c for c in feature_cols if c not in af.columns]
+    if missing:
+        raise SystemExit(
+            f'account_features is missing {len(missing)} column(s) the pinned model needs: '
+            f'{missing}. The corpus rebuild changed the feature schema -- rerun with --retrain '
+            'and bump MODEL_VERSION rather than scoring against a mismatched feature set.')
     pop = af[af['total_contribs'] >= ACTIVITY_FLOOR].copy()
     X = pop[feature_cols].astype('float64')
-    X = X.fillna(X.median())
+    medians = pd.Series({k: (np.nan if v is None else v)
+                         for k, v in meta['impute_medians'].items()})
+    X = X.fillna(medians)
     pop['bot_score'] = model.predict_proba(X)[:, 1]
     pop[['author', 'bot_score']].to_parquet(OUT / 'final_bot_scores.parquet', index=False)
-    print(f'Scored {len(pop)} accounts (>= {ACTIVITY_FLOOR} contributions).')
+    print(f'Scored {len(pop)} accounts (>= {ACTIVITY_FLOOR} contributions) '
+          f"under model_version={meta['model_version']}.")
     return pop[['author', 'bot_score']]
 
 
 def build_subreddit_prevalence(con, scores):
     max_month = con.execute("SELECT max(month) FROM posts").fetchone()[0]
+    # Two correctness fixes, 2026-09-01, both affecting which posts enter the influencer set:
+    #
+    # 1. `AND role = 'top'`. The collector stores 100 top-by-score posts per sub-month PLUS a
+    #    separately-tagged ~20-post counter-sample drawn from BELOW the top 100 (a deliberate
+    #    control group, never intended as "top content"). The published query had no role filter,
+    #    so counter-sample posts could enter the top-30 set.
+    # 2. `, post_id` as a tiebreaker. row_number() over an unstable sort is non-deterministic:
+    #    re-running the identical query on the identical database returned between 4 and 22
+    #    counter-sample posts inside the top-30 across five consecutive executions, because 99 of
+    #    1,120 sub-months (8.8%) have a score tie exactly at the 30/31 cutoff. Published v1.0
+    #    numbers were therefore not reproducible even from unchanged data. post_id is stable and
+    #    arbitrary, which is what a tiebreaker should be.
     top_posts = con.execute(f'''
         SELECT sub, month, post_id, author AS poster,
-               row_number() OVER (PARTITION BY sub, month ORDER BY score DESC) AS rn
-        FROM posts WHERE month <= '{max_month}'
-        QUALIFY rn <= 30
+               row_number() OVER (PARTITION BY sub, month ORDER BY score DESC, post_id) AS rn
+        FROM posts WHERE month <= '{max_month}' AND role = 'top'
+        QUALIFY rn <= {TOP_POSTS_PER_CELL}
     ''').fetchdf()
     con.register('top_post_ids', top_posts[['post_id']].drop_duplicates())
 
-    top_commenters = con.execute('''
+    top_commenters = con.execute(f'''
         SELECT post_id, author FROM (
             SELECT c.post_id, c.author, c.score,
-                   row_number() OVER (PARTITION BY c.post_id ORDER BY c.score DESC) AS rn
+                   row_number() OVER (PARTITION BY c.post_id ORDER BY c.score DESC, c.author) AS rn
             FROM commenters_dedup c JOIN top_post_ids t USING(post_id)
-        ) WHERE rn <= 5
+        ) WHERE rn <= {COMMENTERS_PER_POST}
     ''').fetchdf()
-    latest_commenters = con.execute('''
+    latest_commenters = con.execute(f'''
         SELECT post_id, author FROM (
             SELECT c.post_id, c.author, c.created_utc,
-                   row_number() OVER (PARTITION BY c.post_id ORDER BY c.created_utc DESC) AS rn
+                   row_number() OVER (PARTITION BY c.post_id ORDER BY c.created_utc DESC, c.author) AS rn
             FROM commenters_dedup c JOIN top_post_ids t USING(post_id)
-        ) WHERE rn <= 5
+        ) WHERE rn <= {COMMENTERS_PER_POST}
     ''').fetchdf()
 
     posters = top_posts[['sub', 'month', 'post_id', 'poster']].rename(columns={'poster': 'author'})
@@ -202,14 +299,21 @@ def build_subreddit_prevalence(con, scores):
         n_total = len(g)
         n_scored = g['scored'].sum()
         n_hr = g['high_risk'].sum()
+        # Below the floor the ratio is noise, not a measurement -- report the counts (so the
+        # suppression is visible and auditable) but withhold the rate.
+        enough = n_scored >= MIN_SCORED_PER_CELL
         return pd.Series({
             'n': n_total, 'n_scored': n_scored,
             'coverage_pct': 100 * n_scored / n_total if n_total else np.nan,
-            'pct_high_risk': 100 * n_hr / n_scored if n_scored else np.nan,
-            'mean_bot_score': g.loc[g['scored'], 'bot_score'].mean() if n_scored else np.nan,
+            'pct_high_risk': 100 * n_hr / n_scored if enough else np.nan,
+            'mean_bot_score': g.loc[g['scored'], 'bot_score'].mean() if enough else np.nan,
         })
 
     by_role = all_roles.groupby(['sub', 'month', 'role']).apply(summarize, include_groups=False).reset_index()
+    n_suppressed = int((by_role['n_scored'] < MIN_SCORED_PER_CELL).sum())
+    if n_suppressed:
+        print(f'Suppressed {n_suppressed} (sub, month, role) cell(s) below the '
+              f'MIN_SCORED_PER_CELL={MIN_SCORED_PER_CELL} floor.')
     wide = by_role.pivot(index=['sub', 'month'], columns='role',
                           values=['n', 'n_scored', 'coverage_pct', 'pct_high_risk', 'mean_bot_score'])
     wide.columns = [f'{role}_{metric}' for metric, role in wide.columns]
@@ -259,11 +363,22 @@ def build_subreddit_prevalence(con, scores):
 
 
 def main():
+    ap = argparse.ArgumentParser(description=__doc__,
+                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument('--retrain', action='store_true',
+                    help='Refit the model on the current label set and re-pin it. This restates '
+                         'every published month, so bump MODEL_VERSION and treat the result as a '
+                         'new vintage. Without this flag the pinned model is loaded and only '
+                         'scoring runs -- the normal monthly path.')
+    args = ap.parse_args()
+
     con = duckdb.connect(str(DB), read_only=True)
     af = load_features(con)
-    feature_cols = get_feature_cols(af)
-    model = train_final_model(af, feature_cols)
-    scores = score_population(af, feature_cols, model)
+    if args.retrain:
+        model, meta = train_final_model(af, get_feature_cols(af))
+    else:
+        model, meta = load_pinned_model()
+    scores = score_population(af, model, meta)
     monthly = build_subreddit_prevalence(con, scores)
 
     import subprocess
