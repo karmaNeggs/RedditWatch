@@ -220,14 +220,14 @@
 
   <div class="section">
     <div class="section-title">From account risk to subreddit prevalence</div>
-    <p>The model above scores one account at a time. This section is about turning that into a subreddit-level number — "how much of r/example's visible content this month came from risky accounts?" Rather than looking at a subreddit's <em>entire</em> monthly activity (which is dominated by ordinary, low-visibility comments), the score focuses on <strong>influence over each subreddit's best-performing content</strong>: take each subreddit's top 30 posts that month by karma (Reddit's own upvote score), pull out the poster plus the 5 highest-scoring and 5 most recent commenters on each, run everyone through the model above, and report the % who land at a 0.7-or-higher predicted-removal probability — i.e., accounts the model considers clearly high-risk, not just leaning that way.</p>
+    <p>The model above scores one account at a time. This section is about turning that into a subreddit-level number — "how much of r/example's visible content this month came from risky accounts?" Rather than looking at a subreddit's <em>entire</em> monthly activity (which is dominated by ordinary, low-visibility comments), the score focuses on <strong>influence over each subreddit's best-performing content</strong>: take each subreddit's top 100 posts that month by karma (Reddit's own upvote score), pull out the poster plus the 5 highest-scoring and 5 most recent commenters on each, run everyone through the model above, and report the % who land at a 0.7-or-higher predicted-removal probability — i.e., accounts the model considers clearly high-risk, not just leaning that way.</p>
     <h3>Posters and commenters carry different risk — checked directly, not assumed</h3>
     <p>A direct check (2026-08-22, full 24-month corpus) found the two roles are not interchangeable, and reports them separately on the Compass dashboard rather than blending them into one number:</p>
     <div class="compare-grid">
       <div class="compare-card poster">
         <div class="compare-label">Posters</div>
         <div class="compare-num">~20%</div>
-        <p style="margin:4px 0 0">average high-risk rate — consistently, every one of 24 months. Reaching "top-30-by-karma" doesn't require being a well-liked regular; repeat karma-farming/repost accounts chase exactly this spot, and that cross-subreddit, high-volume pattern is what the model is built to catch.</p>
+        <p style="margin:4px 0 0">average high-risk rate — consistently, every one of 24 months. Reaching the top by karma doesn't require being a well-liked regular; repeat karma-farming/repost accounts chase exactly this spot, and that cross-subreddit, high-volume pattern is what the model is built to catch.</p>
       </div>
       <div class="compare-card commenter">
         <div class="compare-label">Commenters</div>
@@ -235,7 +235,7 @@
         <p style="margin:4px 0 0">average high-risk rate on the same posts. Getting into the top-5-by-score or top-5-latest commenter slots is a much larger, more diverse population — casual, one-off high-scoring comments included.</p>
       </div>
     </div>
-    <p style="margin-top:12px">A separate check for volume-driven skew (the worry that periods of elevated overall activity might shift who clears the top-30 cutoff) found no effect — correlation between influencer volume and prevalence rate is ~0.05 (noise). Full writeup: <a href="v3-research/whitepaper.html#8-subreddit-level-prevalence-the-top-30-post-methodology">whitepaper §8</a>.</p>
+    <p style="margin-top:12px">A separate check for volume-driven skew (the worry that periods of elevated overall activity might shift who clears the top-30 cutoff) found no effect — correlation between influencer volume and prevalence rate is ~0.05 (noise). Full writeup: <a href="v3-research/whitepaper.html#8-subreddit-level-prevalence-the-top-post-methodology">whitepaper §8</a>.</p>
   </div>
 
   <div class="section">

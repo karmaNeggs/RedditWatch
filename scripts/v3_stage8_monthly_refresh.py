@@ -94,28 +94,54 @@ BEST_CFG = {'max_depth': 5, 'n_estimators': 150, 'learning_rate': 0.1, 'min_chil
             'subsample': 0.9, 'colsample_bytree': 0.7, 'reg_lambda': 1, 'random_state': 42}
 ACTIVITY_FLOOR = 10   # min total (comments+posts) contributions to be scored at all
 HIGH_RISK_THRESHOLD = 0.7
-# Sampling depth for the subreddit-prevalence metric. These are the v1.0 published values and are
-# NOT changed in v1.1 -- widening them is a live proposal, deliberately deferred.
+# Sampling depth for the subreddit-prevalence metric. WIDENED in series v1.2.0 (2026-09-01) from
+# the v1.0/v1.1 values of 30 posts and 5 commenters per axis. No new collection was needed: the
+# collector already stored 100 top-by-score posts per sub-month (plus a separately-tagged ~20-post
+# counter-sample, excluded via role='top') and up to 10 top + 10 most-recent commenters per post.
+# The pipeline had been reading a fraction of what was already on disk.
 #
-# The case for widening, measured 2026-09-01 and held for a separate decision: the collector
-# already stores 100 top-by-score posts per sub-month and up to 10 top + 10 first commenters per
-# post, so the pipeline reads a fraction of what is on disk. Raising these to 100 / 30 costs no
-# new collection and would take median unique posters 25 -> 73 (p10 16 -> 42) and commenters
-# 128 -> 966. But it changes what the metric MEANS -- influence over a sub's top ~100 posts rather
-# than its top 30 -- and measured prevalence falls ~1.5pp as a result (12.72% -> 11.26%), because
-# the elite-30 slice runs hotter: repeat karma-farmers chase exactly the top spot (V3_PLAN.md
-# 2026-08-22). Spearman between the two definitions is 0.867. That is a new metric, not a refresh,
-# so it belongs in its own SERIES_VERSION with both series published -- not folded into v1.1.
-TOP_POSTS_PER_CELL = 30
-COMMENTERS_PER_POST = 5
+# Adopted on evidence, not on "more data is better". Three checks, all agreeing:
+#
+# 1. SAME POPULATION. Poster high-risk rate by post rank is flat -- 22.62% (ranks 1-30), 22.99%
+#    (31-60), 22.56% (61-100). Posts ranked 31-100 carry the same risk as the top 30, so this is
+#    not a change of subject. NOTE: this REFUTES a claim previously recorded in V3_PLAN.md and the
+#    whitepaper -- that the elite top-30 slice "runs hotter" because karma-farmers chase the top
+#    spot. Measured directly against the corpus, it does not. The level shift below comes from the
+#    commenter side, where the two ranking axes disagree: top-5 by score are slightly HIGHER risk
+#    (14.5% vs 13.7%) while top-5 by recency are notably LOWER (11.5% vs 15.3%).
+# 2. BETTER INSTRUMENT. Split-half reliability 0.68 -> 0.81; month-to-month persistence
+#    0.73 -> 0.85. At the old sampling roughly a third of the variance in a published
+#    subreddit-month figure was measurement noise. Persistence is independent confirmation --
+#    noise cannot persist month over month.
+# 3. LEADERBOARD. Mean top-10 overlap between the definitions is 7.0/10, which follows directly
+#    from reliability 0.68: about three leaderboard slots per month were being decided by noise.
+#    The wider sample does not scramble the leaderboard, it stops the old one scrambling itself.
+#
+# COST: measured prevalence falls ~1.5pp (ecosystem mean 12.72% -> 11.26%). That is a
+# recalibration of the same quantity, not a decline in bot activity. Figures are comparable
+# WITHIN a series, never across -- which is why this ships as v1.2.0 with v1.1.0 preserved.
+#
+# LIMIT: reliability is a property of the sampling, not of ground truth. These checks show the
+# widened metric is more self-consistent; they do NOT prove it better predicts real bot activity.
+# The n=684 label set is account-level and cannot settle a subreddit-level question.
+#
+# COMMENTERS_PER_POST=10 is the current storage depth; raising collection depth later would let
+# this rise with no other change here.
+TOP_POSTS_PER_CELL = 100
+COMMENTERS_PER_POST = 10
 # Minimum SCORED accounts before a (sub, month, role) cell gets a published prevalence figure.
 # Matches v3_stage7_monthly_score.py's MIN_ACCOUNTS_PER_SUB_MONTH -- that floor existed there but
-# was never applied here, the path that actually feeds the dashboard. Found 2026-09-01: 19 of
-# 1,120 published subreddit-months sat below it and 3 below n=3. IndiaTrending 2026-03 published
-# a figure derived from ONE scored account (22 influencers, 4.5% coverage), so it read 100% in one
-# vintage and 0% in the next -- a coin flip rendered as a severity band. Cells below the floor are
-# now suppressed to NaN (stage9 drops NaN rows) rather than published as if they were measurements.
-MIN_SCORED_PER_CELL = 5
+# was never applied here, the path that actually feeds the dashboard. Found 2026-09-01:
+# IndiaTrending 2026-03 published a figure derived from ONE scored account (22 influencers, 4.5%
+# coverage), so it read 100% in one vintage and 0% in the next -- a coin flip rendered as a
+# severity band. Cells below the floor are suppressed to NaN (stage9 drops NaN rows).
+#
+# Raised 5 -> 15 in v1.2.0, and only because the sample was widened first. Under v1.1's top-30
+# sampling the poster cell was structurally capped at 30 (median 19 scored, p10 of 10), so a floor
+# of 15 would have blanked 28.8% of poster cells -- deleting a third of a headline metric to remove
+# a handful of degenerate ones. Widening lifts the poster p10 to 42, so 15 now costs ~2%. The floor
+# and the sampling width are coupled: never raise one without re-checking the other.
+MIN_SCORED_PER_CELL = 15
 
 # Frozen-vintage scoring, 2026-09-01. Measured against the 2026-08-22 refresh: re-running this
 # script restated 94.5% of the 1,076 published subreddit-months (mean |delta| 1.74pp, max 18.18pp)

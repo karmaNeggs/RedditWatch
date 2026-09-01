@@ -1,23 +1,23 @@
 {
-  "baseline_version": "1.1.0",
+  "baseline_version": "1.2.0",
   "baseline_window": "2024-08..2026-08",
-  "n_subreddit_months": 1111,
+  "n_subreddit_months": 1105,
   "method": "P50/P80/P95 of the pct_high_risk distribution over the baseline window, computed once and frozen. Not recomputed per refresh.",
   "bands_by_role": {
     "combined": {
-      "moderate": 12.23,
-      "high": 17.21,
-      "critical": 22.15
+      "moderate": 10.66,
+      "high": 14.63,
+      "critical": 18.22
     },
     "poster": {
-      "moderate": 18.52,
-      "high": 34.48,
-      "critical": 54.55
+      "moderate": 18.75,
+      "high": 31.44,
+      "critical": 50.59
     },
     "commenter": {
-      "moderate": 11.68,
-      "high": 16.67,
-      "critical": 22.12
+      "moderate": 10.43,
+      "high": 14.37,
+      "critical": 18.07
     }
   }
 }

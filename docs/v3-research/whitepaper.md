@@ -336,7 +336,7 @@ accounts. Below that floor, several features are too noisy to trust; those accou
 scoring entirely, not assigned a default score. Model artifact: `output/v3/final_bot_model.json`. Full
 population scores: `output/v3/final_bot_scores.parquet`.
 
-## 8. Subreddit-level prevalence: the top-30-post methodology
+## 8. Subreddit-level prevalence: the top-post methodology
 
 *In short: the account-level model (§4–6) scores one account at a time. This section is about turning
 that into a subreddit-level number — how do you go from "here's one account's risk score" to "how bad
@@ -347,31 +347,58 @@ Rather than "share of a month's total activity" (dominated by whichever way the 
 commenters leans), prevalence is measured through **influence over each subreddit's best-performing
 content** — the accounts Reddit's own ranking already surfaced as consequential that month:
 
-1. Take each subreddit-month's **top 30 posts by karma**.
-2. Pull the **poster**, the **top-5 highest-scoring commenters**, and the **top-5 most recent
-   commenters** — deduplicated into one "influencer set" per subreddit-month.
+1. Take each subreddit-month's **top 100 posts by karma** (the collector's `role='top'` set; its
+   separately-tagged ~20-post counter-sample, drawn from below the top 100 as a control group, is
+   excluded).
+2. Pull the **poster**, the **10 highest-scoring commenters**, and the **10 most recent commenters**
+   on each — deduplicated into one "influencer set" per subreddit-month.
 3. Score every influencer with the model above (§6), among those meeting the activity floor (§7).
 4. Report the **% of scored influencers landing ≥0.7 predicted-removal probability** ("high-risk") per
    subreddit-month, alongside the mean score and coverage (% of the influencer set that could be scored
    at all).
 
-Cells with **fewer than 5 scored accounts** are suppressed rather than published — below that the
+Cells with **fewer than 15 scored accounts** are suppressed rather than published — below that the
 ratio is noise, not a measurement (one cell previously published a figure derived from a single
 account, reading 100% in one release and 0% in the next).
+
+**Sampling widened in v1.2.0 (2026-09-01), and why it is not a change of subject.** v1.0/v1.1 used the
+top 30 posts and 5+5 commenters — a fraction of what the collector already stored, at no saving, since
+the wider data was on disk. Three checks were run before adopting the change. (1) *Same population:*
+poster high-risk rate is flat across post rank (22.62% / 22.99% / 22.56% for ranks 1–30 / 31–60 /
+61–100), so the added posts carry the same risk as the elite slice. (2) *Better instrument:*
+split-half reliability rose **0.68 → 0.81** and month-to-month persistence **0.73 → 0.85** — at the old
+sampling roughly a third of the variance in a published figure was measurement noise, and persistence
+is independent confirmation since noise cannot persist month over month. (3) *Leaderboard:* mean top-10
+overlap between the definitions is 7.0/10, which is what reliability 0.68 predicts — about three
+leaderboard slots per month were being decided by noise. The minimum-n floor moved 5→15 in the same
+release, and only because widening lifted the poster 10th percentile from 16 to 42; at the old sampling
+a floor of 15 would have blanked 28.8% of poster cells. **The floor and the sampling width are
+coupled.**
+
+The cost is a level shift: ecosystem mean prevalence falls ~1.5pp (12.72% → 11.26%). That is a
+recalibration of the same quantity, not a decline in bot activity — figures are comparable *within* a
+series, never across. One limit worth stating plainly: reliability is a property of the sampling, not
+of ground truth. These checks show the widened metric is more self-consistent; they do **not** prove it
+better predicts real bot activity. The n=684 label set is account-level and cannot settle a
+subreddit-level question.
 
 Full 25-month history (2024-08→2026-08). 1,120 subreddit-month rows, 45 subreddits. Data:
 `output/v3/subreddit_bot_prevalence_mom.csv`. Severity bands (Low/Moderate/High/Critical) are
 percentiles (P50/P80/P95) of the prevalence distribution over a **declared baseline window**, computed
 once and frozen in `output/v3/severity_baseline.json` — not recalculated at every refresh (§8b).
 
-**Posters and commenters are reported separately, not just pooled.** A direct check (2026-08-22, full
-24-month corpus) found they carry meaningfully different risk: **posters of top-30 content average
-~20% high-risk vs. commenters' ~12%**, consistently in every one of the 24 months — the opposite of the
-intuitive read that top posters skew toward established/organic contributors. The likely mechanism:
-reaching "top-30-by-karma" doesn't require being a well-liked regular — repeat karma-farming/repost
-accounts chase exactly this spot, and that cross-subreddit, high-volume, opportunistic posting pattern
-is precisely what the account-level model's features (activity rate, tier-climbing, thin history) are
-built to catch. Genuine moderator announcements mostly don't even appear here — pinned/informational
+**Posters and commenters are reported separately, not just pooled.** They carry meaningfully
+different risk: **posters average ~22.6% high-risk vs. commenters' ~14%**, consistently in every
+month — the opposite of the intuitive read that top posters skew toward established/organic
+contributors. That cross-subreddit, high-volume, opportunistic posting pattern is precisely what the
+account-level model's features (activity rate, tier-climbing, thin history) are built to catch.
+
+**A previously recorded explanation for this gap has been checked and withdrawn.** The 2026-08-22
+write-up attributed it to the *eliteness* of the top-30 slice — that reaching "top-30-by-karma"
+specifically is what repeat karma-farming accounts chase. Measured directly against the corpus
+(2026-09-01), poster high-risk rate is **flat across post rank**: 22.62% at ranks 1–30, 22.99% at
+31–60, 22.56% at 61–100. The poster/commenter gap is real and replicates; the top-30-specific
+mechanism does not. Whatever drives it operates across the whole top-100, not at the very top. Genuine moderator announcements mostly don't even appear here — pinned/informational
 posts rarely rank top-30 *by karma*, so "top poster" and "mod" overlap less than intuition suggests.
 A separate check for volume-driven skew (the concern that periods of elevated overall activity might
 shift who clears the top-30 cutoff) found no effect: correlation between a subreddit-month's influencer
