@@ -25,7 +25,7 @@ INDEX = ROOT / 'docs/index.html'
 BASELINE = ROOT / 'output/v3/severity_baseline.json'
 # Bump ONLY for a deliberate methodology change. A bump starts a new vintage directory and
 # leaves the previous series in place; it never edits already-published month files.
-SERIES_VERSION = '1.1.0'
+SERIES_VERSION = '1.2.0'
 VINTAGE_DIR = DATA_DIR / f'v{SERIES_VERSION}'
 
 
@@ -91,7 +91,7 @@ def load_or_freeze_bands(df, roles):
         bands_by_role[role] = severity_bands(dist)
     months = sorted(df['month'].unique())
     payload = {
-        'baseline_version': '1.1.0',
+        'baseline_version': SERIES_VERSION,
         'baseline_window': f'{months[0]}..{months[-1]}',
         'n_subreddit_months': int(len(df)),
         'method': 'P50/P80/P95 of the pct_high_risk distribution over the baseline window, '
@@ -99,7 +99,7 @@ def load_or_freeze_bands(df, roles):
         'bands_by_role': bands_by_role,
     }
     BASELINE.write_text(json.dumps(payload, indent=2))
-    print(f"Froze severity baseline 1.1.0 from {payload['baseline_window']} "
+    print(f"Froze severity baseline {SERIES_VERSION} from {payload['baseline_window']} "
           f"(n={payload['n_subreddit_months']}) -> {BASELINE.relative_to(ROOT)}")
     return bands_by_role, payload
 

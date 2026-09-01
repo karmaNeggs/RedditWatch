@@ -87,33 +87,41 @@ method). Short version:
   manually-verified high/mid/low tier bad-rates of 85%/25%/2.5% on the largest check (n=120). Full
   analysis (target/feature comparison, feature-count elimination curve, importances, ROC,
   confirmed-rate-by-bucket): `docs/v3-research/charts/model_analysis.html`.
-- **Subreddit prevalence** measures influence over each subreddit's **top-30-posts-by-karma** monthly
-  (poster + top-5-by-score and top-5-latest commenters, deduplicated, scored, % landing ≥0.7) — not
-  share of total monthly activity. Unchanged in v1.1. Full 25-month history (2024-08→2026-08).
-- **🔭 Open proposal, deliberately NOT in v1.1 — widen the sample.** The collector already stores 100
-  top-by-score posts per sub-month and up to 10 top + 10 first commenters per post; the pipeline reads
-  only 30 posts and 5+5 commenters, i.e. a fraction of what is already on disk. Raising it costs **no
-  new collection** and would take median unique posters 25→73 (p10 16→42) and commenters 128→966,
-  which would make the small-n problem disappear rather than be managed. But it changes what the
-  metric MEANS — influence over a sub's top ~100 posts, not its top 30 — and measured prevalence falls
-  ~1.5pp (12.72%→11.26%), because the elite-30 slice runs hotter: karma-farmers chase exactly the top
-  spot. Spearman between the two definitions is 0.867. **That is a new metric, not a refresh** — if
-  adopted it must ship as its own SERIES_VERSION with both series published, never folded into a
-  routine monthly run.
-  `output/v3/subreddit_bot_prevalence_mom.csv`.
+- **Subreddit prevalence** measures influence over each subreddit's **top-100-posts-by-karma** monthly
+  (poster + 10-by-score and 10-latest commenters, deduplicated, scored, % landing ≥0.7) — not share of
+  total monthly activity. Widened in **v1.2.0**, see below. Full 25-month history (2024-08→2026-08).
+- **✅ Sampling widened, adopted in v1.2.0 (2026-09-01).** v1.0/v1.1 read 30 posts and 5+5 commenters
+  per sub-month; the collector already stored 100 top-by-score posts (plus a separately tagged ~20-post
+  counter-sample, excluded via `role='top'`) and up to 10 top + 10 most-recent commenters per post. The
+  pipeline was reading a fraction of what was on disk, at **zero collection cost**. Adopted on evidence,
+  three checks agreeing:
+  1. **Same population.** Poster high-risk rate is flat across post rank — 22.62% (ranks 1–30), 22.99%
+     (31–60), 22.56% (61–100). ⚠️ **This REFUTES the 2026-08-22 claim recorded in this file and the
+     whitepaper** that the elite top-30 slice "runs hotter" because karma-farmers chase the top spot.
+     The poster-vs-commenter gap is real and replicates (22.6% vs ~14%); the *top-30-specific mechanism*
+     does not — whatever drives it operates across the whole top-100. Claim withdrawn, not softened.
+  2. **Better instrument.** Split-half reliability **0.68 → 0.81**, month-to-month persistence
+     **0.73 → 0.85**. At the old sampling ~a third of the variance in a published subreddit-month was
+     measurement noise. Persistence is independent confirmation: noise cannot persist month over month.
+  3. **Leaderboard.** Mean top-10 overlap between definitions 7.0/10 — exactly what reliability 0.68
+     predicts. ~3 leaderboard slots per month were being decided by noise.
+  **Cost:** ecosystem mean falls ~1.5pp (12.72%→11.26%) — a recalibration, not a decline. Shipped as
+  its own series with v1.1.0 preserved; figures compare **within** a series, never across.
+  **Limit, stated plainly:** reliability is a property of the sampling, not of ground truth. These
+  checks show the metric is more self-consistent; they do not prove it better predicts real bot
+  activity. The n=684 label set is account-level and cannot settle a subreddit-level question.
 - **Minimum-n floor, added 2026-09-01 (was a real reporting gap).** `build_subreddit_prevalence`
   applied **no** minimum-scored-accounts floor, unlike `v3_stage7_monthly_score.py:82`'s
   `MIN_ACCOUNTS_PER_SUB_MONTH = 15` — so `IndiaTrending 2026-03` published a figure derived from
   **one** scored account (22 influencers, 4.5% coverage), reading 100% in one vintage and 0% in the
-  next. Now `MIN_SCORED_PER_CELL = 5`; cells below it report their counts but withhold the rate
-  (37 of 3,360 role-cells, 1.1%).
-  **Why 5 and not stage7's 15:** at v1.1's top-30 sampling the poster cell is structurally capped at
-  30 (median 19 scored, p10 of 10), so a floor of 15 would blank **28.8% of poster cells** — it would
-  delete a third of one of the three headline metrics to remove a handful of degenerate ones. 5
-  removes exactly the pathological cases (the n=1 cell above) and little else. A floor of 15 only
-  becomes reasonable alongside the widening proposal above, which lifts the poster p10 to 42. **If
-  the widening is adopted, revisit this floor at the same time** — the two are coupled, and a floor
-  that removes a third of the data is a sign the sample is too small, not that the floor is too high.
+  next. Now `MIN_SCORED_PER_CELL = 15` (was 5 in v1.1); cells below it report their counts but
+  withhold the rate (60 of 3,360 role-cells, 1.8%).
+  **Why it was 5 in v1.1 and is 15 now:** under v1.1's top-30 sampling the poster cell was
+  structurally capped at 30 (median 19 scored, p10 of 10), so a floor of 15 would have blanked **28.8%
+  of poster cells** — deleting a third of a headline metric to remove a handful of degenerate ones.
+  v1.2.0's widening lifts the poster p10 to 42, so 15 now costs ~2%. **The floor and the sampling
+  width are coupled: never raise one without re-checking the other.** A floor that removes a third of
+  your data is a sign the sample is too small, not that the floor is too high.
 - **Dashboard:** `docs/bot-spam-compass.html` — the project's primary bot/spam artifact, data embedded
   at build time (works from file://, a local server, or GitHub Pages alike, no external fetch).
   **Monthly refresh is one command:** `python3 scripts/v3_stage8_monthly_refresh.py` — loads the
