@@ -1,239 +1,138 @@
-# RedditWatch 1.0
+# RedditWatch
 
 A bot/spam-influence tracker for 45 India-focused subreddits. Scores the accounts behind each subreddit's best-performing content each month against an account-removal model trained and cross-validated on **684 real, live-checked Reddit accounts** (banned / deleted / still active — not a proxy label), and publishes results as a static GitHub Pages dashboard.
 
 **Live site:** https://karmaneggs.github.io/RedditWatch/ · **Dashboard:** [`docs/bot-spam-compass.html`](docs/bot-spam-compass.html) · **Methodology:** [`docs/methodology.html`](docs/methodology.html) · **Whitepaper:** [`docs/v3-research/whitepaper.html`](docs/v3-research/whitepaper.html)
 
-10 deduplicated features (down from ~67 candidates), tuned XGBoost, repeated 5×10-fold CV AUC 0.793 ± 0.054 (re-validated 2026-09-01 on the 25-month corpus; imputed within-fold). Subreddit-level prevalence reports posters, commenters, and combined as three separate metrics (checked directly: they carry meaningfully different risk, not assumed), measured over each subreddit's top-100 posts by karma and the top/latest 10 commenters on each. Full 25-month history (2024-08→2026-08), published as **append-only vintages** under `docs/data_v3/v{series}/` — current series **v1.2.0**, with v1.1.0 and v1.0.0 preserved verbatim. Monthly refresh is `python3 scripts/v3_stage8_monthly_refresh.py`: it loads a **pinned** model and appends the new month without rewriting published ones. Retraining requires an explicit `--retrain`; a methodology change bumps the series version and publishes a new vintage beside the old rather than restating history. Figures are comparable within a series, never across. Full methodology, every number, and honest limitations: [`docs/v3-research/whitepaper.md`](docs/v3-research/whitepaper.md). **Start at `V3_PLAN.md` → the "🚦 START HERE" block** for exactly where things stand and what's next.
-
-> **V1 and V2 are archived, not deleted.** They're retained below for provenance and because their underlying pipelines (`scripts/collect_data_v2.py` etc.) still exist and technically still run — but neither is the live methodology, and the site no longer links to V2's report page. V1's 4-component pipeline (`data/`, `output/*.json`, `docs/data/`) lives in `archive/v1/`. V2 (comment-ring detection, calibrated logistic-regression weights, plateaued at ROC-AUC 0.663 — an account-level ceiling per the literature) is documented in the rest of this file as a historical record of how the project got here. Don't extend either without checking `V3_PLAN.md` first.
+**Current series `v1.2.0` · pinned model `1.1.0` · 45 subreddits · 25 months (2024-08 → 2026-08)**
 
 ---
 
-## How it works
+## Running it
 
-Each month, run:
+The project is complete. Ongoing work is **one incremental run per month**, then publish.
 
-```bash
-bash run_monthly.sh --v2                    # previous calendar month
-bash run_monthly.sh --v2 --month 2026-07    # specific month
-bash run_monthly.sh --v2 --year             # full rolling-year backfill (long-running)
-```
-
-Four steps run automatically:
-
-| Step | Script | Output |
-|------|--------|--------|
-| 1 | `collect_data_v2.py` | `data/v2/posts_YYYY-MM.csv` + `data/v2/commenters_YYYY-MM.csv` |
-| 2 | `score_accounts.py` | `output/v2/account_risk_scores.csv` — refreshes the account-risk model against whatever's in the corpus *now*, including any new accounts this month's collection just brought in |
-| 3 | `analyze_data_v2.py` | `output/v2/analysis_YYYY-MM_<timestamp>.json` + `analysis_latest.json` |
-| 4 | `generate_site.py --v2` | `docs/data_v2/YYYY-MM.json` + `history.json` + `findings.json` |
-
-Step 2 is required every run, not optional — `analyze_data_v2.py`'s scoring does
-an inner join against `account_risk_scores.csv`; if it's stale relative to the
-current corpus, new accounts silently vanish from that month's score instead
-of being counted. It reuses the already-fit coefficients (no live API calls,
-seconds to run) — it isn't a refit, just a rescale of the current population.
-
-Then push to publish:
+👉 **[`RUNBOOK.md`](RUNBOOK.md) is the operational procedure.** Start there — it has the five
+commands, what a correct run looks like, and the rules that keep published numbers stable.
 
 ```bash
-git add docs/data_v2/ data/v2/ output/v2/ reports/findings.json logs/
-git commit -m "Add YYYY-MM V2 report"
-git push
+python3 scripts/v3_tracker_freshness.py                          # 0. per-sub health check
+python3 -u scripts/v3_collect.py --only-months YYYY-MM --workers 4   # 1. collect (~20 min)
+python3 scripts/v3_stage0_build.py                               # 2. rebuild corpus…
+python3 scripts/v3_account_features.py
+python3 scripts/v3_botmarker_composite.py                        #    …REQUIRED, see RUNBOOK
+python3 scripts/v3_feature_sanitise.py
+python3 scripts/v3_stage8_monthly_refresh.py                     # 3. score + publish
 ```
 
-To re-score existing data without a fresh Reddit pull:
-
-```bash
-bash run_monthly.sh --v2 --skip-collect
-```
-
-There is currently **no automated schedule** — every run above is manual/on-demand. See "Next steps" in project notes for setting up a recurring monthly job.
+Run a few days *after* the month ends — top-post karma needs time to settle, or the month's final
+days are under-sampled.
 
 ---
 
-## Scoring system
+## What it measures
 
-`final_score` = the % of a (subreddit, month)'s posting/commenting activity
-coming from accounts in **that month's own top risk-decile**, per a
-validated model — not a blend of hand-weighted heuristic components (that
-approach was tried, tested against real evidence, and replaced; see below).
+Prevalence is **influence over each subreddit's best-performing content**, not share of total
+activity. Per subreddit-month: take the **top 100 posts by karma**, pull each post's author plus its
+**10 highest-scoring and 10 most-recent commenters**, deduplicate into one influencer set, score
+every member, and report the **% landing ≥0.7 predicted-removal probability**.
 
-**The model**: ~10 account-level features (account age, log-transformed
-karma/day, log-transformed link-karma ratio, comment velocity, ring-timing
-signals, etc.) → one `LogisticRegression` → a 0–100 risk score per account.
-Fit against the one real label this project has — whether a random sample of
-accounts is currently suspended/gone from Reddit, a weak but real proxy for
-"bad account." Current cross-val AUC ≈ 0.66 (0.5 = coin flip) — a real,
-modest signal, not a confident classifier; treat every score as directional,
-not a verdict. Exact current coefficients, AUC, and a genuine forward-looking
-backtest (does an early reading predict later attrition, not just describe
-concurrent decline?) are on the live **Methodology** page — that page reads
-`reports/findings.json` directly, so it never goes stale the way a hardcoded
-number in this README would.
+Posters, commenters, and combined are reported as three separate metrics — checked directly, they
+carry meaningfully different risk (posters ~22.6% high-risk vs commenters ~14%), so each gets its own
+severity bands. Cells with fewer than 15 scored accounts are suppressed rather than published.
 
-**"High risk"** is computed fresh each month — the top decile of *that
-month's own active accounts*, not a fixed all-time population cutoff. An
-earlier version used a fixed global threshold and it produced a near-
-monotonic 13-month score climb driven almost entirely by the active
-population trending younger over time, not by any real change in relative
-risk (confirmed: the climb hit all 25 subreddits in lockstep regardless of
-topic, and the underlying population's median account age genuinely fell
-over the same window). Month-relative thresholding fixed that.
+**The model:** 10 deduplicated features (from ~67 candidates), tuned XGBoost, repeated 5×10-fold CV
+**AUC 0.793 ± 0.054**. Trained on real live-checked account status, not a proxy. Full validation:
+[`docs/v3-research/charts/model_analysis.html`](docs/v3-research/charts/model_analysis.html).
 
-**Severity bands** (Low/Moderate/High/Critical) are percentiles of the
-actual observed score distribution across every (subreddit, month) scored so
-far — recalibrated by `score_accounts.py` on every run, not fixed cutoffs.
-Current values are on the **Report** page's "how to read this" box.
+---
 
-Six legacy heuristic components (account/ring/engagement/temporal/
-distribution/network — what `final_score` used to be, hand-weighted) are
-still computed and published, but purely as descriptive context, not inputs
-— they were never individually validated against real evidence. See the
-Report page's "Descriptive signals" section for the honest distinction.
+## How published numbers stay stable
 
-`overlap_rate` and `avg_comment_depth` were measured and dropped after
-testing showed them either organic (not a bot signal) or genuinely inert
-(zero effect on the fitted model) — see `scripts/anomaly_detection.py`'s
-`FEATURE_COLS` comment for the full history of what's been tried and why
-each change was made or rejected.
+Until v1.1 every monthly refresh silently rewrote the whole published history — one ordinary run
+changed **94.5% of 1,076 published subreddit-months** and flipped **24.6% of severity labels**. Four
+causes were found and fixed (unconditional retraining, a train/serve imputation skew, an unpinned
+random seed, and untiebroken ranking that made runs irreproducible from identical data).
 
-### Refitting the model
+Three rules now hold, enforced in code:
 
-`scripts/scale_weak_labels.py` does the actual fit (live Reddit API calls to
-check account status — checkpointed/resumable, since a large sample takes
-hours; re-run the same command to continue). Run this far less often than
-monthly — it's a real time investment, not a routine step:
+- **The model is pinned.** The monthly path loads `output/v3/final_bot_model_meta.json` and refuses
+  to retrain implicitly. Retraining needs an explicit `--retrain` and a version bump.
+- **Severity bands are frozen** to a declared window in `output/v3/severity_baseline.json`. Bands
+  re-derived per refresh are self-normalizing — 50/20/5% of months land in each band *by
+  construction* — so a genuine ecosystem-wide rise would be invisible.
+- **Publishing is append-only.** `docs/data_v3/v{series}/` is never rewritten. A methodology change
+  bumps `SERIES_VERSION` and publishes a **new vintage beside the old**.
 
-```bash
-python3 scripts/scale_weak_labels.py --n 8000              # first call starts, re-run to resume/continue
-python3 scripts/scale_weak_labels.py --refit-only           # refit on already-collected labels + current FEATURE_COLS, no API calls — use this when testing feature changes
-python3 scripts/backtest_predictive.py                      # refresh the early/late predictive-validity check
-python3 scripts/score_accounts.py                           # apply the refit coefficients to the current population
+**Figures are comparable within a series, never across.** v1.0.0, v1.1.0 and v1.2.0 all differ in
+level — never plot them on one axis.
+
+| series | what changed |
+|---|---|
+| `v1.0.0` | the originally published series |
+| `v1.1.0` | full August; model pinned, medians persisted, seed and ranking made deterministic |
+| `v1.2.0` | sampling widened to top-100 posts + 10/10 commenters; min-n floor 5 → 15 |
+
+---
+
+## Layout
+
 ```
+RUNBOOK.md     the monthly procedure — start here
+V3_PLAN.md     design record and rationale (see the "🚦 START HERE" block)
+scripts/       the 10 scripts the monthly run uses, and nothing else
+data/v3/       raw collection + DuckDB corpus
+output/v3/     pinned model + metadata, frozen baseline, prevalence table
+docs/          the published site; data_v3/v*/ are the append-only vintages
+archive/       v1, v2, and the one-time v3 research — retained, not run
+```
+
+**On the naming:** the project went V1 → V2 → V3 → **v1.0**. "V3" is not a superseded branch — the
+V3 plan is what *produced* the current product, which is why the live pipeline scripts are named
+`v3_*`. `archive/v3-research/` holds only the one-time analysis that led to the model, not the model
+itself.
+
+**`archive/` is retained for provenance, not deleted.** V1's 4-component pipeline and V2
+(comment-ring detection, calibrated logistic regression, plateaued at ROC-AUC 0.663) both still
+exist there and technically still run, but neither is the live methodology and the site links to
+neither. Don't extend either without reading `V3_PLAN.md` first.
 
 ---
 
 ## Setup
 
-### Requirements
-
-- Python 3.8+
-- Reddit OAuth app credentials ([create one here](https://www.reddit.com/prefs/apps) — choose "script" type)
-
-### Install
-
 ```bash
 pip install -r requirements.txt
-cp .env.example .env   # then fill in your Reddit credentials
+cp .env.example .env    # Reddit OAuth creds, only needed for the Tier-2 fallback path
 ```
 
-### `.env` format
+Collection uses the [Arctic Shift](https://arctic-shift.photon-reddit.com) API and needs no
+credentials. `scripts/reddit_auth.py` (live Reddit OAuth) is the Tier-2 fallback for subreddit-months
+Arctic Shift hasn't indexed — `v3_tracker_freshness.py` decides which subs need it.
 
-```
-REDDIT_CLIENT_ID=your_client_id
-REDDIT_CLIENT_SECRET=your_client_secret
-REDDIT_USER_AGENT=BotWatch/1.0 by YourUsername
-GITHUB_PAT=your_pat_if_needed
-```
-
-### Subreddits tracked
-
-Edit `subreddits.txt` — one subreddit name per line, lines starting with `#` are ignored. Currently tracking 25 Indian subreddits including r/india, r/indiaspeaks, r/IndiaCricket, r/BollyBlindsNGossip, r/IndianStockMarket, r/JEENEETards, and others.
-
----
-
-## Output
-
-### Per-month data (`data/v2/`)
-
-- `posts_YYYY-MM.csv` — up to 40 top posts per subreddit per month (plus a
-  ~20-post random supplement from `/new.json` for months collected after the
-  survivorship-bias fix, tagged `sample_type` — calibration-only, never part
-  of the reported score), with author account signals (karma, age, verified
-  email)
-- `commenters_YYYY-MM.csv` — comment rows for the top-10-scoring posts per (sub, month), tagged `in_top10` / `in_first5` for ring detection
-
-### Monthly analysis JSON (`docs/data_v2/YYYY-MM.json`)
-
-Per-subreddit `final_score` (the validated account-risk rollup) plus the six
-legacy components as diagnostic detail, plus a `narrative` block (headline,
-toppers/movers, curated findings) — written by `generate_site.py` from
-`output/v2/analysis_latest.json`.
-
-### History (`docs/data_v2/history.json`)
-
-Tracks all months with per-subreddit severity labels and aggregate stats. Used by the trend chart.
-
-### Findings (`docs/data_v2/findings.json`)
-
-Copy of `reports/findings.json` — model coefficients, AUC, severity bands, and the predictive backtest, published for the Methodology page.
-
----
-
-## Dashboard (GitHub Pages)
-
-The `docs/` folder is served as a static site — `index.html` is the root
-page GitHub Pages serves at https://karmaneggs.github.io/RedditWatch/. Both
-pages read live data from `docs/data_v2/` at load time; neither hardcodes a
-number that can go stale.
-
-- **`index.html`** ("Report") — headline banner (biggest single move this
-  month), full ranked leaderboard (all 25 subs, severity-colored, per-row
-  sparkline), a subreddit-drill-down trend view, toppers/movers, curated
-  findings, validated composite trends, the legacy components as clearly-
-  labeled descriptive context, and a glossary
-- **`methodology.html`** — the model's actual coefficients (chart), current
-  AUC, the early/late predictive backtest, severity-band derivation, and an
-  explicit "what's validated vs. what's descriptive" explanation
-
-The earlier dashboard (`index.html`/`insights.html` built for the old
-weighted-component scoring system) has been removed — still in git history
-if needed, but no longer published.
-
-View locally:
+To preview the site locally:
 
 ```bash
-python3 -m http.server 8080 --directory docs/
-# open http://localhost:8080
+python3 -m http.server 8080 --directory docs   # then open http://localhost:8080
 ```
 
----
-
-## Full-corpus statistical report
-
-Run this on a slower cadence than the monthly collection — quarterly is
-reasonable, since it re-derives its own diagnostics from the *entire*
-history and would otherwise chase single-month noise.
-
-```bash
-python3 scripts/analysis.py                        # all months in data/v2/
-python3 scripts/analysis.py --months 2026-04 2026-05
-```
-
-Produces `reports/analysis_<timestamp>.pdf` (+ `analysis_latest.pdf`)
-covering data quality, signal distributions/correlations, text intelligence
-(near-dupes, cross-sub keyword spread), cross-sub network analysis (account
-overlap, churn, Gini concentration), and an event calendar overlay. **Note:**
-this script still writes `calibrated_weights`/`pca_weights` keys into
-`reports/findings.json` from an earlier scoring approach — `analyze_data_v2.py`
-no longer reads them for anything; the model's real coefficients live in
-`account_model` (written by `score_accounts.py`/`scale_weak_labels.py`,
-[see Scoring system](#scoring-system)). Harmless to run, just a vestigial
-output worth knowing isn't load-bearing anymore.
+The dashboard embeds its data at build time, so `docs/bot-spam-compass.html` also opens directly
+from `file://` with no server.
 
 ---
 
-## Notes
+## Known limitations
 
-- Year-mode collection (`--year`) fetches up to 1,000 posts/subreddit and every commenter profile it encounters — expect several hours for a full 25-sub backfill; it checkpoints and resumes on interruption
-- With `--skip-collect`, `run_monthly.sh` (collect skipped + rescore + site) takes well under a minute
-- `scale_weak_labels.py` (the model refit) is checkpointed the same way — a
-  large `--n` can take hours of live API calls; re-running the identical
-  command resumes from where it left off rather than restarting
-- All credentials are gitignored via `.env`
+- **History still moves underneath a series.** `account_features` aggregates each account's whole
+  corpus history, so adding a month changes scores for already-published months. Append-only
+  publishing contains the symptom, not the cause — and it means a published 2024-09 figure uses
+  behavior observed through 2026-08 (look-ahead bias). Fix is point-in-time features. Not done.
+- **Reliability is not validity.** v1.2.0's sampling is more self-consistent (split-half 0.81,
+  month-to-month persistence 0.85), but that does not prove it better predicts real bot activity.
+  The n=684 label set is account-level and cannot settle a subreddit-level question.
+- **The model doesn't establish coordination** between accounts, only individual removal risk.
+- **Scores are directional, not verdicts.** AUC 0.793 is a real signal, not a confident classifier.
 
 ---
 
-**Last updated:** July 2026 · **Subreddits tracked:** 25 · **Pipeline:** V2
+**Last updated:** September 2026 · **Subreddits tracked:** 45 · **Series:** v1.2.0

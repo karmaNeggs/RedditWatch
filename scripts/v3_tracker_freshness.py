@@ -7,7 +7,10 @@ import csv, json, time, datetime as dt
 import urllib.request, urllib.parse, urllib.error
 
 B = 'https://arctic-shift.photon-reddit.com/api'
-SP = '/private/tmp/claude-501/-Users-anupamvashist-Documents-Project-writeups-Analysis-Report--reddit-bot-analysis/e3d807eb-e38c-4468-a2f9-f863e737a2ad/scratchpad/'
+# Output dir. Was a hardcoded absolute path into a long-dead session scratchpad, which made this
+# script unrunnable -- fixed 2026-09-01 to write beside the repo's other outputs.
+import os
+SP = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'output', 'v3') + os.sep
 
 def get(url, retries=3):
     for a in range(retries):
