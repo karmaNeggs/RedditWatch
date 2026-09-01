@@ -1,0 +1,41 @@
+{
+  "model_version": "1.1.0",
+  "n_train": 684,
+  "n_positive": 233,
+  "feature_cols": [
+    "mean_body_len",
+    "n_high_tier",
+    "n_medium_tier",
+    "comments_per_day_observed",
+    "sample_score_per_day_observed",
+    "n_own_posts_with_comments",
+    "n_subs_rejected_but_returned",
+    "worst_sub_mean_score",
+    "removal_rate_pctl",
+    "thin_history_score"
+  ],
+  "impute_medians": {
+    "mean_body_len": 89.29166666666666,
+    "n_high_tier": 2.0,
+    "n_medium_tier": 3.0,
+    "comments_per_day_observed": 0.07736427082252725,
+    "sample_score_per_day_observed": 3.2145475543850948,
+    "n_own_posts_with_comments": 0.0,
+    "n_subs_rejected_but_returned": 0.0,
+    "worst_sub_mean_score": 4.0,
+    "removal_rate_pctl": 0.0,
+    "thin_history_score": 4.393630665193517
+  },
+  "best_cfg": {
+    "max_depth": 5,
+    "n_estimators": 150,
+    "learning_rate": 0.1,
+    "min_child_weight": 1,
+    "subsample": 0.9,
+    "colsample_bytree": 0.7,
+    "reg_lambda": 1,
+    "random_state": 42
+  },
+  "activity_floor": 10,
+  "high_risk_threshold": 0.7
+}
