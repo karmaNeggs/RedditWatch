@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""V3 full collection: 45 subs x 24 months (2024-08 -> 2026-07).
+"""Collection for RedditWatch: 45 India-focused subreddits, one cell per (sub, month).
+
+MONTHLY USE (the normal case -- see RUNBOOK.md):
+    python3 -u scripts/v3_collect.py --only-months YYYY-MM --workers 4
+The --start/--end defaults below describe the ORIGINAL 2024-08..2026-07 backfill and are
+not updated per month; always pass --only-months for a monthly run.
 
 Top-100-by-score posts + counter-sample (num_comments-matched, up to 20)
 per sub-month; full comment-thread scan per post (compute-then-discard);

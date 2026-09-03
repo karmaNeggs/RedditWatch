@@ -2,7 +2,7 @@
 """V3 tracker feasibility: which of the 45 subs have real, current data for
 the last 12 months, assuming an ongoing monthly collector? Per-month
 posts/comments, with explicit recency and continuity checks -- not just
-totals, since a dead sub and a healthy sub can have the same 24-month sum."""
+totals, since a dead sub and a healthy sub can have the same all-time sum."""
 import csv, json, time, datetime as dt
 import urllib.request, urllib.parse, urllib.error
 

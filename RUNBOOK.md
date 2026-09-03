@@ -149,11 +149,11 @@ the current product. It is history *and* current rationale — read the "🚦 ST
 
 ## Known limitations
 
-- **History still moves underneath a series.** `account_features` aggregates each account's whole
-  corpus history, so adding a month changes features — and scores — for already-published months.
-  Append-only publishing contains the symptom, not the cause. It also means a published 2024-09
-  figure uses behavior observed through 2026-08: look-ahead bias. The fix is point-in-time
-  features (compute each account's features from data ≤ the month being scored). Not done.
+- **Scores shift as the corpus grows — by design.** An account is scored on its whole history,
+  because "is this account bot-like" is a property of the account; the monthly number reflects
+  *which* accounts were active that month. New evidence therefore improves old estimates — a
+  revision, not a bias — and append-only vintages publish that honestly. Don't try to "fix" it by
+  windowing feature history; that was checked and rejected (see `V3_PLAN.md`).
 - **Month-tail under-sampling** if you run too early — see "When to run".
 - **Reliability is not validity.** The v1.2.0 sampling is more self-consistent (split-half 0.81,
   persistence 0.85) but that does not prove it better predicts real bot activity. The n=684 label

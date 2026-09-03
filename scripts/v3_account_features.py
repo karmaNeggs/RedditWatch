@@ -6,7 +6,7 @@ Important constraint found while building this: our corpus is a BIPARTITE
 SAMPLE (an account only appears when it's in a sampled post's first-10 or
 top-10-by-score), not a per-account census. Measured distribution:
 median 2 comments/account, 48% of the 347,886 accounts are singletons
-(exactly 1 comment in the whole 24-month corpus), only ~10% have >=10.
+(exactly 1 comment in the whole corpus), only ~10% have >=10.
 This directly explains -- and is explained by -- the plan's own account-vs-
 pair framing (Sec 1): most accounts simply don't carry enough individual
 signal for timing-family features, which is exactly why the pair layer

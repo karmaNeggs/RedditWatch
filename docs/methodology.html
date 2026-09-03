@@ -118,7 +118,7 @@
     <div class="stat-row">
       <div class="stat-tile"><div class="stat-label">Ground truth</div><div class="stat-value">684</div><div class="stat-note">accounts, live-checked on Reddit</div></div>
       <div class="stat-tile"><div class="stat-label">Features</div><div class="stat-value">10</div><div class="stat-note">down from ~67 candidates</div></div>
-      <div class="stat-tile"><div class="stat-label"><abbr title="Cross-validation: testing the model on data it never saw during training, several times over, to get an honest accuracy estimate.">CV</abbr> <abbr title="Area Under the ROC Curve — a 0.5-to-1.0 score for how well the model separates the two outcomes. 0.5 = random guessing, 1.0 = perfect.">ROC-AUC</abbr></div><div class="stat-value">0.780</div><div class="stat-note">± 0.035, repeated 5×10-fold</div></div>
+      <div class="stat-tile"><div class="stat-label"><abbr title="Cross-validation: testing the model on data it never saw during training, several times over, to get an honest accuracy estimate.">CV</abbr> <abbr title="Area Under the ROC Curve — a 0.5-to-1.0 score for how well the model separates the two outcomes. 0.5 = random guessing, 1.0 = perfect.">ROC-AUC</abbr></div><div class="stat-value">0.793</div><div class="stat-note">± 0.054, repeated 5×10-fold</div></div>
       <div class="stat-tile"><div class="stat-label">Population scored</div><div class="stat-value">38,146</div><div class="stat-note">accounts, ≥10 contributions</div></div>
     </div>
   </div>
@@ -160,6 +160,7 @@
       </div>
     </div>
     <p style="margin-top:12px">*0.801 was later found to be inflated by the wall-clock bug above; shown here only to make the timeline legible in the order the work actually happened.</p>
+    <p style="margin-top:8px">Every AUC in this timeline was measured on the 24-month corpus this elimination work ran against. The same deployed 10-feature model re-validates at <strong>0.793 ± 0.054</strong> on the current 25-month corpus — the headline figure above. The model did not change; the corpus it is measured on grew.</p>
   </div>
 
   <div class="section">
@@ -195,7 +196,7 @@
       <table>
         <thead><tr><th>check</th><th class="num">result</th></tr></thead>
         <tbody>
-          <tr><td><strong>Repeated CV AUC (headline)</strong></td><td class="num"><strong>0.780 ± 0.035</strong></td></tr>
+          <tr><td><strong>Repeated CV AUC (headline)</strong></td><td class="num"><strong>0.793 ± 0.054</strong></td></tr>
           <tr><td>Multifold-averaged out-of-fold AUC</td><td class="num">0.792</td></tr>
           <tr><td>Deleted-only vs. everyone else</td><td class="num">0.749</td></tr>
           <tr><td>Banned-only vs. everyone else</td><td class="num">0.645</td></tr>
@@ -222,17 +223,17 @@
     <div class="section-title">From account risk to subreddit prevalence</div>
     <p>The model above scores one account at a time. This section is about turning that into a subreddit-level number — "how much of r/example's visible content this month came from risky accounts?" Rather than looking at a subreddit's <em>entire</em> monthly activity (which is dominated by ordinary, low-visibility comments), the score focuses on <strong>influence over each subreddit's best-performing content</strong>: take each subreddit's top 100 posts that month by karma (Reddit's own upvote score), pull out the poster plus the 5 highest-scoring and 5 most recent commenters on each, run everyone through the model above, and report the % who land at a 0.7-or-higher predicted-removal probability — i.e., accounts the model considers clearly high-risk, not just leaning that way.</p>
     <h3>Posters and commenters carry different risk — checked directly, not assumed</h3>
-    <p>A direct check (2026-08-22, full 24-month corpus) found the two roles are not interchangeable, and reports them separately on the Compass dashboard rather than blending them into one number:</p>
+    <p>A direct check (full corpus) found the two roles are not interchangeable, and reports them separately on the Compass dashboard rather than blending them into one number:</p>
     <div class="compare-grid">
       <div class="compare-card poster">
         <div class="compare-label">Posters</div>
         <div class="compare-num">~20%</div>
-        <p style="margin:4px 0 0">average high-risk rate — consistently, every one of 24 months. Reaching the top by karma doesn't require being a well-liked regular; repeat karma-farming/repost accounts chase exactly this spot, and that cross-subreddit, high-volume pattern is what the model is built to catch.</p>
+        <p style="margin:4px 0 0">average high-risk rate — consistently, in every month of the corpus. Reaching the top by karma doesn't require being a well-liked regular; repeat karma-farming/repost accounts chase exactly this spot, and that cross-subreddit, high-volume pattern is what the model is built to catch.</p>
       </div>
       <div class="compare-card commenter">
         <div class="compare-label">Commenters</div>
         <div class="compare-num">~12%</div>
-        <p style="margin:4px 0 0">average high-risk rate on the same posts. Getting into the top-5-by-score or top-5-latest commenter slots is a much larger, more diverse population — casual, one-off high-scoring comments included.</p>
+        <p style="margin:4px 0 0">average high-risk rate on the same posts. Getting into the top-10-by-score or top-10-latest commenter slots is a much larger, more diverse population — casual, one-off high-scoring comments included.</p>
       </div>
     </div>
     <p style="margin-top:12px">A separate check for volume-driven skew (the worry that periods of elevated overall activity might shift who clears the top-30 cutoff) found no effect — correlation between influencer volume and prevalence rate is ~0.05 (noise). Full writeup: <a href="v3-research/whitepaper.html#8-subreddit-level-prevalence-the-top-post-methodology">whitepaper §8</a>.</p>
@@ -262,7 +263,7 @@
         <div><div class="gloss-term">Backward elimination</div><div class="gloss-def">A feature-trimming method: start with everything, repeatedly remove whichever single feature contributes least, retrain, and see how accuracy holds up.</div></div>
         <div><div class="gloss-term">Score bucket / decile</div><div class="gloss-def">Grouping accounts by their predicted-risk score into 10 equal ranges (0.0–0.1, 0.1–0.2, …) to check whether higher scores really do correspond to more real-world removals.</div></div>
         <div><div class="gloss-term">Prevalence</div><div class="gloss-def">The % of a subreddit's most-visible accounts (that month's top posters/commenters) that the model flags as high-risk — a subreddit-level rollup of the account-level score.</div></div>
-        <div><div class="gloss-term">Severity band</div><div class="gloss-def">Low / Moderate / High / Critical — calculated fresh each month from the actual observed range of scores, not a fixed cutoff picked in advance.</div></div>
+        <div><div class="gloss-term">Severity band</div><div class="gloss-def">Low / Moderate / High / Critical — computed once from the observed range of scores over a declared baseline window and then frozen, so a band never shifts under an already-published number.</div></div>
         <div><div class="gloss-term">Coverage</div><div class="gloss-def">The % of an influencer set (posters/commenters on top content) with enough posting history to be scored at all. Low coverage means the reading rests on a thinner sample.</div></div>
       </div>
     </div>

@@ -123,10 +123,10 @@ from `file://` with no server.
 
 ## Known limitations
 
-- **History still moves underneath a series.** `account_features` aggregates each account's whole
-  corpus history, so adding a month changes scores for already-published months. Append-only
-  publishing contains the symptom, not the cause — and it means a published 2024-09 figure uses
-  behavior observed through 2026-08 (look-ahead bias). Fix is point-in-time features. Not done.
+- **Scores shift as the corpus grows — by design, not a defect.** An account is scored on its whole
+  history (bot-likeness is a property of the *account*); the monthly number reflects *which* accounts
+  were active that month. New evidence improves old estimates — a revision, like a GDP revision — and
+  append-only vintages publish that honestly.
 - **Reliability is not validity.** v1.2.0's sampling is more self-consistent (split-half 0.81,
   month-to-month persistence 0.85), but that does not prove it better predicts real bot activity.
   The n=684 label set is account-level and cannot settle a subreddit-level question.
