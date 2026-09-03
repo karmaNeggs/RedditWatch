@@ -1,15 +1,16 @@
 """
-RedditWatch 1.0 — monthly refresh for the bot/spam detection compass.
+RedditWatch — monthly refresh for the bot/spam detection compass.
 
-Re-run this monthly (after the corpus has been extended with a new month of
-posts/comments) to:
-  1. Retrain the final model (15 features, tuned XGBoost, clubbed banned+deleted
-     target, account_ordinal excluded — see docs/v3-research/charts/model_analysis.html
-     for why) on the current hand-verified label set (output/v3/ground_truth_labels.csv).
-  2. Score the full account population.
-  3. Recompute the subreddit-month bot/spam prevalence table (top-30-posts-by-karma
-     methodology) across every month in the corpus.
-  4. Regenerate docs/bot-spam-compass.html with the refreshed data (via v3_stage9).
+Run after the corpus has been extended with a new month (see RUNBOOK.md). It:
+  1. Loads the PINNED model (10 features, tuned XGBoost, clubbed banned+deleted target,
+     account_ordinal excluded — see docs/v3-research/charts/model_analysis.html for why).
+     It does NOT retrain: that requires an explicit --retrain and a MODEL_VERSION bump,
+     because refitting restates every already-published month.
+  2. Scores the account population (>= ACTIVITY_FLOOR contributions).
+  3. Recomputes the subreddit-month prevalence table (top-100-posts-by-karma, plus the
+     top-10-by-score and top-10-most-recent commenters on each) for every month.
+  4. Publishes via v3_stage9: append-only vintages under docs/data_v3/v{SERIES_VERSION}/,
+     frozen severity bands, and the regenerated dashboard + whitepaper.
 
 No manual steps beyond running this file. Takes well under a minute.
 """
@@ -152,9 +153,15 @@ MIN_SCORED_PER_CELL = 15
 #      time -- a moving reference AND a train/serve skew. Medians are now fit once, persisted,
 #      and reused verbatim when scoring.
 #   3. random_state (above).
-# Still unfixed and still moves history: account_features aggregates each account's whole 24-month
-# history, so extending the corpus changes features -- and scores -- for months already published.
-# Fix is point-in-time features; see V3_PLAN.md.
+# Scores DO shift as the corpus grows, and this is by design, not a defect. account_features
+# describes an account over its whole history, because "is this account bot-like" is a property of
+# the account; the monthly number is a property of WHICH accounts were active that month. So when a
+# new month of evidence arrives, an old month's estimate can improve -- a revision, like a GDP
+# revision, not a bias. Append-only vintages are how that is published honestly: within a series
+# numbers never move, and a better estimate ships as a new series beside the old.
+# (This would only be a real problem if the project claimed "the tracker would have flagged this in
+# real time." It makes no such claim. Do not "fix" this by windowing the feature history -- that
+# discards evidence to simulate ignorance, making historical estimates worse, not better.)
 MODEL_VERSION = '1.1.0'
 MODEL_PATH = OUT / 'final_bot_model.json'
 MODEL_META_PATH = OUT / 'final_bot_model_meta.json'

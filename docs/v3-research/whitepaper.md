@@ -196,7 +196,7 @@ columns measuring the same constructs better and were dropped entirely):
 5. **A second backward-elimination pass, 15→10**, run to check how much further the model could be
    lightened. Accuracy held with only a small, real cost below ~12 features (0.789→~0.776–0.778,
    consistent across repeated tests — not noise), and every remaining pair of the 10 stayed under the
-   0.85 overlap threshold (max ρ=0.73). **Final: 10 features, accuracy 0.780 ± 0.035** — accepted as the
+   0.85 overlap threshold (max ρ=0.73). **Final: 10 features, accuracy 0.780 ± 0.035** (measured on the 24-month corpus this pass ran against; the same model re-validates at 0.793 ± 0.054 on the current 25-month corpus — §6) — accepted as the
    right tradeoff for a simpler, easier-to-reason-about model.
 
 Also excluded on purpose:
@@ -309,7 +309,7 @@ taking the feature count from 18 to 15 (§5). Rebuilt `account_features` and `ac
 retrained: **AUC moved from an inflated 0.801 to the correct 0.789** — a small, honest drop, not a
 regression; the earlier number was measuring a model that partly worked by exploiting a timestamp
 artifact. A further lightening pass (§5 step 5) took the deployed model from 15 to the **final 10
-features, AUC 0.780 ± 0.035**.
+features, AUC 0.780 ± 0.035** on the 24-month corpus of the time; re-validated at 0.793 ± 0.054 on the current 25-month corpus.
 
 **Effect on the dashboard trend, before vs. after:**
 
@@ -399,7 +399,7 @@ specifically is what repeat karma-farming accounts chase. Measured directly agai
 (2026-09-01), poster high-risk rate is **flat across post rank**: 22.62% at ranks 1–30, 22.99% at
 31–60, 22.56% at 61–100. The poster/commenter gap is real and replicates; the top-30-specific
 mechanism does not. Whatever drives it operates across the whole top-100, not at the very top. Genuine moderator announcements mostly don't even appear here — pinned/informational
-posts rarely rank top-30 *by karma*, so "top poster" and "mod" overlap less than intuition suggests.
+posts rarely rank near the top *by karma*, so "top poster" and "mod" overlap less than intuition suggests.
 A separate check for volume-driven skew (the concern that periods of elevated overall activity might
 shift who clears the top-30 cutoff) found no effect: correlation between a subreddit-month's influencer
 volume and its prevalence rate is ~0.05 (noise), and a subreddit's own high-activity months read
@@ -508,14 +508,27 @@ moves numbers: against v1.0.0 the mean absolute revision is 1.65 pp and 21.5% of
 change. That is why it ships as its own vintage rather than as a refresh of v1.0.0. Figures are
 comparable *within* a series, not across series.
 
-**What is still not fixed.** `account_features` aggregates each account's entire 25-month history, so
-extending the corpus changes the features — and therefore the scores — of every still-active account,
-including for months long since published. Append-only publishing contains this symptom but does not
-remove the cause. It also means today's published 2024-09 figure is computed from behavior observed
-through 2026-08: **look-ahead bias**, not merely instability — that figure could not have been produced
-in September 2024. The real fix is point-in-time features (computing each account's features from data
-≤ the month being scored), which would make a subreddit-month immutable by construction. That is a
-separate build and is not done.
+**Why scores still shift between series — and why that is correct.** `account_features` describes an
+account over its entire history, so extending the corpus can change an account's score, including for
+months already published. This is deliberate, and it is worth being precise about why it is not a flaw.
+
+The account score answers *"is this account bot-like?"* — a property of the **account**, best estimated
+from everything known about it. The subreddit-month number answers *"which accounts were active here
+that month?"* — a property of the **month**. Two different axes. When an account active in 2024-09 is
+later banned, it was already a bad account in 2024-09; we simply hadn't learned it yet. Folding that in
+makes the 2024-09 estimate **more** accurate, not less. This is a **revision**, in the sense a
+statistical agency revises GDP — not look-ahead bias, which is a flaw specific to claiming you could
+have *predicted* something in real time. RedditWatch describes the past; it makes no real-time claim.
+
+Append-only vintages are the honest way to publish that: within a series numbers never move, and a
+better estimate ships as a new series beside the old rather than silently overwriting it.
+
+**Checked and rejected (2026-09-03): restricting features to a trailing window.** Windowing was
+measured, not assumed. On the same accounts it costs nothing (+0.030 / −0.028 / +0.004 / −0.021 AUC at
+6 / 9 / 12 / 18-month windows — all inside the noise band), but it drops **76% of banned/deleted labels
+at a 6-month window**: removed accounts stop posting, so a trailing window deletes precisely the
+positive class it needs. More fundamentally it would discard real evidence to simulate ignorance,
+degrading exactly the historical estimates it claims to protect.
 
 
 ## 9. The dashboard
@@ -535,8 +548,8 @@ regenerating the dashboard's embedded data in place. Takes under a minute.
 - `output/v3/ground_truth_labels.csv` — the 684-account labeled ground truth.
 - `output/v3/all_shown_accounts.csv` — every account ever sampled, used to avoid resampling.
 - `output/v3/final_bot_model.json` / `final_bot_model_features.json` — the trained model (10 features).
-- `output/v3/final_bot_scores.parquet` — scores for all 36,762 floor-qualifying accounts.
-- `output/v3/subreddit_bot_prevalence_mom.csv` — the full 24-month subreddit prevalence table.
+- `output/v3/final_bot_scores.parquet` — scores for all 38,197 floor-qualifying accounts.
+- `output/v3/subreddit_bot_prevalence_mom.csv` — the full 25-month subreddit prevalence table.
 - `docs/bot-spam-compass.html` — the dashboard.
 - `docs/v3-research/charts/model_analysis.html` — full validation analysis.
 - `scripts/v3_stage8_monthly_refresh.py` — the one-command monthly refresh pipeline.

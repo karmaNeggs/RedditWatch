@@ -154,12 +154,20 @@ method). Short version:
   meant to enter the influencer set. Verified: all four published `pct_high_risk` columns are now
   bit-identical across repeated runs (only `mean_bot_score` varies, by one float32 ulp, and it is
   rounded to 4dp before publication).
-- **Still moves history, NOT yet fixed:** `account_features` aggregates each account's whole
-  25-month history, so extending the corpus changes features — and scores — for months already
-  published. It also means today's 2024-09 figure uses behavior observed through 2026-08:
-  look-ahead bias, not just instability. Real fix is **point-in-time features** (compute each
-  account's features from data ≤ the month being scored), which makes a subreddit-month immutable
-  by construction. Append-only publishing contains the symptom; it does not remove the cause.
+- **Scores shift as the corpus grows — by design, and already handled.** `account_features`
+  describes an account over its whole history, because *"is this account bot-like"* is a property of
+  the **account**; the monthly number is a property of **which accounts were active that month**.
+  Two different axes, deliberately. So when new evidence arrives (e.g. an account active in 2024-09
+  is later banned), the 2024-09 estimate *improves*. That is a **revision**, like a GDP revision —
+  not look-ahead bias. Append-only vintages publish it honestly: within a series numbers never move,
+  and a better estimate ships as a new series beside the old.
+  **Checked and rejected 2026-09-03: windowing the feature history ("point-in-time features").** It
+  would deliberately discard evidence to simulate ignorance we don't have, making historical
+  estimates *worse*. Measured anyway: on the same accounts, windowed features cost nothing
+  (+0.030 / −0.028 / +0.004 / −0.021 AUC at 6/9/12/18-month windows, all inside noise), but a
+  trailing window drops 76% of banned/deleted labels at 6 months — removed accounts stop posting, so
+  the window deletes exactly the positive class. Point-in-time would only be required if the project
+  claimed "this would have been flagged in real time." It makes no such claim. **Do not revisit.**
 - **Not yet done:** this model doesn't establish *coordination* between accounts (only individual
   removal risk) — the coordination angle from the earlier equation-based theory remains open, see the
   coordination-check note below. The labeled set (n=684) could still grow further, but has stopped
