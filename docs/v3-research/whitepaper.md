@@ -66,9 +66,9 @@ what didn't work and why, but not what the dashboard runs today.
 
 ## 1. Corpus
 
-- **1,684,682 comments**, full body text, from `commenters_dedup` (collected via `scripts/v3_collect.py`
+- **1,749,688 comments**, full body text, from `commenters_dedup` (collected via `scripts/v3_collect.py`
   against the Arctic Shift API).
-- **360,431 distinct commenting accounts**, 45 India-focused subreddits, 2024-08 through 2026-08 (25
+- **372,484 distinct commenting accounts**, 45 India-focused subreddits, 2024-08 through 2026-09 (26
   months).
 - `account_features` (`scripts/v3_account_features.py` + `scripts/v3_botmarker_composite.py`): one row
   per account, ~70 behavioral/timing/reception/username columns computed from the full comment+post
@@ -382,7 +382,7 @@ of ground truth. These checks show the widened metric is more self-consistent; t
 better predicts real bot activity. The n=684 label set is account-level and cannot settle a
 subreddit-level question.
 
-Full 25-month history (2024-08→2026-08). 1,120 subreddit-month rows, 45 subreddits. Data:
+Full 26-month history (2024-08→2026-09). 1,164 subreddit-month rows, 45 subreddits. Data:
 `output/v3/subreddit_bot_prevalence_mom.csv`. Severity bands (Low/Moderate/High/Critical) are
 percentiles (P50/P80/P95) of the prevalence distribution over a **declared baseline window**, computed
 once and frozen in `output/v3/severity_baseline.json` — not recalculated at every refresh (§8b).

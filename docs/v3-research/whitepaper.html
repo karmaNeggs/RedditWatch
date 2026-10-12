@@ -183,9 +183,9 @@ approaches that were tried, checked against real evidence, and set aside — wor
 what didn't work and why, but not what the dashboard runs today.</p>
 <h2 id="1-corpus">1. Corpus</h2>
 <ul>
-<li><strong>1,684,682 comments</strong>, full body text, from <code>commenters_dedup</code> (collected via <code>scripts/v3_collect.py</code>
+<li><strong>1,749,688 comments</strong>, full body text, from <code>commenters_dedup</code> (collected via <code>scripts/v3_collect.py</code>
   against the Arctic Shift API).</li>
-<li><strong>360,431 distinct commenting accounts</strong>, 45 India-focused subreddits, 2024-08 through 2026-08 (25
+<li><strong>372,484 distinct commenting accounts</strong>, 45 India-focused subreddits, 2024-08 through 2026-09 (26
   months).</li>
 <li><code>account_features</code> (<code>scripts/v3_account_features.py</code> + <code>scripts/v3_botmarker_composite.py</code>): one row
   per account, ~70 behavioral/timing/reception/username columns computed from the full comment+post
@@ -583,7 +583,7 @@ series, never across. One limit worth stating plainly: reliability is a property
 of ground truth. These checks show the widened metric is more self-consistent; they do <strong>not</strong> prove it
 better predicts real bot activity. The n=684 label set is account-level and cannot settle a
 subreddit-level question.</p>
-<p>Full 25-month history (2024-08→2026-08). 1,120 subreddit-month rows, 45 subreddits. Data:
+<p>Full 26-month history (2024-08→2026-09). 1,164 subreddit-month rows, 45 subreddits. Data:
 <code>output/v3/subreddit_bot_prevalence_mom.csv</code>. Severity bands (Low/Moderate/High/Critical) are
 percentiles (P50/P80/P95) of the prevalence distribution over a <strong>declared baseline window</strong>, computed
 once and frozen in <code>output/v3/severity_baseline.json</code> — not recalculated at every refresh (§8b).</p>

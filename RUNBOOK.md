@@ -38,7 +38,9 @@ python3 scripts/v3_account_features.py
 python3 scripts/v3_botmarker_composite.py     # NOT optional — see warning below
 python3 scripts/v3_feature_sanitise.py
 
-# 3. Score + publish (loads the pinned model, appends the new month, rebuilds the dashboard)
+# 3. Score + publish (loads the pinned model, appends the new month, rebuilds the dashboard,
+#    then refreshes the Report page tiles, month counts, README header and whitepaper corpus
+#    figures via v3_update_static_pages.py)
 python3 scripts/v3_stage8_monthly_refresh.py
 
 # 4. Verify, then publish
@@ -76,7 +78,8 @@ Check all five:
 | months appended | **exactly 1** (the new month) | More than 1 means a vintage directory is missing. Stop. |
 | months kept frozen | all previously published | 0 frozen means you're rewriting history. Stop. |
 
-Then open `docs/bot-spam-compass.html` and confirm the new month appears and the trend's earlier
+Then open `docs/index.html` ("This month" must show the new month, tiles and top-5 must match the
+Compass) and `docs/bot-spam-compass.html`, and confirm the new month appears and the trend's earlier
 months are unchanged.
 
 ---
@@ -123,7 +126,7 @@ re-checking the other.
 ## Layout
 
 ```
-scripts/                     the 10 scripts the monthly run uses, and nothing else
+scripts/                     the 11 scripts the monthly run uses, and nothing else
   v3_tracker_freshness.py    step 0 — per-sub Tier-1/Tier-2 health check
   v3_collect.py              step 1 — Arctic Shift collection, resumable
   reddit_auth.py             Tier-2 fallback (live Reddit OAuth)
@@ -133,6 +136,7 @@ scripts/                     the 10 scripts the monthly run uses, and nothing el
   v3_feature_sanitise.py     step 2 — account_features_model
   v3_stage8_monthly_refresh.py   step 3 — score + prevalence, calls the two below
   v3_stage9_generate_dashboard_data.py   publishes vintages, embeds dashboard data
+  v3_update_static_pages.py              refreshes index.html tiles/counts, README header, whitepaper corpus figures
   v3_build_whitepaper_html.py            renders whitepaper.md -> .html
 
 data/v3/       raw collection + DuckDB corpus

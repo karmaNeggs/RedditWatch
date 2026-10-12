@@ -4,7 +4,7 @@ A bot/spam-influence tracker for 45 India-focused subreddits. Scores the account
 
 **Live site:** https://karmaneggs.github.io/RedditWatch/ · **Dashboard:** [`docs/bot-spam-compass.html`](docs/bot-spam-compass.html) · **Methodology:** [`docs/methodology.html`](docs/methodology.html) · **Whitepaper:** [`docs/v3-research/whitepaper.html`](docs/v3-research/whitepaper.html)
 
-**Current series `v1.2.0` · pinned model `1.1.0` · 45 subreddits · 25 months (2024-08 → 2026-08)**
+**Current series `v1.2.0` · pinned model `1.1.0` · 45 subreddits · 26 months (2024-08 → 2026-09)**
 
 ---
 
