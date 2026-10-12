@@ -78,6 +78,8 @@ Check all five:
 | months appended | **exactly 1** (the new month) | More than 1 means a vintage directory is missing. Stop. |
 | months kept frozen | all previously published | 0 frozen means you're rewriting history. Stop. |
 
+Stage 8 ends by running `scripts/v3_consistency_check.py` (Report page, Compass, trend and month files must agree; it exits non-zero and stops the run if they do not). Do not push on a failure.
+
 Then open `docs/index.html` ("This month" must show the new month, tiles and top-5 must match the
 Compass) and `docs/bot-spam-compass.html`, and confirm the new month appears and the trend's earlier
 months are unchanged.
@@ -136,6 +138,7 @@ scripts/                     the 11 scripts the monthly run uses, and nothing el
   v3_feature_sanitise.py     step 2 — account_features_model
   v3_stage8_monthly_refresh.py   step 3 — score + prevalence, calls the two below
   v3_stage9_generate_dashboard_data.py   publishes vintages, embeds dashboard data
+  v3_consistency_check.py                cross-page agreement check (runs at the end of stage 8)
   v3_update_static_pages.py              refreshes index.html tiles/counts, README header, whitepaper corpus figures
   v3_build_whitepaper_html.py            renders whitepaper.md -> .html
 

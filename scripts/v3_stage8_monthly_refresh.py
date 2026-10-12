@@ -418,6 +418,7 @@ def main():
     subprocess.run(['python3', str(ROOT / 'scripts/v3_stage9_generate_dashboard_data.py')], check=True)
     subprocess.run(['python3', str(ROOT / 'scripts/v3_update_static_pages.py')], check=True)
     subprocess.run(['python3', str(ROOT / 'scripts/v3_build_whitepaper_html.py')], check=True)
+    subprocess.run(['python3', str(ROOT / 'scripts/v3_consistency_check.py')], check=True)
 
     print('\nDone. Re-run this script monthly after the corpus is extended.')
 

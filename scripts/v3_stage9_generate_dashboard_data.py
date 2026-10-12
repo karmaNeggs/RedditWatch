@@ -165,9 +165,11 @@ def main():
             }
         month_docs[m] = subs
 
-    def build_narrative(m, subs, role):
-        prev_idx = months.index(m) - 1
-        prev_subs = month_docs.get(months[prev_idx]) if prev_idx >= 0 else None
+    def build_narrative(m, subs, role, prev_subs):
+        # prev_subs MUST be the previous month as PUBLISHED (frozen file), not the fresh
+        # recompute. Every other view (trend chart, Compass leaderboard delta column) compares
+        # against the published month; using the recompute made the headline delta, riser,
+        # faller and findings disagree with them (2026-09: -0.49pp vs -0.12pp).
         rb = bands_by_role[role]
 
         def val(d, key='pct_high_risk'):
@@ -250,6 +252,8 @@ def main():
             frozen.append(m)
             continue
         subs = month_docs[m]
+        prev_pub = full_docs.get(months[months.index(m) - 1]) if months.index(m) > 0 else None
+        prev_subs = prev_pub['subreddits'] if prev_pub else None
         doc = {
             'month': m,
             'series_version': SERIES_VERSION,
@@ -262,7 +266,7 @@ def main():
             'severity_baseline': {k: baseline_meta[k] for k in
                                   ('baseline_version', 'baseline_window', 'n_subreddit_months',
                                    'method')},
-            'narrative': {role: build_narrative(m, subs, role) for role in ROLES},
+            'narrative': {role: build_narrative(m, subs, role, prev_subs) for role in ROLES},
         }
         full_docs[m] = doc
         path.write_text(json.dumps(doc))
