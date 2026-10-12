@@ -62,8 +62,8 @@ def main():
     # + a plain suffix filter sidesteps pattern parsing on the path entirely.
     posts_dir = os.path.join(RAW, 'posts')
     comm_dir = os.path.join(RAW, 'commenters')
-    posts_files = sorted(os.path.join(posts_dir, f) for f in os.listdir(posts_dir) if f.endswith('.ndjson.zst'))
-    comm_files = sorted(os.path.join(comm_dir, f) for f in os.listdir(comm_dir) if f.endswith('.ndjson.zst'))
+    posts_files = sorted(os.path.join(posts_dir, f) for f in os.listdir(posts_dir) if f.endswith('.ndjson.zst') and not f.startswith('._'))
+    comm_files = sorted(os.path.join(comm_dir, f) for f in os.listdir(comm_dir) if f.endswith('.ndjson.zst') and not f.startswith('._'))
     if not posts_files or not comm_files:
         raise RuntimeError(f'No raw files found under {RAW} -- check data/v3/raw/{{posts,commenters}}/')
 

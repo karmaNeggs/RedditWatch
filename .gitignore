@@ -63,3 +63,13 @@ output/v3/round2_batch_8.json
 output/v3/round2_batch_9.json
 output/v3/round2_batch_10.json
 output/v3/round2_candidates_comments.json
+
+# macOS AppleDouble files created by copying via exFAT
+._*
+
+# Internal working notes and settings (kept on disk, not published)
+CLAUDE.md
+LEARNINGS.md
+V3_PLAN.md
+.claude/
+archive/v3-research/V3_FEATURE_PLAN.md

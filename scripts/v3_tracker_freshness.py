@@ -58,7 +58,7 @@ def count_via_search(sub, endpoint, after, before, max_pages=60):
         cur = last * 1000 - 1
     return n, pages >= max_pages  # (count, was_capped)
 
-with open('/Users/anupamvashist/Documents/Project writeups/Analysis Report- reddit-bot-analysis/subreddits_v3.csv') as f:
+with open(__import__('os').path.join(__import__('os').path.dirname(__import__('os').path.abspath(__file__)), '..', 'subreddits_v3.csv')) as f:
     rows = list(csv.DictReader(f))
 subs = [r['sub_name'].replace('r/', '') for r in rows]
 
