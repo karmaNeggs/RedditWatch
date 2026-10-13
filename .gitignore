@@ -73,3 +73,10 @@ LEARNINGS.md
 V3_PLAN.md
 .claude/
 archive/v3-research/V3_FEATURE_PLAN.md
+
+# internal planning notes (kept on disk, never on GitHub)
+archive/v3-research/V3_DATA_SOURCES.md
+archive/v3-research/V3_METRIC_CATALOGUE.md
+V3_PLAN.md
+V3_FEATURE_PLAN.md
+.claude/
